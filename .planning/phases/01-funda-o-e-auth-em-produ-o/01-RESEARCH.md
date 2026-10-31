@@ -23,7 +23,7 @@ O segundo ponto crítico é o **seed via Flyway (D-03/D-04)**: Flyway SQL não l
 - **D-05:** Login **simples e minimalista**: apenas e-mail + senha, interface em **pt-BR**, mensagens de erro claras (credenciais inválidas genéricas — sem dizer qual campo falhou), sem extras (lembrar-me, social login, "esqueci a senha").
 - **D-06:** **Três ambientes: local, staging e produção** — staging criado porque o usuário pretende **escalar** depois (mais clientes/empresas).
 - **D-07:** Deploy por push: Vercel (web, com preview por branch) + Render (API), HTTPS nativo, migrations rodam no boot.
-- **D-08 (pendente → plan-phase):** infraestrutura do staging — banco Postgres separado no Render (custo de 2º banco) vs. banco único com dados de teste. Usuário quer staging; o planner decide o modelo custo×segurança. → *Dados de custo na seção "Open Questions".*
+- **D-08 (pendente → plan-phase):** infraestrutura do staging — banco Postgres separado no Render (custo de 2º banco) vs. banco único com dados de teste. Usuário quer staging; o planner decide o modelo custo×segurança. → *Dados de custo na seção "Open Questions".* → ✅ **RESOLVIDO no plan-phase:** banco separado (ver `## Open Questions (RESOLVED)` Q1 e bloco `D-08-decision` do `01-04-PLAN.md`)
 
 ### the agent's Discretion
 - Build tool com Maven (premissa do plano mestre, não questionada).
@@ -508,14 +508,14 @@ Map<String, String> health() {
 | A3 | Render native runtime (Java) compila Maven a partir do Root Directory `api/` e roda Java ≥ 21 | Env Availability / Pitfall 2 | Médio — fallback: Dockerfile na Render (runtime Docker), amplamente documentado |
 | A4 | `typescript@7.x` resolvido pelo create-next-app é compatível com Next 16.4 | Standard Stack | Baixo — pinar `typescript@^5` se houver incompatibilidade de types |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **D-08 — infraestrutura do staging (decisão do planner, com dados de custo)**
+1. **D-08 — infraestrutura do staging (decisão do planner, com dados de custo)** → ✅ **RESOLVIDO:** banco Postgres **separado** para staging — decisão registrada no bloco `D-08-decision` de `01-04-PLAN.md` e em `01-SKELETON.md`
    - O que se sabe: Render Postgres pago a partir de **$6/mês** (Basic-256mb, compute) + storage $0.30/GB; web service Starter **$7/mês**. Staging completo (2º serviço + 2º banco) ≈ **+$13–25/mês** sobre produção.
    - Recomendação da pesquisa: **banco separado para staging** — env vars (`SEED_ADMIN_PASSWORD`, `JWT_SECRET`) são por serviço; um banco compartilhado exporia dados reais a deploys de teste e quebraria o isolamento que o usuário quer para crescer. Se custo pesar, alternativa: staging compartilha o serviço mas usa database separado no mesmo Postgres Render? — Render não oferece múltiplos databases isolados por instância de forma recomendada; 2ª instância é o caminho limpo.
-2. **Spring Boot 3.5 sem patches OSS**
+2. **Spring Boot 3.5 sem patches OSS** → ✅ **RISCO ACEITO** (não é mais pergunta): lock de stack "Spring Boot 3" no AGENTS.md; justificado em State of the Art e visível ao cliente
    - Lock de stack exige Boot 3; risco aceito. Se o usuário permitir, Boot 4.x seria o recomendado para projeto novo em out/2026 — **fora do escopo sem nova decisão**.
-3. **Staging seed:** mesma migration roda em staging e produção com senhas diferentes (env var por serviço). Confirmar se o usuário quer mesmo usuário `admin@controle.com` em produção (D-03 diz sim).
+3. **Staging seed:** mesma migration roda em staging e produção com senhas diferentes (env var por serviço). Confirmar se o usuário quer mesmo usuário `admin@controle.com` em produção (D-03 diz sim). → ✅ **RESOLVIDO:** D-03 confirmado (`admin@controle.com` em todos os ambientes); senha distinta por serviço via env var `SEED_ADMIN_PASSWORD` (D-04) — checklist na Task 1 do `01-04-PLAN.md`
 
 ## Environment Availability
 
