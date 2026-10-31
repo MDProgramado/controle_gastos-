@@ -17,6 +17,13 @@
 
 **Requirements:** AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05, AUTH-06, INF-01, INF-03, INF-04
 **UI hint**: yes
+**Plans:** 4 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Monorepo api/+web/ + Flyway V1 (NUMERIC(14,2)) + GET /api/health com Testcontainers
+- [ ] 01-02-PLAN.md — Seed V1_1 (BCrypt via env) + login JWT (resource-server Nimbus) + TenantContext só do token
+- [ ] 01-03-PLAN.md — BFF cookie httpOnly + tela de login UI-SPEC (pt-BR) + shell autenticado [checkpoint]
+- [ ] 01-04-PLAN.md — Deploy staging+produção (Render+Vercel, D-08 banco separado) + smoke + verificação humana [checkpoints]
 
 ---
 
