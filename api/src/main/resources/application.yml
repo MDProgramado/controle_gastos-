@@ -11,7 +11,12 @@ spring:
       ddl-auto: validate
     open-in-view: false
   flyway:
-    locations: classpath:db/migration
+    # classpath:db/migration = DDL SQL (V1). A migration Java V1_1 vive no pacote
+    # com.controlefinanceiro.db.migration (P1) — Flyway varre pacotes de location,
+    # então o pacote dela precisa estar listado para ser descoberta.
+    locations:
+      - classpath:db/migration
+      - classpath:com/controlefinanceiro/db/migration
   jackson:
     time-zone: America/Sao_Paulo
     deserialization:

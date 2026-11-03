@@ -1,7 +1,9 @@
 package com.controlefinanceiro;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.controlefinanceiro.db.migration.V1_1__seed_empresa_admin;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -52,5 +54,18 @@ class SeedMigrationTest {
     assertThat(hash).startsWith("$2");
     assertThat(hash).hasSize(60);
     assertThat(hash).isNotEqualTo(System.getenv("SEED_ADMIN_PASSWORD"));
+  }
+
+  @Test
+  void migrationFalhaRapidoQuandoSenhaDoAmbienteNaoExiste() {
+    // Fail-fast (Pitfall 4/D-04): sem SEED_ADMIN_PASSWORD o startup falha com mensagem clara.
+    // A env var do surefire mantém os testes verdes; o caso nulo/vazio exercita o guard aqui.
+    assertThatThrownBy(() -> V1_1__seed_empresa_admin.senhaObrigatoria(null))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("SEED_ADMIN_PASSWORD");
+
+    assertThatThrownBy(() -> V1_1__seed_empresa_admin.senhaObrigatoria("   "))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("SEED_ADMIN_PASSWORD");
   }
 }
