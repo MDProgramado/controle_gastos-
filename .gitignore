@@ -9,3 +9,8 @@
 target/
 node_modules/
 .next/
+
+# JVM crash logs (nunca commitar)
+hs_err_pid*
+replay_pid*
+*.log
