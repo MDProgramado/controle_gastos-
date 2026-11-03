@@ -1,0 +1,11 @@
+# GSD tooling (workflows, agents, commands) — local, not project code
+.opencode/
+
+# Secrets — never commit (regra: nada de senha/segredo em git)
+.env*
+!.env.example
+
+# Build artifacts
+target/
+node_modules/
+.next/
