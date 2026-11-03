@@ -1,0 +1,19 @@
+server:
+  # Pitfall 1 (Render): a plataforma injeta PORT — nunca hardcodar 8080 fixo
+  port: ${PORT:8080}
+
+spring:
+  application:
+    name: controle-financeiro-api
+  jpa:
+    # Flyway é dono do schema; Hibernate apenas valida a leitura (anti-pattern: update/create)
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    locations: classpath:db/migration
+  jackson:
+    time-zone: America/Sao_Paulo
+    deserialization:
+      # Rejeita campos extras no body (pré-requisito do teste "campo desconhecido → 400")
+      fail-on-unknown-properties: true
