@@ -19,12 +19,12 @@
 
 **Requirements:** AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05, AUTH-06, INF-01, INF-03, INF-04
 **UI hint**: yes
-**Plans:** 4 plans
+**Plans:** 1/4 plans executed
 
 Plans:
 **Wave 1**
 
-- [ ] 01-01-PLAN.md — Monorepo api/+web/ + Flyway V1 (NUMERIC(14,2)) + GET /api/health com Testcontainers
+- [x] 01-01-PLAN.md — Monorepo api/+web/ + Flyway V1 (NUMERIC(14,2)) + GET /api/health com Testcontainers
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
