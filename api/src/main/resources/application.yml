@@ -22,3 +22,9 @@ spring:
     deserialization:
       # Rejeita campos extras no body (pré-requisito do teste "campo desconhecido → 400")
       fail-on-unknown-properties: true
+
+# Segredo HS256 do JWT (Pitfall 6): por ambiente via env var JWT_SECRET (>= 32 bytes;
+# gere com `openssl rand -base64 48`). JwtService falha rápido se ausente/fraco.
+# Em teste a env var vem do fixture óbvio do surefire (D-04 — nunca valor real).
+jwt:
+  secret: ${JWT_SECRET:}

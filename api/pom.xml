@@ -97,6 +97,8 @@
         <configuration>
           <environmentVariables>
             <SEED_ADMIN_PASSWORD>fixture-somente-testes-it</SEED_ADMIN_PASSWORD>
+            <!-- Segredo JWT de teste (>= 32 bytes, Pitfall 6) — fixture óbvio, não valor real -->
+            <JWT_SECRET>fixture-jwt-somente-testes-it-0123456789abcdef</JWT_SECRET>
           </environmentVariables>
         </configuration>
       </plugin>
