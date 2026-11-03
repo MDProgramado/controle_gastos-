@@ -7,9 +7,11 @@
 ## Phases
 
 ### Phase 1: Fundação e Auth em Produção
+
 **Goal:** Monorepo (`api/` + `web/`), Flyway V1, autenticação JWT, seed de empresa/usuário, deploy da API na Render e da web na Vercel
 **Mode:** mvp
 **Success Criteria**:
+
 1. Login com e-mail/senha funciona na web publicada (Vercel → API Render)
 2. `GET /api/health` responde OK em produção
 3. `empresa_id` é extraído do token em todas as rotas autenticadas (teste de integração prova que o body não define tenant)
@@ -20,17 +22,30 @@
 **Plans:** 4 plans
 
 Plans:
+**Wave 1**
+
 - [ ] 01-01-PLAN.md — Monorepo api/+web/ + Flyway V1 (NUMERIC(14,2)) + GET /api/health com Testcontainers
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 01-02-PLAN.md — Seed V1_1 (BCrypt via env) + login JWT (resource-server Nimbus) + TenantContext só do token
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 01-03-PLAN.md — BFF cookie httpOnly + tela de login UI-SPEC (pt-BR) + shell autenticado [checkpoint]
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 01-04-PLAN.md — Deploy staging+produção (Render+Vercel, D-08 banco separado) + smoke + verificação humana [checkpoints]
 
 ---
 
 ### Phase 2: Categorias e Lançamentos
+
 **Goal:** Seed V2 de categorias, CRUD de lançamentos com validação monetária estrita e lote tudo-ou-nada
 **Mode:** mvp
 **Success Criteria**:
+
 1. Testes de integração (Testcontainers) passam em `./mvnw verify`
 2. Lote com uma linha inválida retorna o índice da linha e **não grava nenhuma linha**
 3. Valor com mais de 2 casas decimais é rejeitado; nenhum `double`/`float` no código
@@ -42,9 +57,11 @@ Plans:
 ---
 
 ### Phase 3: Dashboard
+
 **Goal:** Entradas, saídas, saldo por mês, gasto por categoria e comparação mensal na web
 **Mode:** mvp
 **Success Criteria**:
+
 1. Todos os números do dashboard batem com SQL de conferência executado direto no banco (seed conhecida)
 2. Seletor de mês atualiza entradas, saídas, saldo, categorias e comparação
 3. Mês sem lançamentos mostra zeros sem erro (divisão por zero tratada)
@@ -56,9 +73,11 @@ Plans:
 ---
 
 ### Phase 4: IA via OpenRouter
+
 **Goal:** Function calling sobre consultas fixas e categorização sugerida com confirmação explícita
 **Mode:** mvp
 **Success Criteria**:
+
 1. Consultas de teste retornam os mesmos números que o dashboard (tools reusam as mesmas queries)
 2. Categorização sugerida só grava após confirmação explícita do usuário
 3. Chave OpenRouter existe somente no servidor; sem chave/limite, o app segue funcionando (degradação graciosa)
