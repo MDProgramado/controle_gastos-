@@ -17,6 +17,8 @@ spring:
     locations:
       - classpath:db/migration
       - classpath:com/controlefinanceiro/db/migration
+    # Permite baseline automático se schema já existe sem tabela de histórico (dev local)
+    baseline-on-migrate: true
   jackson:
     time-zone: America/Sao_Paulo
     deserialization:
