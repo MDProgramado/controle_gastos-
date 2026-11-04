@@ -19,7 +19,7 @@
 
 **Requirements:** AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05, AUTH-06, INF-01, INF-03, INF-04
 **UI hint**: yes
-**Plans:** 1/4 plans executed
+**Plans:** 2/4 plans executed
 
 Plans:
 **Wave 1**
@@ -28,7 +28,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 01-02-PLAN.md — Seed V1_1 (BCrypt via env) + login JWT (resource-server Nimbus) + TenantContext só do token
+- [x] 01-02-PLAN.md — Seed V1_1 (BCrypt via env) + login JWT (resource-server Nimbus) + TenantContext só do token
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
