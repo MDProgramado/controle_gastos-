@@ -21,7 +21,7 @@ import org.springframework.security.web.SecurityFilterChain;
 /**
  * Padrão P3 completo (transição explícita da cadeia mínima do plano 01): stateless, regras por rota
  * e Bearer via {@code oauth2ResourceServer} (Nimbus) — NUNCA um segundo SecurityConfig e NUNCA um
- * {@code JwtAuthFilter} manual (anti-pattern 2: filtros hand-rolled erram exp/alg/clock skew).
+ * filtro JWT manual (anti-pattern 2: filtros hand-rolled erram exp/alg/clock skew).
  */
 @Configuration
 @EnableWebSecurity
