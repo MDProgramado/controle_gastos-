@@ -163,3 +163,21 @@ a {
     @apply font-sans;
   }
 }
+
+/* ===== UI-SPEC fase 1 — bases e estados (regras fora de camada vencem as utilities) ===== */
+
+/* Base font 16px (UI-SPEC Typography: override do default 14px do shadcn) */
+html {
+  font-size: 16px;
+}
+
+/* Foco (UI-SPEC): outline 2px sólido teal com offset 2px — teclado apenas */
+:focus-visible {
+  outline: 2px solid #0f766e;
+  outline-offset: 2px;
+}
+
+/* Hover do CTA primário "Entrar": teal-800 exato #115E59 (UI-SPEC Color) */
+[data-slot="button"][data-variant="default"]:hover {
+  background-color: #115e59;
+}

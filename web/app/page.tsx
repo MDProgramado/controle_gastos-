@@ -1,69 +1,36 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+import { redirect } from "next/navigation";
+import { getMe } from "@/lib/api";
+import { LogoutButton } from "@/components/LogoutButton";
 
-export default function Home() {
+// Cache Components (Next 16): a sessão é lida por request (cookies) — a rota
+// é dinâmica por natureza e bloqueia no servidor (docs: "Allow blocking route").
+export const instant = false;
+
+/**
+ * Shell autenticado (Server Component): valida a sessão via `getMe()`.
+ * Sem sessão → redirect ao login com o flag de expiração; o cookie obsoleto é
+ * limpo pela rota `GET /api/me` acionada na tela de login (RSC não pode mutar
+ * cookie — regra do Next 16).
+ */
+export default async function Home() {
+  const usuario = await getMe();
+  if (!usuario) {
+    redirect("/login?expirada=1");
+  }
+
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className={styles.intro}>
-          <h1>
-            To get started, edit the{" "}
-            <code className={styles.code}>page.tsx</code> file.
-          </h1>
-          <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main className="flex min-h-dvh w-full flex-col items-center justify-center px-4 py-12">
+      <div className="w-full max-w-[400px] rounded-xl border border-border bg-card p-6 text-center shadow-none md:p-8 md:shadow-md">
+        <h1 className="text-[20px] leading-[1.2] font-semibold text-foreground">
+          Você está autenticado.
+        </h1>
+        <p className="mt-2 text-base text-muted-foreground">
+          O dashboard chega na Fase 3. Use o botão Sair para encerrar a sessão.
+        </p>
+        <div className="mt-6">
+          <LogoutButton />
         </div>
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+      </div>
+    </main>
   );
 }
