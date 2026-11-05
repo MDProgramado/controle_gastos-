@@ -9,12 +9,12 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Autenticação e Tenant (AUTH)
 
-- [ ] **AUTH-01**: Usuário faz login com e-mail/senha e recebe JWT usado em todas as chamadas autenticadas
-- [ ] **AUTH-02**: Senhas são armazenadas apenas como hash BCrypt (nunca em texto puro)
-- [ ] **AUTH-03**: `empresa_id` é extraído exclusivamente do token JWT — nenhum body define tenant
-- [ ] **AUTH-04**: Seed de empresa e usuário ADMIN criados por migration Flyway (V1)
-- [ ] **AUTH-05**: Usuários possuem role `ADMIN` ou `USER` desde a fase 1 e o JWT carrega a role
-- [ ] **AUTH-06**: Comunicação em produção é somente HTTPS (Render/Vercel)
+- [x] **AUTH-01**: Usuário faz login com e-mail/senha e recebe JWT usado em todas as chamadas autenticadas
+- [x] **AUTH-02**: Senhas são armazenadas apenas como hash BCrypt (nunca em texto puro)
+- [x] **AUTH-03**: `empresa_id` é extraído exclusivamente do token JWT — nenhum body define tenant
+- [x] **AUTH-04**: Seed de empresa e usuário ADMIN criados por migration Flyway (V1)
+- [x] **AUTH-05**: Usuários possuem role `ADMIN` ou `USER` desde a fase 1 e o JWT carrega a role
+- [x] **AUTH-06**: Comunicação em produção é somente HTTPS (Render/Vercel)
 
 ### Categorias (CAT)
 
@@ -50,10 +50,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Infraestrutura e Qualidade (INF)
 
-- [ ] **INF-01**: Flyway gerencia o schema (V1) e o seed de categorias (V2); migrations são imutáveis
+- [ ] **INF-01**: Flyway gerencia o schema (V1) e o seed de categorias (V2); migrations são imutáveis *(parcial: V1/V1_1 ✓ na fase 1; V2 categorias na fase 2)*
 - [ ] **INF-02**: Testes de integração rodam com Testcontainers (PostgreSQL real)
-- [ ] **INF-03**: API publicada na Render com health check respondendo OK em produção
-- [ ] **INF-04**: Web publicada na Vercel consumindo a API publicada (login funciona em produção)
+- [x] **INF-03**: API publicada na Render com health check respondendo OK em produção
+- [x] **INF-04**: Web publicada na Vercel consumindo a API publicada (login funciona em produção)
 
 ### IA (AI) — Fase 4
 
@@ -107,12 +107,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-01 | Phase 1 | Pending |
-| AUTH-02 | Phase 1 | Pending |
-| AUTH-03 | Phase 1 | Pending |
-| AUTH-04 | Phase 1 | Pending |
-| AUTH-05 | Phase 1 | Pending |
-| AUTH-06 | Phase 1 | Pending |
+| AUTH-01 | Phase 1 | Verified |
+| AUTH-02 | Phase 1 | Verified |
+| AUTH-03 | Phase 1 | Verified |
+| AUTH-04 | Phase 1 | Verified |
+| AUTH-05 | Phase 1 | Verified |
+| AUTH-06 | Phase 1 | Verified |
 | CAT-01 | Phase 2 | Pending |
 | CAT-02 | Phase 2 | Pending |
 | CAT-03 | Phase 2 | Pending |
@@ -133,10 +133,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DSH-03 | Phase 3 | Pending |
 | DSH-04 | Phase 3 | Pending |
 | DSH-05 | Phase 3 | Pending |
-| INF-01 | Phase 1 | Pending |
+| INF-01 | Phase 1 | Partial — V1/V1_1 ✓; V2 seed categorias → Phase 2 |
 | INF-02 | Phase 2 | Pending |
-| INF-03 | Phase 1 | Pending |
-| INF-04 | Phase 1 | Pending |
+| INF-03 | Phase 1 | Verified |
+| INF-04 | Phase 1 | Verified |
 | AI-01 | Phase 4 | Pending |
 | AI-02 | Phase 4 | Pending |
 | AI-03 | Phase 4 | Pending |

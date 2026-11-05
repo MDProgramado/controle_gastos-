@@ -19,7 +19,7 @@
 
 **Requirements:** AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05, AUTH-06, INF-01, INF-03, INF-04
 **UI hint**: yes
-**Plans:** 3/4 plans executed
+**Plans:** 4/4 plans executed ✓ [phase complete 2026-11-05 — VERIFICATION: ACHIEVED]
 
 Plans:
 **Wave 1**
@@ -36,7 +36,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 01-04-PLAN.md — Deploy staging+produção (Render+Vercel, D-08 banco separado) + smoke + verificação humana [checkpoints]
+- [x] 01-04-PLAN.md — Deploy Render+Vercel + smoke + verificação humana [aprovado 2026-11-05] · desvio D-08 aprovado: 1 ambiente único (banco Free expira 2026-12-05)
 
 ---
 
