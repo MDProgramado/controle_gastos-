@@ -1,0 +1,53 @@
+# Render Blueprint — Controle Financeiro (fase 1 / plano 01-04, Task 2)
+#
+# ⚠️ Pitfall 2 (banco de dados): a SPRING_DATASOURCE_URL precisa do prefixo `jdbc:`.
+#    ❌ postgres://user:senha@host:5432/db   (formato psql — o driver JDBC recusa)
+#    ✅ jdbc:postgresql://host:5432/db       (usuário e senha ficam nas env vars
+#       SPRING_DATASOURCE_USERNAME / SPRING_DATASOURCE_PASSWORD — NUNCA na URL)
+#
+# ⚠️ Runtime: a Render não tem runtime Java nativo (só Node/Python/Ruby/Go/Rust/
+#    Elixir) — a API usa Docker via api/Dockerfile (multi-stage: Maven + JRE 21).
+#    Deploy é push→automático na branch main (D-07), sem CI custom.
+#
+# ⚠️ DESVIO registrado e aprovado no checkpoint da fase 1: existe UM ambiente
+#    único (produção) em vez de staging + produção (D-08), e o banco é o plano
+#    Free (expira em 2026-12-05 — migrar para pago com backup é tarefa futura).
+#    Sem staging, o isolamento preview→staging (Pitfall 8) NÃO está valendo:
+#    deploys de preview da Vercel apontam para a API de produção.
+#
+# Segredos: `sync: false` = o valor vive SÓ no dashboard da Render (D-04,
+# ameaças T-4-01/T-4-02). Este arquivo referencia as env vars, nunca as contém.
+#
+# NOTA: este blueprint é inerte até você criar um Blueprint no dashboard
+# (Blueprints → New Blueprint → este repo). Confirme o nome exato do serviço
+# antes de vincular — se o `name` abaixo não bater com o serviço existente,
+# a Render cria um serviço NOVO em vez de reaplicar a configuração.
+
+services:
+  - type: web
+    name: controle-gastos-
+    runtime: docker
+    dockerfilePath: ./api/Dockerfile
+    dockerContext: ./api
+    branch: main
+    healthCheckPath: /api/health
+    # plan omitido: para serviço existente a Render mantém o plano atual
+    envVars:
+      - key: JWT_SECRET
+        sync: false # gere localmente: openssl rand -base64 48 (um por ambiente)
+      - key: SEED_ADMIN_PASSWORD
+        sync: false # D-04: só no dashboard; rotacionar após o 1º login
+      - key: SPRING_DATASOURCE_URL
+        sync: false # formato jdbc:postgresql://host:5432/db (Pitfall 2)
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+
+# Um banco por ambiente (D-08) — hoje apenas o banco de produção existe.
+databases:
+  - name: controle_gastos_db
+    databaseName: controle_gastos_db_whia
+    user: controle_gastos_db_whia_user
+    region: oregon
+    # plan omitido: mantém o plano atual do banco existente
