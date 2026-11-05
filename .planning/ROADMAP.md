@@ -19,7 +19,7 @@
 
 **Requirements:** AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05, AUTH-06, INF-01, INF-03, INF-04
 **UI hint**: yes
-**Plans:** 2/4 plans executed
+**Plans:** 3/4 plans executed
 
 Plans:
 **Wave 1**
@@ -32,7 +32,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 01-03-PLAN.md — BFF cookie httpOnly + tela de login UI-SPEC (pt-BR) + shell autenticado [checkpoint]
+- [x] 01-03-PLAN.md — BFF cookie httpOnly + tela de login UI-SPEC (pt-BR) + shell autenticado [checkpoint aprovado 2026-11-05]
 
 **Wave 4** *(blocked on Wave 3 completion)*
 

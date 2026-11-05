@@ -2,7 +2,7 @@
 
 **Plan:** BFF cookie httpOnly + tela de login UI-SPEC + shell pós-login
 **Wave:** 3
-**Status:** Tasks 1–3 complete; awaiting human checkpoint approval
+**Status:** COMPLETE — human checkpoint approved (2026-11-05)
 
 ---
 
@@ -13,7 +13,7 @@
 | 1 | BFF — rotas /api/auth/login, /api/auth/logout, /api/me + lib/api.ts + proxy.ts | `386afb5` | web/app/api/auth/login/route.ts, web/app/api/auth/logout/route.ts, web/app/api/me/route.ts, web/lib/api.ts, web/proxy.ts | `npm run lint` + `npm run build` ✓ |
 | 2 | Tela de login (UI-SPEC) + shell pós-login com "Sair" | `386afb5` (mesmo commit) | web/app/login/page.tsx, web/components/LoginForm.tsx, web/components/Spinner.tsx, web/app/page.tsx, web/app/globals.css, web/app/layout.tsx | `npm run lint` + `npm run build` + grep-gates ✓ |
 | 3 | Suíte E2E Playwright (10 testes) | (este commit) | web/e2e/auth.spec.ts, web/playwright.config.ts, web/package.json | **10/10 Playwright verdes** ✓ |
-| 4 | Checkpoint — verificação humana do fluxo de login local | — | — | **PENDENTE** (human-verify) |
+| 4 | Checkpoint — verificação humana do fluxo de login local | — | — | **APROVADO** (2026-11-05, 10/10 passos) |
 
 ---
 
@@ -130,4 +130,4 @@
 
 ## Resume Signal
 
-**Aguardando input do usuário:** digite `aprovado` se todos os 10 passos passaram, ou descreva os problemas encontrados (estado, copy, comportamento).
+**APROVADO pelo usuário em 2026-11-05** — 10/10 passos da checklist manual validados. Wave 3 encerrada; seguindo para Wave 4 (01-04 — deploy).

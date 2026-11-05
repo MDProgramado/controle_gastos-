@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-11-03T11:00:46.568Z"
-last_activity: 2026-11-03 -- Phase 1 execution started
+last_updated: "2026-11-05T12:30:00.000Z"
+last_activity: 2026-11-05 -- Wave 3 (01-03) complete, human checkpoint approved; starting Wave 4 (01-04 deploy)
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 4
-  completed_plans: 0
-  percent: 0
+  completed_plans: 3
+  percent: 75
 ---
 
 # STATE.md — Controle Financeiro
@@ -25,17 +25,17 @@ See: .planning/PROJECT.md (updated 2026-10-30)
 ## Current Position
 
 Phase: 1 (Fundação e Auth em Produção) — EXECUTING
-Plan: 1 of 4
-Status: Executing Phase 1
+Plan: 4 of 4 (Wave 4 — deploy Render + Vercel)
+Status: Executing Phase 1 — Wave 4
 Total Plans in Phase: 4
-Last activity: 2026-11-03 -- Phase 1 execution started
-Last Activity Description: Phase 1 execution started
+Last activity: 2026-11-05 -- Wave 3 (01-03) complete, human checkpoint approved
+Last Activity Description: BFF + login UI + shell entregues; 10/10 Playwright E2E verdes; 16/16 Maven verdes; checkpoint humano aprovado (10/10 passos)
 
 ## Phase Status
 
 | Phase | Status | Plans | Progress |
 |-------|--------|-------|----------|
-| 1 · Fundação e Auth em Produção | ○ | 0/4 | 0% |
+| 1 · Fundação e Auth em Produção | ◐ | 3/4 | 75% |
 | 2 · Categorias e Lançamentos | ○ | 0/2 | 0% |
 | 3 · Dashboard | ○ | 0/2 | 0% |
 | 4 · IA via OpenRouter | ○ | 0/1 | 0% |
