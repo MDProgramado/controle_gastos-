@@ -10,6 +10,11 @@ target/
 node_modules/
 .next/
 
+# Playwright
+test-results/
+playwright-report/
+blob-report/
+
 # JVM crash logs (nunca commitar)
 hs_err_pid*
 replay_pid*

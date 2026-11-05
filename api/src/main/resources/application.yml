@@ -6,9 +6,9 @@ spring:
   application:
     name: controle-financeiro-api
   jpa:
-    # Flyway é dono do schema; Hibernate apenas valida a leitura (anti-pattern: update/create)
+    # Flyway é dono do schema; Hibernate não toca no schema
     hibernate:
-      ddl-auto: validate
+      ddl-auto: none
     open-in-view: false
   flyway:
     # classpath:db/migration = DDL SQL (V1). A migration Java V1_1 vive no pacote
@@ -17,8 +17,6 @@ spring:
     locations:
       - classpath:db/migration
       - classpath:com/controlefinanceiro/db/migration
-    # Permite baseline automático se schema já existe sem tabela de histórico (dev local)
-    baseline-on-migrate: true
   jackson:
     time-zone: America/Sao_Paulo
     deserialization:

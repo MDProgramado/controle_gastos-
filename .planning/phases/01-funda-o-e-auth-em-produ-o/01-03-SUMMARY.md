@@ -2,7 +2,7 @@
 
 **Plan:** BFF cookie httpOnly + tela de login UI-SPEC + shell pós-login
 **Wave:** 3
-**Status:** Tasks 1–2 complete; Task 3 = human E2E checkpoint (awaiting)
+**Status:** Tasks 1–3 complete; awaiting human checkpoint approval
 
 ---
 
@@ -12,7 +12,35 @@
 |------|------|--------|-------|----------|
 | 1 | BFF — rotas /api/auth/login, /api/auth/logout, /api/me + lib/api.ts + proxy.ts | `386afb5` | web/app/api/auth/login/route.ts, web/app/api/auth/logout/route.ts, web/app/api/me/route.ts, web/lib/api.ts, web/proxy.ts | `npm run lint` + `npm run build` ✓ |
 | 2 | Tela de login (UI-SPEC) + shell pós-login com "Sair" | `386afb5` (mesmo commit) | web/app/login/page.tsx, web/components/LoginForm.tsx, web/components/Spinner.tsx, web/app/page.tsx, web/app/globals.css, web/app/layout.tsx | `npm run lint` + `npm run build` + grep-gates ✓ |
-| 3 | Checkpoint — verificação humana do fluxo de login local | — | — | **PENDENTE** (human-verify) |
+| 3 | Suíte E2E Playwright (10 testes) | (este commit) | web/e2e/auth.spec.ts, web/playwright.config.ts, web/package.json | **10/10 Playwright verdes** ✓ |
+| 4 | Checkpoint — verificação humana do fluxo de login local | — | — | **PENDENTE** (human-verify) |
+
+---
+
+## E2E Playwright (Task 3 — 10/10 PASS)
+
+| # | Teste | Status |
+|---|-------|--------|
+| 1 | Tela de login com copy correta (D-05) | ✓ |
+| 2 | Validação client-side: campos vazios | ✓ |
+| 3 | Validação client-side: e-mail inválido | ✓ |
+| 4 | Credencial errada → mensagem genérica (anti-enumeração) | ✓ |
+| 5 | Login certo → shell autenticado | ✓ |
+| 6 | Cookie httpOnly (inacessível via `document.cookie`) | ✓ |
+| 7 | Sem cookie → redirect `/login` | ✓ |
+| 8 | Com cookie → acessa o shell | ✓ |
+| 9 | Logout → volta ao login e bloqueia o shell | ✓ |
+| 10 | Usuário logado não fica em `/login` | ✓ |
+
+**Run:** `cd web && npx playwright test` (pré-requisitos: API + web rodando)
+
+---
+
+## Environment Fix (dev local)
+
+- **Problema:** PostgreSQL nativo do Windows (serviço `postgresql-x64-18`) escutava em `127.0.0.1:5432`, roubando a porta do Docker — a API conectava no banco errado.
+- **Solução:** container `pg-fase1` mapeado para porta **5435** (`-p 5435:5432`); `.env` atualizado para `localhost:5435`.
+- **Flyway:** `enabled` por padrão (Testcontainers + prod); `ddl-auto: none` (Flyway é dono do schema); `baseline-on-migrate` removido (banco local recriado limpo).
 
 ---
 
@@ -66,14 +94,14 @@
 
 ---
 
-## Verification Checklist (Task 3 — Human E2E)
+## Verification Checklist (Task 4 — Human E2E)
 
-**Pré-condições automatizadas:** ✓ build + lint + grep-gates verdes
+**Pré-condições automatizadas:** ✓ build + lint + grep-gates + **10/10 Playwright** verdes
 
 **Passos manuais (checklist do plano):**
 
-1. **Suba o banco local:** `docker run -d --name pg-fase1 -e POSTGRES_PASSWORD=dev -p 5432:5432 postgres:16-alpine`
-2. **Suba a API:** defina `JWT_SECRET` (`openssl rand -base64 48`), `SEED_ADMIN_PASSWORD` (em `.env` gitignored — D-04) e rode `cd api; .\mvnw.cmd spring-boot:run` — confirme "Successfully applied 2 migrations"
+1. **Suba o banco local:** `docker run -d --name pg-fase1 -e POSTGRES_PASSWORD=dev -p 5435:5432 postgres:16-alpine` *(porta 5435 — conflito com PG nativo na 5432)*
+2. **Suba a API:** rode `cd api; .\mvnw.cmd spring-boot:run` com `.env` (gitignored) — confirme "Successfully applied 2 migrations"
 3. **Suba o web:** `cd web && npm run dev` → abra `http://localhost:3000`
 4. **Redirect:** deve ir automático para `/login`
 5. **Senha errada** → alerta vermelho genérico; e-mail mantido; senha limpa; foco no campo senha
@@ -83,6 +111,8 @@
 9. **Clique "Sair"** → volta ao `/login`; cookie `sess` removido (DevTools: httpOnly, SameSite=Lax)
 10. **Viewport 375px:** inputs/botões full-width e tocáveis (≥44px)
 
+**Credenciais:** `admin@controle.com` / `admin123` (dev local)
+
 ---
 
 ## Self-Check: PASSED
@@ -90,6 +120,8 @@
 - ✓ 11/11 arquivos do plano encontrados no commit `386afb5` + working tree
 - ✓ `npm run lint` + `npm run build` exit 0
 - ✓ 4/4 grep-gates limpos (D-02)
+- ✓ **10/10 testes Playwright E2E verdes**
+- ✓ `mvn verify` 16/16 verdes (Flyway reativado)
 - ✓ UI-SPEC tokens/copy/focal-point implementados
 - ✓ Threat model STRIDE completo com mitigações
 - ✓ SUMMARY.md criado e commitado
