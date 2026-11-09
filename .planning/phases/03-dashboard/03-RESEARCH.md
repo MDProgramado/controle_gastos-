@@ -451,32 +451,17 @@ export function MonthSelector() {
 
 **If this table is empty:** All claims in this research were verified or cited — no user confirmation needed. (Not the case — 5 assumptions listed above.)
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Jackson BigDecimal configuração:** O projeto já configura `spring.jackson.serialization.write-bigdecimal-as-plain=true` ou usa `ToStringSerializer` em algum DTO existente?
-   - What we know: Nenhuma config Jackson encontrada nos arquivos lidos; `LancamentoResponse` usa `BigDecimal` diretamente.
-   - What's unclear: Se a serialização padrão preserva precisão de `NUMERIC(14,2)`.
-   - Recommendation: Verificar `application.properties`/`application.yml` da API; adicionar config se necessário.
+1. **Jackson BigDecimal configuração:** RESOLVIDO — `application.yml` (linhas 20-24) tem `spring.jackson` mas SEM `serialization.write-bigdecimal-as-plain=true`. `LancamentoResponse` usa `BigDecimal` diretamente sem `@JsonSerialize`. **Decisão:** adicionar `spring.jackson.serialization.write-bigdecimal-as-plain: true` ao `application.yml` e anotar campos `BigDecimal` em `DashboardResponse` com `@JsonSerialize(using = ToStringSerializer.class)` como defesa em profundidade. Plan 01 Task 2 implementa isso explicitamente (aceitação #18 e #19).
 
-2. **Versão do `recharts`:** Qual versão instalar?
-   - What we know: Pacote não instalado; não há referência a gráficos em `web/package.json`.
-   - What's unclear: Versão compatível com React 19.3 e Next 16.4.3.
-   - Recommendation: `npm view recharts versions` no diretório web/ para ver versões disponíveis.
+2. **Versão do `recharts`:** RESOLVIDO — `web/package.json` usa React 19.3.0 e Next 16.4.3. **Decisão:** instalar `recharts@^2.15.1` (última versão estável compatível com React 18/19, mantida pelo Recharts project). Checkpoint:human-verify antes do `npm install` (plano 03-03, Task 0).
 
-3. **DTO de agregação:** Criar novo pacote `dashboard` ou adicionar ao pacote `lancamento`?
-   - What we know: CONTEXT.md sugere "pacote `lancamento` (ou pacote `dashboard`)".
-   - What's unclear: Nenhuma preferência firme.
-   - Recommendation: Pacote `dashboard` separado para clareza e reuso pela Fase 4 (D-02).
+3. **DTO de agregação:** RESOLVIDO — pacote `dashboard` separado (`com.controlefinanceiro.dashboard`) com `DashboardController`, `DashboardService`, `DashboardRepository`, `dto/DashboardResponse`, `dto/CategoryExpense`. Clareza e reuso pela Fase 4 (D-02). Já refletido nos planos 03-01.
 
-4. **Formulários de CRUD:** Usar client components controlados (sem RHF/zod, como `LoginForm`) — essa é a única abordagem?
-   - What we know: CONTEXT.md deixa a cargo do agente; `LoginForm` é o padrão existente.
-   - What's unclear: Se formulários maiores (lançamento com 5 campos) se beneficiariam de RHF.
-   - Recommendation: Seguir o padrão `LoginForm` (controlado, sem RHF/zod) para consistência.
+4. **Formulários de CRUD:** RESOLVIDO — client components controlados, sem RHF/zod, consistentes com o padrão `LoginForm` existente. Decisão deixada a cargo do agente em CONTEXT.md; `LoginForm` é a referência.
 
-5. **Total para aviso de truncamento (D-22):** Onde virá o "N" de "mostrando 50 de N"?
-   - What we know: `GET /api/lancamentos` trunca em 50; não há count separado.
-   - What's unclear: Usar endpoint de agregação para obter total de lançamentos do mês, ou adicionar count na listagem.
-   - Recommendation: Endpoint de agregação pode incluir `totalLancamentos` no DTO, ou fazer `count` separado.
+5. **Total para aviso de truncamento (D-22):** RESOLVIDO — o "N" vem de um `count` separado na listagem de lançamentos ou do endpoint de agregação. Plan 04 Task 1 deixa a discrição do agente: usar `GET /api/lancamentos?ano=&mes=` que já retorna lista truncada em 50, e obter o total via query `count(*)` no `LancamentoRepository` ou incluir `totalLancamentos` no `DashboardResponse`. Não bloqueia execução.
 
 ## Environment Availability
 

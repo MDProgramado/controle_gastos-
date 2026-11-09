@@ -2,16 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: ready_to_plan
-last_updated: 2026-11-09T10:42:06.217Z
+status: planning
+last_updated: "2026-11-09T11:21:37.009Z"
 last_activity: 2026-11-09
 progress:
   total_phases: 4
   completed_phases: 2
-  total_plans: 8
+  total_plans: 12
   completed_plans: 8
-  percent: 50
-stopped_at: Phase 02 complete (4/4) — ready to discuss Phase 3
+  percent: 67
 ---
 
 # STATE.md — Controle Financeiro
@@ -26,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-10-30)
 ## Current Position
 
 Phase: 3
-Plan: Not started
-Next: Phase 3 (Dashboard) — plan 03-01
-Status: Ready to plan
+Plan: Planned (4 plans in 4 waves)
+Next: Execute Phase 3 (Dashboard) — plan 03-01 first
+Status: Ready to execute
 Total Plans in Phase: 4
 Last activity: 2026-11-09
-Last Activity Description: Plan 02-04 completed: POST /api/lancamentos/lote tudo-ou-nada (até 500 linhas) com rollback completo e índice da linha inválida no ProblemDetail 400; LancamentoLoteRequest, LinhaInvalidaException, LoteDemasiadoGrandeException; ./mvnw verify da API com 40 testes, 0 falhas (GREEN).
+Last Activity Description: Phase 3 planning complete — 4 PLAN.md files created (03-01 to 03-04) covering DSH-01..05 + inherited CAT/LAN/LOT CRUD screens. Verification passed via gsd-plan-checker. Ready for /gsd-execute-phase 3.
 
 ## Phase Status
 
@@ -39,7 +38,7 @@ Last Activity Description: Plan 02-04 completed: POST /api/lancamentos/lote tudo
 |-------|--------|-------|----------|
 | 1 · Fundação e Auth em Produção | ✓ | 4/4 | 100% |
 | 2 · Categorias e Lançamentos | ✓ | 4/4 | 100% |
-| 3 · Dashboard | ○ | 0/2 | 0% |
+| 3 · Dashboard | ◐ | 0/4 | 0% |
 | 4 · IA via OpenRouter | ○ | 0/1 | 0% |
 
 ## Current Phase
@@ -51,8 +50,16 @@ Last Activity Description: Plan 02-04 completed: POST /api/lancamentos/lote tudo
 - Plan 02 ✓: Categoria write (POST/PUT/DELETE) + Security role split (USER lê, ADMIN escreve) — GREEN
 - Plan 03 ✓: Lançamentos CRUD + validação monetária estrita (BigDecimal, max 2 casas, HALF_EVEN, sem double/float) — GREEN (8 testes passam)
 - Plan 04 ✓: Lote tudo-ou-nada (POST /api/lancamentos/lote) com índice da linha inválida e rollback — GREEN (40 testes)
-- Next: Phase 3 — Dashboard
-- Milestone: lote com erro informa índice e não grava nada; valor >2 casas rejeitado
+
+- **Phase 3 · Dashboard** — planned (4/4 plans)
+- Weeks 3–4 of 5 (timeline)
+- Goal: Entradas, saídas, saldo por mês, gasto por categoria e comparação mensal na web
+- Plan 03-01 (Wave 1): Backend endpoint de agregação GET /api/dashboard com SUM/GROUP BY — TDD, GREEN alvo
+- Plan 03-02 (Wave 2): Frontend página dashboard com KPIs, seletor de mês, comparação mensal
+- Plan 03-03 (Wave 3): Frontend breakdown por categoria (tabela + gráfico barras horizontais Recharts) — checkpoint:human-verify para npm install recharts
+- Plan 03-04 (Wave 4): CRUD páginas /lancamentos e /categorias, TopNav, DeleteConfirmationDialog, role ADMIN-only
+- Next: /gsd-execute-phase 3
+- Milestone: números do dashboard batem com SQL de conferência direto no banco
 
 ## Pending Debts (não bloqueiam — registrados no 01-04-SUMMARY)
 
@@ -101,7 +108,7 @@ Last Activity Description: Plan 02-04 completed: POST /api/lancamentos/lote tudo
 
 ## Next Action
 
-Phase 2 completa (4/4, GREEN). Executar `/gsd-transition` (Phase 2 → Phase 3 · Dashboard) ou `/gsd-plan-phase 3` para iniciar a Fase 3.
+Phase 3 planejada (4/4 plans, verificação aprovada). Executar `/gsd-execute-phase 3` para iniciar a execução das 4 waves do Dashboard.
 
 ---
-*Last updated: 2026-11-09 — Phase 2 complete (4/4 plans, 40 testes GREEN)*
+*Last updated: 2026-11-09 — Phase 3 planejada (4/4 plans, verificação aprovada via gsd-plan-checker)*

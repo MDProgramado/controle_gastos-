@@ -88,6 +88,25 @@ Plans:
 
 **Requirements:** DSH-01, DSH-02, DSH-03, DSH-04, DSH-05
 **UI hint**: yes
+**Plans:** 4 plans in 4 waves
+
+Plans:
+
+**Wave 1**
+
+- [ ] 03-01-PLAN.md — Backend: endpoint de agregação GET /api/dashboard com SUM/GROUP BY (DSH-01, DSH-02, DSH-03, DSH-05)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 03-02-PLAN.md — Frontend: página dashboard com KPIs, seletor de mês, comparação mensal (DSH-01, DSH-03, DSH-04, DSH-05)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 03-03-PLAN.md — Frontend: breakdown por categoria (tabela + gráfico barras horizontais com Recharts) (DSH-02, DSH-05)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 03-04-PLAN.md — CRUD páginas: /lancamentos e /categorias com TopNav, DeleteConfirmationDialog, role ADMIN-only (CAT-01..06, LAN-01..07, LOT-01..02)
 
 ---
 
