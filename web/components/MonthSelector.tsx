@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
 /**
@@ -17,34 +17,30 @@ import { Button } from "@/components/ui/button";
 export function MonthSelector() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [mes, setMes] = useState(
-    searchParams.get("mes") ?? new Date().toISOString().slice(0, 7),
-  );
-
-  // Sempre que o parâmetro de URL muda (ex.: setas ‹ ›), atualiza o input.
-  useEffect(() => {
-    const urlMes = searchParams.get("mes");
-    if (urlMes && urlMes !== mes) {
-      setMes(urlMes);
-    }
-  }, [searchParams, mes]);
+  const urlMes = searchParams.get("mes") ?? new Date().toISOString().slice(0, 7);
 
   function mudarMes(delta: number) {
-    const [ano, mesAtual] = mes.split("-").map(Number);
+    const [ano, mesAtual] = urlMes.split("-").map(Number);
     const data = new Date(ano, mesAtual - 1 + delta, 1);
     const proximo = data.toISOString().slice(0, 7);
-    setMes(proximo);
     router.push(`/?mes=${proximo}`, { scroll: false });
   }
 
+  function onChangeMes(event: React.ChangeEvent<HTMLInputElement>) {
+    router.push(`/?mes=${event.target.value}`, { scroll: false });
+  }
+
   return (
-    <div className="flex items-center gap-4">
-      <Label htmlFor="mes-selector">Mês</Label>
-      <input
+    <div className="flex items-center gap-4" key={urlMes}>
+      <Label htmlFor="mes-selector" className="font-semibold">
+        Mês
+      </Label>
+      <Input
         id="mes-selector"
+        name="mes-selector"
         type="month"
-        value={mes}
-        onChange={(e) => setMes(e.target.value)}
+        value={urlMes}
+        onChange={onChangeMes}
         className="w-40"
       />
       <Button type="button" variant="outline" size="icon" onClick={() => mudarMes(-1)}>

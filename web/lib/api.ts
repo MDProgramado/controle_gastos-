@@ -199,3 +199,110 @@ export async function excluirLancamento(id: number): Promise<boolean> {
     return false;
   }
 }
+
+/** Shape de `GET /api/categorias` (contrato da API — plano 03-04). */
+export type CategoriaData = {
+  id: number;
+  nome: string;
+  tipo: string;
+  pessoal: boolean;
+  ativo: boolean;
+};
+
+/** Shape de entrada para criar/editar categoria (plano 03-04). */
+export type CategoriaRequest = {
+  nome: string;
+  tipo: string;
+  pessoal: boolean;
+};
+
+/**
+ * Server-side: lista categorias do tenant (GET /api/categorias).
+ * Segue o padrão de `getMe()`: lê cookie "sess", envia Bearer, cache no-store.
+ * Retorna null quando não há cookie ou a API não responde OK.
+ */
+export async function getCategorias(): Promise<CategoriaData[] | null> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("sess")?.value;
+  if (!token) return null;
+
+  try {
+    const res = await fetch(`${process.env.API_URL}/api/categorias`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as CategoriaData[];
+  } catch {
+    return null;
+  }
+}
+
+/** POST /api/categorias — cria categoria (ADMIN-only no backend). Retorna a categoria criada ou null. */
+export async function criarCategoria(
+  request: CategoriaRequest,
+): Promise<CategoriaData | null> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("sess")?.value;
+  if (!token) return null;
+
+  try {
+    const res = await fetch(`${process.env.API_URL}/api/categorias`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(request),
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as CategoriaData;
+  } catch {
+    return null;
+  }
+}
+
+/** PUT /api/categorias/{id} — edita categoria (ADMIN-only no backend). Retorna a categoria editada ou null. */
+export async function editarCategoria(
+  id: number,
+  request: CategoriaRequest,
+): Promise<CategoriaData | null> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("sess")?.value;
+  if (!token) return null;
+
+  try {
+    const res = await fetch(`${process.env.API_URL}/api/categorias/${id}`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(request),
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as CategoriaData;
+  } catch {
+    return null;
+  }
+}
+
+/** DELETE /api/categorias/{id} — desativa categoria (soft delete, ADMIN-only no backend). Retorna true se 204. */
+export async function desativarCategoria(id: number): Promise<boolean> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("sess")?.value;
+  if (!token) return false;
+
+  try {
+    const res = await fetch(`${process.env.API_URL}/api/categorias/${id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+    return res.status === 204;
+  } catch {
+    return false;
+  }
+}

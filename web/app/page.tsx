@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getMe } from "@/lib/api";
 import { getDashboard } from "@/lib/api";
 import { LogoutButton } from "@/components/LogoutButton";
+import { TopNav } from "@/components/TopNav";
 import { MonthSelector } from "@/components/MonthSelector";
 import { DashboardKPIs } from "@/components/DashboardKPIs";
 import { CategoryBreakdown } from "@/components/CategoryBreakdown";
@@ -43,7 +44,9 @@ export default async function Home({
   }
 
   return (
-    <main className="flex min-h-dvh w-full flex-col items-center justify-center px-4 py-12">
+    <div className="w-full">
+      <TopNav activeRoute="/" userRole={usuario.role} />
+      <main className="flex min-h-dvh w-full flex-col items-center justify-center px-4 py-12">
       <div className="w-full max-w-4xl">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
@@ -78,6 +81,7 @@ export default async function Home({
           <LogoutButton />
         </div>
       </div>
-    </main>
+      </main>
+    </div>
   );
 }

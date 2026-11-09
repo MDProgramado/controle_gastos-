@@ -2,9 +2,7 @@
 
 import {
   useCallback,
-  useEffect,
   useMemo,
-  useRef,
   useState,
   type Dispatch,
   type FormEvent,
@@ -40,8 +38,6 @@ interface CategoriaOption {
 interface LancamentosClientProps {
   lancamentos: LancamentoData[];
   total: number;
-  ano: number;
-  mes: number;
   categorias: CategoriaOption[];
   onCriar: (request: { categoriaId: number; tipo: string; valor: number; data: string; descricao?: string }) => Promise<LancamentoData | null>;
   onEditar: (id: number, request: { categoriaId: number; tipo: string; valor: number; data: string; descricao?: string }) => Promise<LancamentoData | null>;
@@ -53,8 +49,6 @@ const VALOR_RE = /^-?\d+(\.\d{1,2})?$/;
 export function LancamentosClient({
   lancamentos: lancamentosIniciais,
   total,
-  ano,
-  mes,
   categorias,
   onCriar,
   onEditar,

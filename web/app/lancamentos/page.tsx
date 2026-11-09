@@ -10,8 +10,7 @@ import {
   excluirLancamento,
 } from "@/lib/api";
 import { LancamentosClient } from "@/components/LancamentosClient";
-import { Spinner } from "@/components/Spinner";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { TopNav } from "@/components/TopNav";
 
 export const instant = false;
 
@@ -68,18 +67,19 @@ export default async function LancamentosPage({
   }
 
   return (
-    <div className="w-full max-w-5xl mx-auto px-4 py-6">
-      <LancamentosClient
+    <div className="w-full">
+      <TopNav activeRoute="/lancamentos" userRole={usuario.role} />
+      <div className="w-full max-w-5xl mx-auto px-4 py-6">
+        <LancamentosClient
         lancamentos={lancamentos}
         total={total}
-        ano={ano}
-        mes={mes}
         categorias={categorias}
         onCriar={actionCriarLancamento}
         onEditar={actionEditarLancamento}
         onExcluir={actionExcluirLancamento}
       />
     </div>
+  </div>
   );
 }
 
