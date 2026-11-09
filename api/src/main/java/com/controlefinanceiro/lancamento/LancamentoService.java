@@ -2,6 +2,8 @@ package com.controlefinanceiro.lancamento;
 
 import com.controlefinanceiro.categoria.Categoria;
 import com.controlefinanceiro.categoria.CategoriaRepository;
+import com.controlefinanceiro.common.LinhaInvalidaException;
+import com.controlefinanceiro.common.LoteDemasiadoGrandeException;
 import com.controlefinanceiro.common.MonetarioException;
 import com.controlefinanceiro.common.NaoAutorizadoException;
 import com.controlefinanceiro.common.TenantContext;
@@ -11,6 +13,7 @@ import com.controlefinanceiro.usuario.Usuario;
 import com.controlefinanceiro.usuario.UsuarioRepository;
 import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -164,6 +167,40 @@ public class LancamentoService {
         .stream()
         .map(LancamentoResponse::new)
         .toList();
+  }
+
+  /**
+   * Processa um lote de lançamentos em transação tudo-ou-nada (LOT-01, LOT-02, T-02-08).
+   *
+   * <p>Limite de 500 linhas (T-02-09). Cada linha é validada pelo {@link #criar(Long,
+   * LancamentoRequest)}; se qualquer linha falhar, a exceção é convertida em {@link
+   * LinhaInvalidaException} carregando o índice base 0 da linha, e o {@code @Transactional} garante
+   * rollback completo — nenhuma linha é persistida.
+   *
+   * @param empresaId tenant extraído do token via TenantContext (T-02-10)
+   * @param lote lote de linhas a criar
+   * @return lançamentos criados, na ordem do lote
+   */
+  @Transactional
+  public List<LancamentoResponse> processarLote(Long empresaId, LancamentoLoteRequest lote) {
+    List<LancamentoLoteRequest.LancamentoLinha> linhas =
+        lote.linhas() == null ? List.of() : lote.linhas();
+
+    if (linhas.size() > 500) {
+      throw new LoteDemasiadoGrandeException(
+          "Limite de 500 linhas excedido para lote de lançamentos");
+    }
+
+    List<LancamentoResponse> criados = new ArrayList<>(linhas.size());
+    for (int i = 0; i < linhas.size(); i++) {
+      try {
+        criados.add(criar(empresaId, linhas.get(i).toRequest()));
+      } catch (RuntimeException ex) {
+        // LOT-02: reporta o índice base 0 da linha inválida e aborta o lote inteiro
+        throw new LinhaInvalidaException(i, ex.getMessage());
+      }
+    }
+    return criados;
   }
 
   /** Valida valor monetário: escala <= 2 e positivo (LAN-04, LAN-07). */

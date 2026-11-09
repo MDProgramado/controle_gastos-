@@ -4,6 +4,8 @@ import com.controlefinanceiro.common.CategoriaDuplicadaException;
 import com.controlefinanceiro.common.CategoriaNaoEncontradaException;
 import com.controlefinanceiro.common.CategoriaTipoIncompativelException;
 import com.controlefinanceiro.common.CredenciaisInvalidasException;
+import com.controlefinanceiro.common.LinhaInvalidaException;
+import com.controlefinanceiro.common.LoteDemasiadoGrandeException;
 import com.controlefinanceiro.common.MonetarioException;
 import com.controlefinanceiro.common.NaoAutorizadoException;
 import java.util.stream.Collectors;
@@ -73,5 +75,20 @@ public class ProblemDetailExceptionHandler {
   @ExceptionHandler(CategoriaNaoEncontradaException.class)
   public ProblemDetail categoriaNaoEncontrada(CategoriaNaoEncontradaException ex) {
     return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+  }
+
+  /** Linha inválida em lote de lançamentos → 400 ProblemDetail com o índice da linha (LOT-02). */
+  @ExceptionHandler(LinhaInvalidaException.class)
+  public ProblemDetail linhaInvalida(LinhaInvalidaException ex) {
+    ProblemDetail problemDetail =
+        ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+    problemDetail.setProperty("indiceLinha", ex.getIndiceLinha());
+    return problemDetail;
+  }
+
+  /** Lote acima do limite de 500 linhas → 400 ProblemDetail (LOT-01, T-02-09). */
+  @ExceptionHandler(LoteDemasiadoGrandeException.class)
+  public ProblemDetail loteDemasiadoGrande(LoteDemasiadoGrandeException ex) {
+    return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
   }
 }

@@ -36,6 +36,18 @@ public class LancamentoController {
         .body(lancamentoService.criar(TenantContext.getEmpresaId(), request));
   }
 
+  /**
+   * POST /api/lancamentos/lote — cria um lote de até 500 lançamentos em transação tudo-ou-nada
+   * (LOT-01, LOT-02). Em falha de qualquer linha, retorna 400 com o índice da linha inválida e nada
+   * é gravado.
+   */
+  @PostMapping("/lote")
+  public ResponseEntity<List<LancamentoResponse>> processarLote(
+      @Valid @RequestBody LancamentoLoteRequest lote) {
+    return ResponseEntity.status(201)
+        .body(lancamentoService.processarLote(TenantContext.getEmpresaId(), lote));
+  }
+
   /** PUT /api/lancamentos/{id} — edita lançamento. */
   @PutMapping("/{id}")
   public ResponseEntity<LancamentoResponse> editar(
