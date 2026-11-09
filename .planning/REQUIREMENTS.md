@@ -37,8 +37,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Lote (LOT)
 
-- [ ] **LOT-01**: Endpoint aceita lote de até 500 lançamentos em **transação tudo-ou-nada**
-- [ ] **LOT-02**: Em erro, a resposta informa o **índice da linha** inválida e **nenhuma linha** do lote é gravada
+- [x] **LOT-01**: Endpoint aceita lote de até 500 lançamentos em **transação tudo-ou-nada**
+- [x] **LOT-02**: Em erro, a resposta informa o **índice da linha** inválida e **nenhuma linha** do lote é gravada
 
 ### Dashboard (DSH)
 
@@ -51,7 +51,7 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Infraestrutura e Qualidade (INF)
 
 - [ ] **INF-01**: Flyway gerencia o schema (V1) e o seed de categorias (V2); migrations são imutáveis *(parcial: V1/V1_1 ✓ na fase 1; V2 categorias na fase 2)*
-- [ ] **INF-02**: Testes de integração rodam com Testcontainers (PostgreSQL real)
+- [x] **INF-02**: Testes de integração rodam com Testcontainers (PostgreSQL real)
 - [x] **INF-03**: API publicada na Render com health check respondendo OK em produção
 - [x] **INF-04**: Web publicada na Vercel consumindo a API publicada (login funciona em produção)
 
@@ -126,15 +126,15 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LAN-05 | Phase 2 | Pending |
 | LAN-06 | Phase 2 | Pending |
 | LAN-07 | Phase 2 | Pending |
-| LOT-01 | Phase 2 | Pending |
-| LOT-02 | Phase 2 | Pending |
+| LOT-01 | Phase 2 | Complete |
+| LOT-02 | Phase 2 | Complete |
 | DSH-01 | Phase 3 | Pending |
 | DSH-02 | Phase 3 | Pending |
 | DSH-03 | Phase 3 | Pending |
 | DSH-04 | Phase 3 | Pending |
 | DSH-05 | Phase 3 | Pending |
 | INF-01 | Phase 1 | Partial — V1/V1_1 ✓; V2 seed categorias → Phase 2 |
-| INF-02 | Phase 2 | Pending |
+| INF-02 | Phase 2 | Complete |
 | INF-03 | Phase 1 | Verified |
 | INF-04 | Phase 1 | Verified |
 | AI-01 | Phase 4 | Pending |

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-11-08T23:30:00-03:00"
-last_activity: 2026-11-08
+last_updated: "2026-11-09T10:22:12.084Z"
+last_activity: 2026-11-09
 progress:
   total_phases: 4
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 8
-  completed_plans: 7
-  percent: 25
+  completed_plans: 8
+  percent: 50
 ---
 
 # STATE.md — Controle Financeiro
@@ -24,32 +24,33 @@ See: .planning/PROJECT.md (updated 2026-10-30)
 
 ## Current Position
 
-Phase: 02 (categorias-e-lan-amentos) — EXECUTING
-Plan: 3 of 4
-Next: Phase 2 plan 4 (Lote tudo-ou-nada + todos os testes de integração)
-Status: Plan 01 complete, Plan 02 complete, Plan 03 complete — ready for plan 04
+Phase: 02 (categorias-e-lan-amentos) — COMPLETE
+Plan: 4 of 4
+Next: Phase 3 (Dashboard) — plan 03-01
+Status: Phase 2 complete — all 4 plans GREEN (40 testes de integração passam)
 Total Plans in Phase: 4
-Last activity: 2026-11-08 — 02-03 plan complete (Lançamentos CRUD + validação monetária estrita GREEN)
-Last Activity Description: Plan 02-03 completed: Lancamentos CRUD (POST/PUT/DELETE/GET /api/lancamentos) com validação monetária estrita (BigDecimal, max 2 casas, rejeita não arredonda, HALF_EVEN, sem double/float), integridade categoria×tipo, tenant isolation via empresa_id do token. Todos os 8 testes de integração passam (GREEN).
+Last activity: 2026-11-09
+Last Activity Description: Plan 02-04 completed: POST /api/lancamentos/lote tudo-ou-nada (até 500 linhas) com rollback completo e índice da linha inválida no ProblemDetail 400; LancamentoLoteRequest, LinhaInvalidaException, LoteDemasiadoGrandeException; ./mvnw verify da API com 40 testes, 0 falhas (GREEN).
 
 ## Phase Status
 
 | Phase | Status | Plans | Progress |
 |-------|--------|-------|----------|
 | 1 · Fundação e Auth em Produção | ✓ | 4/4 | 100% |
-| 2 · Categorias e Lançamentos | ○ | 3/4 | 75% |
+| 2 · Categorias e Lançamentos | ✓ | 4/4 | 100% |
 | 3 · Dashboard | ○ | 0/2 | 0% |
 | 4 · IA via OpenRouter | ○ | 0/1 | 0% |
 
 ## Current Phase
 
-- **Phase 2 · Categorias e Lançamentos** — in progress
+- **Phase 2 · Categorias e Lançamentos** — complete (4/4)
 - Weeks 1–2 of 5 (timeline)
 - Goal: seed V2 de categorias, CRUD de lançamentos com validação monetária estrita e lote tudo-ou-nada
 - Plan 01 ✓: V2 seed migration (16 categorias) + GET /api/categorias read API
 - Plan 02 ✓: Categoria write (POST/PUT/DELETE) + Security role split (USER lê, ADMIN escreve) — GREEN
 - Plan 03 ✓: Lançamentos CRUD + validação monetária estrita (BigDecimal, max 2 casas, HALF_EVEN, sem double/float) — GREEN (8 testes passam)
-- Next: plan 04 — Lote tudo-ou-nada (POST /lote) + todos os testes de integração
+- Plan 04 ✓: Lote tudo-ou-nada (POST /api/lancamentos/lote) com índice da linha inválida e rollback — GREEN (40 testes)
+- Next: Phase 3 — Dashboard
 - Milestone: lote com erro informa índice e não grava nada; valor >2 casas rejeitado
 
 ## Pending Debts (não bloqueiam — registrados no 01-04-SUMMARY)
@@ -85,13 +86,21 @@ Last Activity Description: Plan 02-03 completed: Lancamentos CRUD (POST/PUT/DELE
 - usuarioAtual() obtido do principal UsuarioAuth no SecurityContext (R3 — usuário do token, nunca do body)
 - Seguido padrão exato de CategoriaService/Controller/Repository para consistência com plan 02-02
 
+## Key Decisions (from 02-04 execution)
+
+- POST /api/lancamentos/lote responde 201 com o array de lançamentos criados (o teste RED de Task 1 exige corpo JSON não nulo; desvio do `ResponseEntity<Void>` do plano)
+- Validação monetária fica no service por linha (não em @Digits no DTO do lote) para preservar o índice da linha no erro
+- processarLote @Transactional: limite de 500 checado no service; cada linha delega a criar() na mesma transação (self-invocation) → rollback total
+- ProblemDetail de LinhaInvalidaException inclui property `indiceLinha` além do detail textual
+- empresa_id nunca no DTO do lote (R3/T-02-10) — sempre de TenantContext
+
 ## Active Blockers
 
 - (none)
 
 ## Next Action
 
-`/gsd-execute-phase 2 04` — executar plan 02-04: lote tudo-ou-nada (POST /lote) + todos os testes de integração
+Phase 2 completa (4/4, GREEN). Executar `/gsd-transition` (Phase 2 → Phase 3 · Dashboard) ou `/gsd-plan-phase 3` para iniciar a Fase 3.
 
 ---
-*Last updated: 2026-11-05 — Phase 1 complete (verification ACHIEVED)*
+*Last updated: 2026-11-09 — Phase 2 complete (4/4 plans, 40 testes GREEN)*

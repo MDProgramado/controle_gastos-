@@ -70,7 +70,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 02-04-PLAN.md — Lote tudo-ou-nada (POST /lote) + todos os testes de integração
+- [x] 02-04-PLAN.md — Lote tudo-ou-nada (POST /lote) + todos os testes de integração [complete 2026-11-09 — GREEN, 40 testes passam]
 
 ---
 
