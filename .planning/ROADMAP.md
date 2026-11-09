@@ -88,13 +88,13 @@ Plans:
 
 **Requirements:** DSH-01, DSH-02, DSH-03, DSH-04, DSH-05
 **UI hint**: yes
-**Plans:** 4 plans in 4 waves
+**Plans:** 1/4 plans executed
 
 Plans:
 
 **Wave 1**
 
-- [ ] 03-01-PLAN.md — Backend: endpoint de agregação GET /api/dashboard com SUM/GROUP BY (DSH-01, DSH-02, DSH-03, DSH-05)
+- [x] 03-01-PLAN.md — Backend: endpoint de agregação GET /api/dashboard com SUM/GROUP BY (DSH-01, DSH-02, DSH-03, DSH-05)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
