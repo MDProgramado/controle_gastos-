@@ -88,7 +88,7 @@ Plans:
 
 **Requirements:** DSH-01, DSH-02, DSH-03, DSH-04, DSH-05
 **UI hint**: yes
-**Plans:** 3/4 plans executed
+**Plans:** 4/4 plans complete
 
 Plans:
 
@@ -106,7 +106,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 03-04-PLAN.md — CRUD páginas: /lancamentos e /categorias com TopNav, DeleteConfirmationDialog, role ADMIN-only (CAT-01..06, LAN-01..07, LOT-01..02)
+- [x] 03-04-PLAN.md — CRUD páginas: /lancamentos e /categorias com TopNav, DeleteConfirmationDialog, role ADMIN-only (CAT-01..06, LAN-01..07, LOT-01..02)
 
 ---
 
