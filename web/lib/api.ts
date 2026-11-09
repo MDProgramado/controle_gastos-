@@ -36,3 +36,273 @@ export async function getMe(): Promise<SessionUser | null> {
     return null;
   }
 }
+
+/** Shape de `GET /api/dashboard?ano=&mes=` (contrato da API — plano 03-01). */
+export type DashboardData = {
+  totalEntradas: number;
+  totalSaidas: number;
+  saldo: number;
+  variacaoEntradas: number;
+  variacaoSaidas: number;
+  variacaoSaldo: number;
+  percentualEntradas: string;
+  percentualSaidas: string;
+  percentualSaldo: string;
+  categorias: Array<{ id: number; nome: string; total: number }>;
+};
+
+/**
+ * Server-side (Server Component): busca os dados agregados do dashboard para
+ * um mês específico. Segue o mesmo padrão de `getMe()`: lê o cookie "sess",
+ * envia `Authorization: Bearer <token>` e usa `cache: "no-store"`.
+ *
+ * Retorna `null` quando não há cookie de sessão ou a API não responde com OK.
+ * O chamador decide o redirect para /login quando necessário.
+ */
+export async function getDashboard(
+  ano: number,
+  mes: number,
+): Promise<DashboardData | null> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("sess")?.value;
+  if (!token) return null;
+
+  try {
+    const res = await fetch(
+      `${process.env.API_URL}/api/dashboard?ano=${ano}&mes=${mes}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
+      },
+    );
+    if (!res.ok) return null;
+    return (await res.json()) as DashboardData;
+  } catch {
+    return null;
+  }
+}
+
+/** Shape de `GET /api/lancamentos?ano=&mes=` (contrato da API — plano 03-04). */
+export type LancamentoData = {
+  id: number;
+  tipo: string;
+  valor: number;
+  data: string;
+  descricao: string;
+  categoriaNome: string;
+  categoriaTipo: string;
+};
+
+/** Shape de entrada para criar/editar lançamento (plano 03-04). */
+export type LancamentoRequest = {
+  categoriaId: number;
+  tipo: string;
+  valor: number;
+  data: string;
+  descricao?: string;
+};
+
+/**
+ * Server-side: lista lançamentos de um mês (GET /api/lancamentos?ano=&mes=).
+ * Segue o padrão de `getMe()`: lê cookie "sess", envia Bearer, cache no-store.
+ * Retorna null quando não há cookie ou a API não responde OK.
+ */
+export async function getLancamentos(
+  ano: number,
+  mes: number,
+): Promise<{ lancamentos: LancamentoData[]; total: number } | null> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("sess")?.value;
+  if (!token) return null;
+
+  try {
+    const res = await fetch(
+      `${process.env.API_URL}/api/lancamentos?ano=${ano}&mes=${mes}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
+      },
+    );
+    if (!res.ok) return null;
+    const lista = (await res.json()) as LancamentoData[];
+    return { lancamentos: lista, total: lista.length };
+  } catch {
+    return null;
+  }
+}
+
+/** POST /api/lancamentos — cria lançamento. Retorna o lançamento criado ou null. */
+export async function criarLancamento(
+  request: LancamentoRequest,
+): Promise<LancamentoData | null> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("sess")?.value;
+  if (!token) return null;
+
+  try {
+    const res = await fetch(`${process.env.API_URL}/api/lancamentos`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(request),
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as LancamentoData;
+  } catch {
+    return null;
+  }
+}
+
+/** PUT /api/lancamentos/{id} — edita lançamento. Retorna o lançamento editado ou null. */
+export async function editarLancamento(
+  id: number,
+  request: LancamentoRequest,
+): Promise<LancamentoData | null> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("sess")?.value;
+  if (!token) return null;
+
+  try {
+    const res = await fetch(`${process.env.API_URL}/api/lancamentos/${id}`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(request),
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as LancamentoData;
+  } catch {
+    return null;
+  }
+}
+
+/** DELETE /api/lancamentos/{id} — exclui lançamento. Retorna true se 204. */
+export async function excluirLancamento(id: number): Promise<boolean> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("sess")?.value;
+  if (!token) return false;
+
+  try {
+    const res = await fetch(`${process.env.API_URL}/api/lancamentos/${id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+    return res.status === 204;
+  } catch {
+    return false;
+  }
+}
+
+/** Shape de `GET /api/categorias` (contrato da API — plano 03-04). */
+export type CategoriaData = {
+  id: number;
+  nome: string;
+  tipo: string;
+  pessoal: boolean;
+  ativo: boolean;
+};
+
+/** Shape de entrada para criar/editar categoria (plano 03-04). */
+export type CategoriaRequest = {
+  nome: string;
+  tipo: string;
+  pessoal: boolean;
+};
+
+/**
+ * Server-side: lista categorias do tenant (GET /api/categorias).
+ * Segue o padrão de `getMe()`: lê cookie "sess", envia Bearer, cache no-store.
+ * Retorna null quando não há cookie ou a API não responde OK.
+ */
+export async function getCategorias(): Promise<CategoriaData[] | null> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("sess")?.value;
+  if (!token) return null;
+
+  try {
+    const res = await fetch(`${process.env.API_URL}/api/categorias`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as CategoriaData[];
+  } catch {
+    return null;
+  }
+}
+
+/** POST /api/categorias — cria categoria (ADMIN-only no backend). Retorna a categoria criada ou null. */
+export async function criarCategoria(
+  request: CategoriaRequest,
+): Promise<CategoriaData | null> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("sess")?.value;
+  if (!token) return null;
+
+  try {
+    const res = await fetch(`${process.env.API_URL}/api/categorias`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(request),
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as CategoriaData;
+  } catch {
+    return null;
+  }
+}
+
+/** PUT /api/categorias/{id} — edita categoria (ADMIN-only no backend). Retorna a categoria editada ou null. */
+export async function editarCategoria(
+  id: number,
+  request: CategoriaRequest,
+): Promise<CategoriaData | null> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("sess")?.value;
+  if (!token) return null;
+
+  try {
+    const res = await fetch(`${process.env.API_URL}/api/categorias/${id}`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(request),
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as CategoriaData;
+  } catch {
+    return null;
+  }
+}
+
+/** DELETE /api/categorias/{id} — desativa categoria (soft delete, ADMIN-only no backend). Retorna true se 204. */
+export async function desativarCategoria(id: number): Promise<boolean> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("sess")?.value;
+  if (!token) return false;
+
+  try {
+    const res = await fetch(`${process.env.API_URL}/api/categorias/${id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+    return res.status === 204;
+  } catch {
+    return false;
+  }
+}
