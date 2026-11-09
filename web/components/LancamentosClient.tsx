@@ -15,7 +15,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Spinner } from "@/components/Spinner";
 import { DeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog";
 
-type TipoLancamento = "ENTRADA" | "SAÍDA";
+type TipoLancamento = "ENTRADA" | "SAIDA";
 
 interface LancamentoData {
   id: number;
@@ -453,7 +453,7 @@ function CardForm({
             aria-invalid={errosForm.tipo ? true : undefined}
           >
             <option value="ENTRADA">Entrada</option>
-            <option value="SAÍDA">Saída</option>
+            <option value="SAIDA">Saída</option>
           </select>
           {errosForm.tipo && <p className="text-sm text-destructive">{errosForm.tipo}</p>}
         </div>
