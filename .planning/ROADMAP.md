@@ -54,6 +54,24 @@ Plans:
 **Requirements:** CAT-01, CAT-02, CAT-03, CAT-04, CAT-05, CAT-06, LAN-01, LAN-02, LAN-03, LAN-04, LAN-05, LAN-06, LAN-07, LOT-01, LOT-02, INF-02
 **UI hint**: yes
 
+Plans:
+
+**Wave 1**
+
+- [ ] 02-01-PLAN.md — V2 seed migration (16 categorias) + categoria read API GET /api/categorias
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 02-02-PLAN.md — Categoria write (POST/PUT/DELETE) + Security role split (USER lê, ADMIN escreve)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 02-03-PLAN.md — Lancamentos CRUD + validação monetária estrita (BigDecimal, max 2 casas, HALF_EVEN)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 02-04-PLAN.md — Lote tudo-ou-nada (POST /lote) + todos os testes de integração
+
 ---
 
 ### Phase 3: Dashboard
