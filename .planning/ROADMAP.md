@@ -66,7 +66,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 02-03-PLAN.md — Lancamentos CRUD + validação monetária estrita (BigDecimal, max 2 casas, HALF_EVEN)
+- [x] 02-03-PLAN.md — Lancamentos CRUD + validação monetária estrita (BigDecimal, max 2 casas, HALF_EVEN) [complete 2026-11-08 — GREEN, 8 testes passam]
 
 **Wave 4** *(blocked on Wave 3 completion)*
 

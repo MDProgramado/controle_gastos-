@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-last_updated: "2026-11-08T23:15:37-03:00"
+last_updated: "2026-11-08T23:30:00-03:00"
 last_activity: 2026-11-08
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 8
-  completed_plans: 6
+  completed_plans: 7
   percent: 25
 ---
 
@@ -25,19 +25,19 @@ See: .planning/PROJECT.md (updated 2026-10-30)
 ## Current Position
 
 Phase: 02 (categorias-e-lan-amentos) — EXECUTING
-Plan: 2 of 4
-Next: Phase 2 plan 3 (Lançamentos CRUD + validação monetária estrita)
-Status: Plan 01 complete, Plan 02 complete — ready for plan 03
+Plan: 3 of 4
+Next: Phase 2 plan 4 (Lote tudo-ou-nada + todos os testes de integração)
+Status: Plan 01 complete, Plan 02 complete, Plan 03 complete — ready for plan 04
 Total Plans in Phase: 4
-Last activity: 2026-11-08 — 02-02 plan complete (Categoria write + Security role split GREEN)
-Last Activity Description: Plan 02-02 completed: Categoria write (POST/PUT/DELETE) + Security role split (USER lê, ADMIN escreve), all 8 CategoriaIntegrationTest tests pass (GREEN)
+Last activity: 2026-11-08 — 02-03 plan complete (Lançamentos CRUD + validação monetária estrita GREEN)
+Last Activity Description: Plan 02-03 completed: Lancamentos CRUD (POST/PUT/DELETE/GET /api/lancamentos) com validação monetária estrita (BigDecimal, max 2 casas, rejeita não arredonda, HALF_EVEN, sem double/float), integridade categoria×tipo, tenant isolation via empresa_id do token. Todos os 8 testes de integração passam (GREEN).
 
 ## Phase Status
 
 | Phase | Status | Plans | Progress |
 |-------|--------|-------|----------|
 | 1 · Fundação e Auth em Produção | ✓ | 4/4 | 100% |
-| 2 · Categorias e Lançamentos | ○ | 2/4 | 50% |
+| 2 · Categorias e Lançamentos | ○ | 3/4 | 75% |
 | 3 · Dashboard | ○ | 0/2 | 0% |
 | 4 · IA via OpenRouter | ○ | 0/1 | 0% |
 
@@ -48,7 +48,8 @@ Last Activity Description: Plan 02-02 completed: Categoria write (POST/PUT/DELET
 - Goal: seed V2 de categorias, CRUD de lançamentos com validação monetária estrita e lote tudo-ou-nada
 - Plan 01 ✓: V2 seed migration (16 categorias) + GET /api/categorias read API
 - Plan 02 ✓: Categoria write (POST/PUT/DELETE) + Security role split (USER lê, ADMIN escreve) — GREEN
-- Next: plan 03 — Lançamentos CRUD + validação monetária estrita
+- Plan 03 ✓: Lançamentos CRUD + validação monetária estrita (BigDecimal, max 2 casas, HALF_EVEN, sem double/float) — GREEN (8 testes passam)
+- Next: plan 04 — Lote tudo-ou-nada (POST /lote) + todos os testes de integração
 - Milestone: lote com erro informa índice e não grava nada; valor >2 casas rejeitado
 
 ## Pending Debts (não bloqueiam — registrados no 01-04-SUMMARY)
@@ -77,13 +78,20 @@ Last Activity Description: Plan 02-02 completed: Categoria write (POST/PUT/DELET
 - Exceções dedicadas (CategoriaDuplicadaException, CategoriaNaoEncontradaException) para mapeamento claro 400/404 via ProblemDetailExceptionHandler
 - @AfterEach no teste deleta categorias com id > 16 (seed V2), garantindo isolamento entre métodos de teste
 
+## Key Decisions (from 02-03 execution)
+
+- MonetarioException handler adicionado a ProblemDetailExceptionHandler (Rule 2 desvio — necessário para converter exceção de validação monetária em 400 em vez de 500)
+- GET /api/lancamentos/{id} adicionado ao controller (necessário pelo teste de exclusão: GET após DELETE deve retornar 404)
+- usuarioAtual() obtido do principal UsuarioAuth no SecurityContext (R3 — usuário do token, nunca do body)
+- Seguido padrão exato de CategoriaService/Controller/Repository para consistência com plan 02-02
+
 ## Active Blockers
 
 - (none)
 
 ## Next Action
 
-`/gsd-discuss-phase 2` — colher contexto e revisar decisões da fase 2 (categorias e lançamentos: lista de categorias do cliente, formato do lote, regras de edição/exclusão).
+`/gsd-execute-phase 2 04` — executar plan 02-04: lote tudo-ou-nada (POST /lote) + todos os testes de integração
 
 ---
 *Last updated: 2026-11-05 — Phase 1 complete (verification ACHIEVED)*
