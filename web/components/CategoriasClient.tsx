@@ -74,7 +74,7 @@ export function CategoriasClient({
       if (!podeEscrever) return;
       setEditandoId(c.id);
       setNome(c.nome);
-      setTipo(c.tipo as "ENTRADA" | "SAÍDA");
+      setTipo(c.tipo as "ENTRADA" | "SAIDA");
       setPessoal(c.pessoal);
       setFormAberto(true);
     },
@@ -404,7 +404,7 @@ function CardForm({
             aria-invalid={errosForm.tipo ? true : undefined}
           >
             <option value="ENTRADA">Entrada</option>
-            <option value="SAÍDA">Saída</option>
+            <option value="SAIDA">Saída</option>
           </select>
           {errosForm.tipo && <p className="text-sm text-destructive">{errosForm.tipo}</p>}
         </div>
