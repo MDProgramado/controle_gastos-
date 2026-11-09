@@ -45,7 +45,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **DSH-01**: Dashboard mostra total de entradas, total de saídas e saldo do mês solicitado
 - [x] **DSH-02**: Dashboard mostra gasto por categoria do mês
 - [x] **DSH-03**: Dashboard compara o mês com o mês anterior (variação), tratando mês zerado
-- [ ] **DSH-04**: Seletor de mês (padrão: mês corrente) atualiza todos os números
+- [x] **DSH-04**: Seletor de mês (padrão: mês corrente) atualiza todos os números
 - [x] **DSH-05**: Números do dashboard são idênticos a um SQL de conferência executado direto no banco com seed conhecida
 
 ### Infraestrutura e Qualidade (INF)
@@ -131,7 +131,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DSH-01 | Phase 3 | Complete |
 | DSH-02 | Phase 3 | Complete |
 | DSH-03 | Phase 3 | Complete |
-| DSH-04 | Phase 3 | Pending |
+| DSH-04 | Phase 3 | Complete |
 | DSH-05 | Phase 3 | Complete |
 | INF-01 | Phase 1 | Complete — V1/V1_1 + V2 seed categorias (Phase 2) |
 | INF-02 | Phase 2 | Complete |

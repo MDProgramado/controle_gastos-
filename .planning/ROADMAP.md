@@ -88,7 +88,7 @@ Plans:
 
 **Requirements:** DSH-01, DSH-02, DSH-03, DSH-04, DSH-05
 **UI hint**: yes
-**Plans:** 1/4 plans executed
+**Plans:** 2/4 plans executed
 
 Plans:
 
@@ -98,7 +98,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 03-02-PLAN.md — Frontend: página dashboard com KPIs, seletor de mês, comparação mensal (DSH-01, DSH-03, DSH-04, DSH-05)
+- [x] 03-02-PLAN.md — Frontend: página dashboard com KPIs, seletor de mês, comparação mensal (DSH-01, DSH-03, DSH-04, DSH-05)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
