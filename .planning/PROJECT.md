@@ -14,18 +14,17 @@ Saldo, entradas e saídas corretos ao centavo — números confiáveis por mês,
 
 <!-- Shipped and confirmed valuable. -->
 
-(None yet — ship to validate)
+- [x] Login JWT em produção com seed de empresa/usuário (Flyway V1) — validado na Fase 1
+- [x] Categorias com tipo ENTRADA/SAÍDA (seed de 12 saídas e 4 entradas, Flyway V2) e flag `pessoal` para as marcadas [P] — validado na Fase 2
+- [x] Lançamentos (criar/editar/excluir) com validação monetária estrita (máx. 2 casas, HALF_EVEN, sem double/float) — validado na Fase 2
+- [x] Lote de lançamentos em transação tudo-ou-nada, erro informa o índice da linha — validado na Fase 2
+- [x] Integridade: categoria ENTRADA não aceita lançamento de SAÍDA e vice-versa — validado na Fase 2
+- [x] `empresa_id` sempre extraído do token, nunca do body — validado nas Fases 1–2
 
 ### Active
 
 <!-- Current scope. Building toward these. -->
 
-- [ ] Login JWT em produção com seed de empresa/usuário (Flyway V1)
-- [ ] Categorias com tipo ENTRADA/SAÍDA (seed de 12 saídas e 4 entradas, Flyway V2) e flag `pessoal` para as marcadas [P]
-- [ ] Lançamentos (criar/editar/excluir) com validação monetária estrita (máx. 2 casas, HALF_EVEN, sem double/float)
-- [ ] Lote de lançamentos em transação tudo-ou-nada, erro informa o índice da linha
-- [ ] Integridade: categoria ENTRADA não aceita lançamento de SAÍDA e vice-versa
-- [ ] `empresa_id` sempre extraído do token, nunca do body
 - [ ] Dashboard: entradas, saídas, saldo do mês, gasto por categoria e comparação mensal
 - [ ] Testes de integração com Testcontainers; números do dashboard batem com SQL de conferência
 - [ ] IA via OpenRouter na última fase: function calling sobre consultas fixas + categorização sugerida com confirmação
@@ -50,7 +49,8 @@ Saldo, entradas e saídas corretos ao centavo — números confiáveis por mês,
 - **Dois pontos de controle não negociáveis do cliente:**
   1. No plano: verificar se toca em valor monetário ou permissão e se as regras aparecem como tarefas
   2. No verify: rodar o teste de lote com uma linha inválida e confirmar que nada foi gravado
-- **Ambiente atual:** repo git sem commits; apenas `.opencode/` (tooling GSD) existe — é um greenfield
+- **Ambiente atual:** Fases 1 e 2 completas (2026-11-09). API de categorias e lançamentos (CRUD + lote tudo-ou-nada) com 40 testes de integração Testcontainers passando. UI web de categorias/lançamentos ficou para a Fase 3 (Dashboard), conforme decisão em `02-HUMAN-UAT.md`; categoria desativada continua aceitando novos lançamentos por decisão explícita.
+- **Estado Phase 2 (2026-11-09):** Phase 2 complete — 4/4 plans, 40 integration tests green, human verification aprovada. Non-blocking findings em `02-VERIFICATION.md` (paginação fixa de 50, pré-checagem de duplicidade em `editar`, testes de scaffolding).
 
 ## Constraints
 
@@ -98,4 +98,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-30 after initialization*
+*Last updated: 2026-11-09 after Phase 2 completion*
