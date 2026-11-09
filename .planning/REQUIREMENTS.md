@@ -21,19 +21,19 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **CAT-01**: Categoria possui tipo `ENTRADA` ou `SAÍDA`
 - [x] **CAT-02**: Seed (Flyway V2) cria 12 categorias de saída e 4 de entrada conforme lista do cliente
 - [x] **CAT-03**: Categorias marcadas [P] (Alimentação, Saúde/farmácia, Lazer, Rendimentos e reembolsos) têm `pessoal = true`
-- [ ] **CAT-04**: Categoria do tipo ENTRADA rejeita lançamento de SAÍDA e vice-versa
-- [ ] **CAT-05**: Usuário ADMIN pode criar, editar e desativar categorias; USER apenas lista
+- [x] **CAT-04**: Categoria do tipo ENTRADA rejeita lançamento de SAÍDA e vice-versa
+- [x] **CAT-05**: Usuário ADMIN pode criar, editar e desativar categorias; USER apenas lista
 - [x] **CAT-06**: Categorias pertencem à empresa do token e nome é único por (empresa, tipo)
 
 ### Lançamentos (LAN)
 
-- [ ] **LAN-01**: Usuário pode criar lançamento com data, tipo, valor, categoria e descrição
-- [ ] **LAN-02**: Usuário pode editar lançamento existente (mesmas validações da criação)
-- [ ] **LAN-03**: Usuário pode excluir lançamento
-- [ ] **LAN-04**: Valor aceita no máximo 2 casas decimais; entrada com mais de 2 casas é **rejeitada** (não arredondada)
-- [ ] **LAN-05**: Todo cálculo monetário usa `BigDecimal` com `NUMERIC(14,2)`, `scale = 2` e `RoundingMode.HALF_EVEN`; nenhum `double`/`float` no código
-- [ ] **LAN-06**: Usuário pode filtrar lançamentos por mês, tipo e categoria (sempre dentro da empresa do token)
-- [ ] **LAN-07**: Valor aceito é sempre positivo — o sinal é dado pelo tipo (ENTRADA/SAÍDA)
+- [x] **LAN-01**: Usuário pode criar lançamento com data, tipo, valor, categoria e descrição
+- [x] **LAN-02**: Usuário pode editar lançamento existente (mesmas validações da criação)
+- [x] **LAN-03**: Usuário pode excluir lançamento
+- [x] **LAN-04**: Valor aceita no máximo 2 casas decimais; entrada com mais de 2 casas é **rejeitada** (não arredondada)
+- [x] **LAN-05**: Todo cálculo monetário usa `BigDecimal` com `NUMERIC(14,2)`, `scale = 2` e `RoundingMode.HALF_EVEN`; nenhum `double`/`float` no código
+- [x] **LAN-06**: Usuário pode filtrar lançamentos por mês, tipo e categoria (sempre dentro da empresa do token)
+- [x] **LAN-07**: Valor aceito é sempre positivo — o sinal é dado pelo tipo (ENTRADA/SAÍDA)
 
 ### Lote (LOT)
 
@@ -116,16 +116,16 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CAT-01 | Phase 2 | Complete |
 | CAT-02 | Phase 2 | Complete |
 | CAT-03 | Phase 2 | Complete |
-| CAT-04 | Phase 2 | Pending |
-| CAT-05 | Phase 2 | Pending |
+| CAT-04 | Phase 2 | Complete |
+| CAT-05 | Phase 2 | Complete |
 | CAT-06 | Phase 2 | Complete |
-| LAN-01 | Phase 2 | Pending |
-| LAN-02 | Phase 2 | Pending |
-| LAN-03 | Phase 2 | Pending |
-| LAN-04 | Phase 2 | Pending |
-| LAN-05 | Phase 2 | Pending |
-| LAN-06 | Phase 2 | Pending |
-| LAN-07 | Phase 2 | Pending |
+| LAN-01 | Phase 2 | Complete |
+| LAN-02 | Phase 2 | Complete |
+| LAN-03 | Phase 2 | Complete |
+| LAN-04 | Phase 2 | Complete |
+| LAN-05 | Phase 2 | Complete |
+| LAN-06 | Phase 2 | Complete |
+| LAN-07 | Phase 2 | Complete |
 | LOT-01 | Phase 2 | Complete |
 | LOT-02 | Phase 2 | Complete |
 | DSH-01 | Phase 3 | Pending |
@@ -133,7 +133,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DSH-03 | Phase 3 | Pending |
 | DSH-04 | Phase 3 | Pending |
 | DSH-05 | Phase 3 | Pending |
-| INF-01 | Phase 1 | Partial — V1/V1_1 ✓; V2 seed categorias → Phase 2 |
+| INF-01 | Phase 1 | Complete — V1/V1_1 + V2 seed categorias (Phase 2) |
 | INF-02 | Phase 2 | Complete |
 | INF-03 | Phase 1 | Verified |
 | INF-04 | Phase 1 | Verified |

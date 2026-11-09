@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-last_updated: "2026-11-09T10:22:12.084Z"
+status: ready_to_plan
+last_updated: 2026-11-09T10:42:06.217Z
 last_activity: 2026-11-09
 progress:
   total_phases: 4
@@ -11,6 +11,7 @@ progress:
   total_plans: 8
   completed_plans: 8
   percent: 50
+stopped_at: Phase 02 complete (4/4) — ready to discuss Phase 3
 ---
 
 # STATE.md — Controle Financeiro
@@ -20,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-30)
 
 **Core value:** Saldo, entradas e saídas corretos ao centavo — números confiáveis por mês, conferidos contra SQL direto.
-**Current focus:** Phase 02 — categorias-e-lan-amentos
+**Current focus:** Phase 3 — dashboard
 
 ## Current Position
 
-Phase: 02 (categorias-e-lan-amentos) — COMPLETE
-Plan: 4 of 4
+Phase: 3
+Plan: Not started
 Next: Phase 3 (Dashboard) — plan 03-01
-Status: Phase 2 complete — all 4 plans GREEN (40 testes de integração passam)
+Status: Ready to plan
 Total Plans in Phase: 4
 Last activity: 2026-11-09
 Last Activity Description: Plan 02-04 completed: POST /api/lancamentos/lote tudo-ou-nada (até 500 linhas) com rollback completo e índice da linha inválida no ProblemDetail 400; LancamentoLoteRequest, LinhaInvalidaException, LoteDemasiadoGrandeException; ./mvnw verify da API com 40 testes, 0 falhas (GREEN).
