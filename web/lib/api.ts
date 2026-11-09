@@ -36,3 +36,48 @@ export async function getMe(): Promise<SessionUser | null> {
     return null;
   }
 }
+
+/** Shape de `GET /api/dashboard?ano=&mes=` (contrato da API — plano 03-01). */
+export type DashboardData = {
+  totalEntradas: number;
+  totalSaidas: number;
+  saldo: number;
+  variacaoEntradas: number;
+  variacaoSaidas: number;
+  variacaoSaldo: number;
+  percentualEntradas: string;
+  percentualSaidas: string;
+  percentualSaldo: string;
+  categorias: Array<{ id: number; nome: string; total: number }>;
+};
+
+/**
+ * Server-side (Server Component): busca os dados agregados do dashboard para
+ * um mês específico. Segue o mesmo padrão de `getMe()`: lê o cookie "sess",
+ * envia `Authorization: Bearer <token>` e usa `cache: "no-store"`.
+ *
+ * Retorna `null` quando não há cookie de sessão ou a API não responde com OK.
+ * O chamador decide o redirect para /login quando necessário.
+ */
+export async function getDashboard(
+  ano: number,
+  mes: number,
+): Promise<DashboardData | null> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("sess")?.value;
+  if (!token) return null;
+
+  try {
+    const res = await fetch(
+      `${process.env.API_URL}/api/dashboard?ano=${ano}&mes=${mes}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
+      },
+    );
+    if (!res.ok) return null;
+    return (await res.json()) as DashboardData;
+  } catch {
+    return null;
+  }
+}
