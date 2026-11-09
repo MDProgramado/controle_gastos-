@@ -4,6 +4,7 @@ import { getDashboard } from "@/lib/api";
 import { LogoutButton } from "@/components/LogoutButton";
 import { MonthSelector } from "@/components/MonthSelector";
 import { DashboardKPIs } from "@/components/DashboardKPIs";
+import { CategoryBreakdown } from "@/components/CategoryBreakdown";
 
 // Cache Components (Next 16): a sessão é lida por request (cookies) — a rota
 // é dinâmica por natureza e bloqueia no servidor (docs: "Allow blocking route").
@@ -66,6 +67,11 @@ export default async function Home({
           percentualEntradas={dados.percentualEntradas}
           percentualSaidas={dados.percentualSaidas}
           percentualSaldo={dados.percentualSaldo}
+        />
+
+        <CategoryBreakdown
+          categorias={dados.categorias}
+          totalSaidas={dados.totalSaidas}
         />
 
         <div className="mt-8 flex items-center gap-4">
