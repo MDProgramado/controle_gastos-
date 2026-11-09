@@ -4,6 +4,7 @@ import com.controlefinanceiro.common.CategoriaDuplicadaException;
 import com.controlefinanceiro.common.CategoriaNaoEncontradaException;
 import com.controlefinanceiro.common.CategoriaTipoIncompativelException;
 import com.controlefinanceiro.common.CredenciaisInvalidasException;
+import com.controlefinanceiro.common.MonetarioException;
 import com.controlefinanceiro.common.NaoAutorizadoException;
 import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
@@ -53,6 +54,12 @@ public class ProblemDetailExceptionHandler {
   /** Tipo de categoria inválido ou incompatível → 400 ProblemDetail (CAT-04). */
   @ExceptionHandler(CategoriaTipoIncompativelException.class)
   public ProblemDetail categoriaTipoIncompativel(CategoriaTipoIncompativelException ex) {
+    return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+  }
+
+  /** Valor monetário inválido (>2 casas decimais ou <= 0) → 400 ProblemDetail (LAN-04, LAN-07). */
+  @ExceptionHandler(MonetarioException.class)
+  public ProblemDetail monetarioInvalido(MonetarioException ex) {
     return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
   }
 

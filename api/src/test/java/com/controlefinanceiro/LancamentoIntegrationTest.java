@@ -151,8 +151,14 @@ class LancamentoIntegrationTest {
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
 
     // GET subsequente deve retornar 404 (lançamento não existe mais)
+    HttpHeaders getHeaders = new HttpHeaders();
+    getHeaders.setBearerAuth(tokenAdmin);
     ResponseEntity<String> getResponse =
-        rest.getForEntity("/api/lancamentos/%d".formatted(lancamentoId), String.class);
+        rest.exchange(
+            "/api/lancamentos/%d".formatted(lancamentoId),
+            HttpMethod.GET,
+            new HttpEntity<>(getHeaders),
+            String.class);
     assertThat(getResponse.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
   }
 
