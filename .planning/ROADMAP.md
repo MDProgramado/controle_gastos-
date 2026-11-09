@@ -62,7 +62,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 02-02-PLAN.md — Categoria write (POST/PUT/DELETE) + Security role split (USER lê, ADMIN escreve)
+- [x] 02-02-PLAN.md — Categoria write (POST/PUT/DELETE) + Security role split (USER lê, ADMIN escreve) [complete 2026-11-08 — VERIFICATION: ACHIEVED, GREEN]
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
