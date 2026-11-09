@@ -88,7 +88,7 @@ Plans:
 
 **Requirements:** DSH-01, DSH-02, DSH-03, DSH-04, DSH-05
 **UI hint**: yes
-**Plans:** 2/4 plans executed
+**Plans:** 3/4 plans executed
 
 Plans:
 
@@ -102,7 +102,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 03-03-PLAN.md — Frontend: breakdown por categoria (tabela + gráfico barras horizontais com Recharts) (DSH-02, DSH-05)
+- [x] 03-03-PLAN.md — Frontend: breakdown por categoria (tabela + gráfico barras horizontais com Recharts) (DSH-02, DSH-05) [complete 2026-11-09 — commit 35b6846]
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
