@@ -2,10 +2,12 @@ package com.controlefinanceiro;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.controlefinanceiro.categoria.CategoriaRequest;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -17,14 +19,16 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
- * Testes de integração de categorias (CAT-01, CAT-02, CAT-03, CAT-06) com PostgreSQL real e Flyway
- * completo (padrão P6): GET /api/categorias retorna 16 categorias seedadas (12 SAÍDA + 4 ENTRADA, 5
- * pessoais [P]), filtradas pela empresa_id do token (tenant isolation).
+ * Testes de integração de categorias (CAT-01 a CAT-06) com PostgreSQL real e Flyway completo
+ * (padrão P6): GET /api/categorias retorna 16 categorias seedadas; write endpoints
+ * (POST/PUT/DELETE) restritos a ADMIN; USER recebe 403; integridade categoria×tipo (CAT-04).
  */
 @Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -39,6 +43,48 @@ class CategoriaIntegrationTest {
   @Autowired private TestRestTemplate rest;
 
   @Autowired private ObjectMapper mapper;
+
+  @Autowired private JdbcTemplate jdbc;
+
+  @Autowired private PasswordEncoder passwordEncoder;
+
+  private String tokenAdmin;
+
+  private String tokenUser;
+
+  @BeforeEach
+  void setup() {
+    tokenAdmin = login("admin@controle.com", SENHA_FIXTURE);
+    garantirUsuarioUser();
+    tokenUser = login("usuario@controle.com", SENHA_FIXTURE);
+  }
+
+  private void garantirUsuarioUser() {
+    Long empresaId =
+        jdbc.queryForObject(
+            "SELECT id FROM empresa WHERE nome = 'Controle Financeiro'", Long.class);
+    long jaExiste =
+        jdbc.queryForObject(
+            "SELECT COUNT(*) FROM usuario WHERE email = 'usuario@controle.com'", Long.class);
+    if (jaExiste == 0) {
+      String senhaHash = passwordEncoder.encode(SENHA_FIXTURE);
+      jdbc.update(
+          "INSERT INTO usuario (empresa_id, email, senha_hash, nome, role, ativo) VALUES (?, ?, ?, ?, ?, true)",
+          empresaId,
+          "usuario@controle.com",
+          senhaHash,
+          "Usuario Comum",
+          "USER");
+    }
+  }
+
+  @Test
+  void categoriaRequestNaoExisteAindaRed() {
+    // Referencia CategoriaRequest que ainda não existe — compilação falha (RED).
+    // Esta classe será criada na Task 2 (GREEN).
+    CategoriaRequest request = new CategoriaRequest("Teste", "SAIDA", false);
+    assertThat(request).isNotNull();
+  }
 
   @Test
   void listarCategoriasRetorna16CategoriasSeedadas() throws Exception {
@@ -96,6 +142,101 @@ class CategoriaIntegrationTest {
             assertThat(categoria.has("empresa_id"))
                 .as("R3: empresa_id nunca deve aparecer no corpo da resposta")
                 .isFalse());
+  }
+
+  @Test
+  void criarCategoriaComSucessoRetorna201() throws Exception {
+    String corpo = "{\"nome\":\"Supermercado\",\"tipo\":\"SAIDA\",\"pessoal\":true}";
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_JSON);
+    headers.setBearerAuth(tokenAdmin);
+    ResponseEntity<String> response =
+        rest.exchange(
+            "/api/categorias", HttpMethod.POST, new HttpEntity<>(corpo, headers), String.class);
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+
+    JsonNode body = mapper.readTree(response.getBody());
+    assertThat(body.get("nome").asText()).isEqualTo("Supermercado");
+    assertThat(body.get("tipo").asText()).isEqualTo("SAIDA");
+    assertThat(body.get("pessoal").asBoolean()).isTrue();
+    assertThat(body.has("empresa_id")).as("R3: empresa_id não deve aparecer na resposta").isFalse();
+  }
+
+  @Test
+  void usuarioNaoPodeCriarCategoriaRetorna403() throws Exception {
+    String corpo = "{\"nome\":\"Supermercado\",\"tipo\":\"SAIDA\",\"pessoal\":true}";
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_JSON);
+    headers.setBearerAuth(tokenUser);
+    ResponseEntity<String> response =
+        rest.exchange(
+            "/api/categorias", HttpMethod.POST, new HttpEntity<>(corpo, headers), String.class);
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+  }
+
+  @Test
+  void editarCategoriaComSucessoRetorna200() throws Exception {
+    Long categoriaId = criarCategoriaViaApi(tokenAdmin, "Antigo Nome", "SAIDA", false);
+    String corpo = "{\"nome\":\"Novo Nome\",\"tipo\":\"SAIDA\",\"pessoal\":false}";
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_JSON);
+    headers.setBearerAuth(tokenAdmin);
+    ResponseEntity<String> response =
+        rest.exchange(
+            "/api/categorias/" + categoriaId,
+            HttpMethod.PUT,
+            new HttpEntity<>(corpo, headers),
+            String.class);
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+    JsonNode body = mapper.readTree(response.getBody());
+    assertThat(body.get("nome").asText()).isEqualTo("Novo Nome");
+    assertThat(body.get("id").asLong()).isEqualTo(categoriaId);
+  }
+
+  @Test
+  void desativarCategoriaRetorna204() throws Exception {
+    Long categoriaId = criarCategoriaViaApi(tokenAdmin, "Para Desativar", "ENTRADA", false);
+    HttpHeaders headers = new HttpHeaders();
+    headers.setBearerAuth(tokenAdmin);
+    ResponseEntity<String> response =
+        rest.exchange(
+            "/api/categorias/" + categoriaId,
+            HttpMethod.DELETE,
+            new HttpEntity<>(headers),
+            String.class);
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+  }
+
+  @Test
+  void categoriaTipoIncompativelRetorna400() throws Exception {
+    String corpo = "{\"nome\":\"Teste\",\"tipo\":\"INVALIDO\",\"pessoal\":false}";
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_JSON);
+    headers.setBearerAuth(tokenAdmin);
+    ResponseEntity<String> response =
+        rest.exchange(
+            "/api/categorias", HttpMethod.POST, new HttpEntity<>(corpo, headers), String.class);
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+  }
+
+  private Long criarCategoriaViaApi(String token, String nome, String tipo, boolean pessoal)
+      throws Exception {
+    String corpo =
+        "{\"nome\":\"" + nome + "\",\"tipo\":\"" + tipo + "\",\"pessoal\":" + pessoal + "}";
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_JSON);
+    headers.setBearerAuth(token);
+    ResponseEntity<String> response =
+        rest.exchange(
+            "/api/categorias", HttpMethod.POST, new HttpEntity<>(corpo, headers), String.class);
+
+    return mapper.readTree(response.getBody()).get("id").asLong();
   }
 
   private String login(String email, String senha) throws Exception {
