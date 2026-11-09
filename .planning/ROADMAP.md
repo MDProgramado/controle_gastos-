@@ -88,7 +88,7 @@ Plans:
 
 **Requirements:** DSH-01, DSH-02, DSH-03, DSH-04, DSH-05
 **UI hint**: yes
-**Plans:** 4/4 plans complete
+**Plans:** 4/4 execution plans complete · 3 gap plans pending closure (verification: gaps_found)
 
 Plans:
 
@@ -107,6 +107,20 @@ Plans:
 **Wave 4** *(blocked on Wave 3 completion)*
 
 - [x] 03-04-PLAN.md — CRUD páginas: /lancamentos e /categorias com TopNav, DeleteConfirmationDialog, role ADMIN-only (CAT-01..06, LAN-01..07, LOT-01..02)
+
+**Gap Closure (pending execution — /gsd-execute-phase 3 --gaps-only)**
+
+**Gap Wave 1**
+
+- [ ] 03-gap-01-PLAN.md — Fix CR-01: "SAÍDA" → "SAIDA" enum mismatch em LancamentosClient.tsx + CategoriasClient.tsx (cria/edita saídas quebrado)
+
+**Gap Wave 2** *(blocked on Gap Wave 1 completion)*
+
+- [ ] 03-gap-02-PLAN.md — Fix CR-02: guard divisão por zero (totalSaidas string) + tipos monetários TS (produz "NaN%" quando total=0)
+
+**Gap Wave 3** *(blocked on Gap Wave 2 completion)*
+
+- [ ] 03-gap-03-PLAN.md — Fix WR-03: contagem real de lançamentos para aviso "Mostrando 50 de {N}" (retorna tamanho da página, não o total)
 
 ---
 

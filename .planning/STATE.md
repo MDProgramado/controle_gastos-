@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 current_plan: 4
-status: complete
-stopped_at: Completed 03-dashboard-04 plan
-last_updated: "2026-11-09T15:01:47.847Z"
+status: gaps_pending
+stopped_at: Completed 03-dashboard-04 plan; 3 gap plans created (03-gap-01 to 03-gap-03) awaiting execution
+last_updated: "2026-11-09T15:30:00Z"
 last_activity: 2026-11-09
 progress:
   total_phases: 4
   completed_phases: 3
-  total_plans: 12
+  total_plans: 15
   completed_plans: 12
   percent: 75
 ---
@@ -34,7 +34,7 @@ Current Plan: 4
 Total Plans in Phase: 4
 **Progress:** [██████████] 100%
 Last activity: 2026-11-09
-Last Activity Description: Phase 3 execution complete — 4/4 plans executed across 4 waves. GET /api/dashboard aggregation endpoint (TDD GREEN), dashboard page with KPIs + MonthSelector + comparison, CategoryBreakdown with Recharts horizontal bar chart, CRUD pages /lancamentos + /categorias with TopNav + DeleteConfirmationDialog. All tests pass (api compile + web tsc/eslint/next build).
+Last Activity Description: Phase 3 gap planning complete — 4/4 execution plans executed + 3 gap plans created (03-gap-01 CR-01 SAÍDA/SAIDA, 03-gap-02 CR-02 division-by-zero guard, 03-gap-03 WR-03 truncation count). Gap verification passed via gsd-plan-checker. Awaiting gap execution via /gsd-execute-phase 3 --gaps-only.
 
 ## Phase Status
 
@@ -42,7 +42,7 @@ Last Activity Description: Phase 3 execution complete — 4/4 plans executed acr
 |-------|--------|-------|----------|
 | 1 · Fundação e Auth em Produção | ✓ | 4/4 | 100% |
 | 2 · Categorias e Lançamentos | ✓ | 4/4 | 100% |
-| 3 · Dashboard | ✓ | 4/4 | 100% |
+| 3 · Dashboard | ◐ | 4/4 + 3 gaps | 100% exec, gaps pending |
 | 4 · IA via OpenRouter | ○ | 0/1 | 0% |
 
 ## Current Phase
@@ -55,14 +55,17 @@ Last Activity Description: Phase 3 execution complete — 4/4 plans executed acr
 - Plan 03 ✓: Lançamentos CRUD + validação monetária estrita (BigDecimal, max 2 casas, HALF_EVEN, sem double/float) — GREEN (8 testes passam)
 - Plan 04 ✓: Lote tudo-ou-nada (POST /api/lancamentos/lote) com índice da linha inválida e rollback — GREEN (40 testes)
 
-- **Phase 3 · Dashboard** — complete (4/4 plans, 100%)
+- **Phase 3 · Dashboard** — executed (4/4 plans, 100%) — 3 gap plans pending closure
 - Weeks 3–4 of 5 (timeline)
 - Goal: Entradas, saídas, saldo por mês, gasto por categoria e comparação mensal na web
 - Plan 03-01 (Wave 1): Backend endpoint de agregação GET /api/dashboard com SUM/GROUP BY — TDD RED→GREEN, 4 testes GREEN
 - Plan 03-02 (Wave 2): Frontend página dashboard com KPIs, MonthSelector, comparação mensal — tsc/eslint/build OK
 - Plan 03-03 (Wave 3): Frontend breakdown por categoria (tabela + gráfico barras horizontais Recharts) — completo (recharts 2.15.4, chart.tsx wrapper)
 - Plan 03-04 (Wave 4): CRUD páginas /lancamentos e /categorias, TopNav, DeleteConfirmationDialog, role ADMIN-only — tsc/eslint/next build OK
-- Next: /gsd-plan-phase 4 (IA via OpenRouter)
+- Gap Plan 03-gap-01 (Wave 1): Fix CR-01 — "SAÍDA" → "SAIDA" enum mismatch in LancamentosClient.tsx + CategoriasClient.tsx
+- Gap Plan 03-gap-02 (Wave 2): Fix CR-02 — division-by-zero guard (totalSaidas string) + monetary TS types
+- Gap Plan 03-gap-03 (Wave 3): Fix WR-03 — real total count for truncation warning "Mostrando 50 de {N}"
+- Next: /gsd-execute-phase 3 --gaps-only (execute gap plans), then /gsd-verify-work 3 (re-verify)
 - Milestone: números do dashboard batem com SQL de conferência direto no banco
 
 ## Pending Debts (não bloqueiam — registrados no 01-04-SUMMARY)
@@ -134,7 +137,7 @@ Last Activity Description: Phase 3 execution complete — 4/4 plans executed acr
 
 ## Next Action
 
-Phase 3 completa (4/4 plans, 100%). Próximo: `/gsd-plan-phase 4` para iniciar a Fase 4 (IA via OpenRouter) ou `/gsd-discuss-phase 4` para discutir primeiro.
+Phase 3 execução completa (4/4 plans) com 3 gaps verificados. Execute gap plans: `/gsd-execute-phase 3 --gaps-only`, depois re-verify: `/gsd-verify-work 3`. Após gaps fechados, prossiga para `/gsd-plan-phase 4` (IA via OpenRouter).
 
 Last session: 2026-11-09T15:01:46.596Z
 Stopped At: Completed 03-dashboard-04 plan
