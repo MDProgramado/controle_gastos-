@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.List;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -53,7 +54,7 @@ class CategoriaIntegrationTest {
   private String tokenUser;
 
   @BeforeEach
-  void setup() {
+  void setup() throws Exception {
     tokenAdmin = login("admin@controle.com", SENHA_FIXTURE);
     garantirUsuarioUser();
     tokenUser = login("usuario@controle.com", SENHA_FIXTURE);
@@ -76,6 +77,13 @@ class CategoriaIntegrationTest {
           "Usuario Comum",
           "USER");
     }
+  }
+
+  @AfterEach
+  void apagarCategoriasCriadasNosTestes() {
+    // Isola testes de escrita: remove categorias criadas via API (id > 16 = seed da V2)
+    // para que listarCategoriasRetorna16CategoriasSeedadas não seja afetado por ordem de execução.
+    jdbc.update("DELETE FROM categoria WHERE id > 16");
   }
 
   @Test

@@ -6,6 +6,7 @@ import java.util.List;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.convert.converter.Converter;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -37,7 +38,9 @@ public class SecurityConfig {
             auth ->
                 auth.requestMatchers("/api/auth/login", "/api/health")
                     .permitAll()
-                    // seed da regra de permissão (T-2-05) — endpoints completam na Fase 2
+                    // GET liberado para ADMIN e USER; escrita restrita a ADMIN (T-2-05, CAT-05)
+                    .requestMatchers(HttpMethod.GET, "/api/categorias")
+                    .hasAnyRole("ADMIN", "USER")
                     .requestMatchers("/api/categorias/**")
                     .hasRole("ADMIN")
                     .anyRequest()

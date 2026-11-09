@@ -1,5 +1,8 @@
 package com.controlefinanceiro.config;
 
+import com.controlefinanceiro.common.CategoriaDuplicadaException;
+import com.controlefinanceiro.common.CategoriaNaoEncontradaException;
+import com.controlefinanceiro.common.CategoriaTipoIncompativelException;
 import com.controlefinanceiro.common.CredenciaisInvalidasException;
 import com.controlefinanceiro.common.NaoAutorizadoException;
 import java.util.stream.Collectors;
@@ -45,5 +48,23 @@ public class ProblemDetailExceptionHandler {
   @ExceptionHandler(HttpMessageNotReadableException.class)
   public ProblemDetail corpoInvalido(HttpMessageNotReadableException ex) {
     return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Corpo da requisição inválido");
+  }
+
+  /** Tipo de categoria inválido ou incompatível → 400 ProblemDetail (CAT-04). */
+  @ExceptionHandler(CategoriaTipoIncompativelException.class)
+  public ProblemDetail categoriaTipoIncompativel(CategoriaTipoIncompativelException ex) {
+    return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+  }
+
+  /** Categoria duplicada (mesmo nome+tipo+empresa) → 400 ProblemDetail. */
+  @ExceptionHandler(CategoriaDuplicadaException.class)
+  public ProblemDetail categoriaDuplicada(CategoriaDuplicadaException ex) {
+    return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+  }
+
+  /** Categoria não encontrada para a empresa autenticada → 404 ProblemDetail. */
+  @ExceptionHandler(CategoriaNaoEncontradaException.class)
+  public ProblemDetail categoriaNaoEncontrada(CategoriaNaoEncontradaException ex) {
+    return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
   }
 }
