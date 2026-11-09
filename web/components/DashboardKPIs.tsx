@@ -71,7 +71,7 @@ export function DashboardKPIs({
       <Card className="border-l-4 border-l-green-600">
         <CardHeader>
           <CardTitle className="text-green-600">Entradas</CardTitle>
-          <CardDescription className="text-lg font-medium text-foreground">
+          <CardDescription className="text-lg font-medium text-green-600">
             {MONETARY.format(totalEntradas)}
           </CardDescription>
         </CardHeader>
@@ -83,7 +83,7 @@ export function DashboardKPIs({
       <Card className="border-l-4 border-l-red-600">
         <CardHeader>
           <CardTitle className="text-red-600">Saídas</CardTitle>
-          <CardDescription className="text-lg font-medium text-foreground">
+          <CardDescription className="text-lg font-medium text-red-600">
             {MONETARY.format(totalSaidas)}
           </CardDescription>
         </CardHeader>
