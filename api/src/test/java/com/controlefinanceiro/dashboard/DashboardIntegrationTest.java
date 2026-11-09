@@ -7,7 +7,6 @@ import com.controlefinanceiro.dashboard.dto.DashboardResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -118,7 +117,8 @@ class DashboardIntegrationTest {
     assertThat(dto.totalSaidas()).isEqualByComparingTo(BigDecimal.ZERO);
     assertThat(dto.saldo()).isEqualByComparingTo(BigDecimal.ZERO);
     assertThat(dto.categorias()).isNotNull();
-    assertThat(dto.categorias()).isEmpty();
+    // LEFT JOIN traz todas as categorias de SAÍDA, inclusive zeradas (DSH-02)
+    assertThat(dto.categorias()).allMatch(c -> c.total().compareTo(BigDecimal.ZERO) == 0);
   }
 
   @Test
@@ -180,9 +180,12 @@ class DashboardIntegrationTest {
 
     DashboardResponse dto = mapper.readValue(response.getBody(), DashboardResponse.class);
     assertThat(dto.totalSaidas()).isEqualByComparingTo(new BigDecimal("100.00"));
+    // Supermercado aparece com total 100.00; outras categorias podem aparecer zeradas (LEFT JOIN)
+    assertThat(dto.categorias())
+        .filteredOn(c -> c.nome().equals("Supermercado"))
+        .extracting(CategoryExpense::total)
+        .containsExactly(new BigDecimal("100.00"));
     // Não há campo empresa_id no corpo da resposta (R3 gate)
-    List<CategoryExpense> categorias = dto.categorias();
-    assertThat(categorias).hasSize(1);
   }
 
   private Long criarCategoriaViaApi(String token, String nome, String tipo, boolean pessoal)
