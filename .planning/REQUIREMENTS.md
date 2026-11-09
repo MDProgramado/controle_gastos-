@@ -18,12 +18,12 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Categorias (CAT)
 
-- [ ] **CAT-01**: Categoria possui tipo `ENTRADA` ou `SAÍDA`
-- [ ] **CAT-02**: Seed (Flyway V2) cria 12 categorias de saída e 4 de entrada conforme lista do cliente
-- [ ] **CAT-03**: Categorias marcadas [P] (Alimentação, Saúde/farmácia, Lazer, Rendimentos e reembolsos) têm `pessoal = true`
+- [x] **CAT-01**: Categoria possui tipo `ENTRADA` ou `SAÍDA`
+- [x] **CAT-02**: Seed (Flyway V2) cria 12 categorias de saída e 4 de entrada conforme lista do cliente
+- [x] **CAT-03**: Categorias marcadas [P] (Alimentação, Saúde/farmácia, Lazer, Rendimentos e reembolsos) têm `pessoal = true`
 - [ ] **CAT-04**: Categoria do tipo ENTRADA rejeita lançamento de SAÍDA e vice-versa
 - [ ] **CAT-05**: Usuário ADMIN pode criar, editar e desativar categorias; USER apenas lista
-- [ ] **CAT-06**: Categorias pertencem à empresa do token e nome é único por (empresa, tipo)
+- [x] **CAT-06**: Categorias pertencem à empresa do token e nome é único por (empresa, tipo)
 
 ### Lançamentos (LAN)
 
@@ -113,12 +113,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AUTH-04 | Phase 1 | Verified |
 | AUTH-05 | Phase 1 | Verified |
 | AUTH-06 | Phase 1 | Verified |
-| CAT-01 | Phase 2 | Pending |
-| CAT-02 | Phase 2 | Pending |
-| CAT-03 | Phase 2 | Pending |
+| CAT-01 | Phase 2 | Complete |
+| CAT-02 | Phase 2 | Complete |
+| CAT-03 | Phase 2 | Complete |
 | CAT-04 | Phase 2 | Pending |
 | CAT-05 | Phase 2 | Pending |
-| CAT-06 | Phase 2 | Pending |
+| CAT-06 | Phase 2 | Complete |
 | LAN-01 | Phase 2 | Pending |
 | LAN-02 | Phase 2 | Pending |
 | LAN-03 | Phase 2 | Pending |

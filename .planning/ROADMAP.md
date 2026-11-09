@@ -58,7 +58,7 @@ Plans:
 
 **Wave 1**
 
-- [ ] 02-01-PLAN.md — V2 seed migration (16 categorias) + categoria read API GET /api/categorias
+- [x] 02-01-PLAN.md — V2 seed migration (16 categorias) + categoria read API GET /api/categorias
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
