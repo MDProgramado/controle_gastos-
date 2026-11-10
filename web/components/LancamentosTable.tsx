@@ -226,7 +226,6 @@ function renderRow(
   loading: boolean,
 ) {
   const ehEntrada = l.tipo === "ENTRADA"
-  const corValor = ehEntrada ? "text-green-600" : "text-red-600"
   const categoriaNome = l.categoriaNome || "—"
   return (
     <tr key={l.id} className="hover:bg-muted/50 transition-colors">
@@ -234,12 +233,12 @@ function renderRow(
       <td className="p-4">{l.descricao || "—"}</td>
       <td className="p-4">{categoriaNome}</td>
       <td className="p-4">
-        <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs font-semibold ${ehEntrada ? "border-green-600 text-green-600 bg-green-600/10" : "border-red-600 text-red-600 bg-red-600/10"}`}>
+        <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs font-semibold ${ehEntrada ? "border-positive text-positive bg-positive/10" : "border-destructive text-destructive bg-destructive/10"}`}>
           {l.tipo}
         </span>
       </td>
       <td className="p-4 text-right font-semibold">
-        <span className={corValor}>
+        <span className={ehEntrada ? "text-positive" : "text-destructive"}>
           {ehEntrada ? "+" : "-"}
           {MONETARY.format(Math.abs(l.valor))}
         </span>

@@ -44,11 +44,11 @@ export default async function Home({
       <SidebarInset>
         <div className="flex flex-col h-full w-full overflow-hidden">
           <Header title="Visão geral" />
-          <main className="flex-1 overflow-y-auto bg-[#0A2A20] px-4 py-6">
+          <main className="flex-1 overflow-y-auto bg-background px-4 py-6">
             <div className="max-w-[1280px] mx-auto">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
                 <div>
-                  <h1 className="text-[28px] leading-[1.2] font-semibold text-foreground">
+                  <h1 className="text-2xl font-semibold text-foreground">
                     Visão geral
                   </h1>
                   <p className="mt-1 text-sm text-muted-foreground">
@@ -75,16 +75,12 @@ export default async function Home({
                 saldoMesAnterior={Number(dados.saldo) - Number(dados.variacaoSaldo)}
               />
 
-              <div className="grid gap-6 md:grid-cols-3 lg:grid-cols-2">
+              <div className="mt-8 grid gap-6 md:grid-cols-3 lg:grid-cols-2">
                 <CategoryBreakdown
                   categorias={dados.categorias}
                   totalSaidas={dados.totalSaidas}
                 />
                 <MonthlyComparison />
-              </div>
-
-              <div className="mt-8 lg:mt-0 lg:fixed lg:right-4 lg:top-24 lg:w-[380px] h-[560px]">
-                <ChatPanel />
               </div>
             </div>
           </main>

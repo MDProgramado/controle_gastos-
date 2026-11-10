@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import {
   Sheet,
@@ -55,7 +55,7 @@ function useSidebar() {
   return context
 }
 
-// ── Sidebar (shell — flex container) ────────────────────────────────────
+// ── Sidebar (shell flex container) ──────────────────────────────────────
 
 interface SidebarProps {
   children: React.ReactNode
@@ -72,17 +72,18 @@ export function Sidebar({ children }: SidebarProps) {
 // ── Sair (botão de logout, apenas no rodapé da sidebar) ─────────────────
 
 function SairButton({ collapsed }: { collapsed?: boolean }) {
+  const router = useRouter()
   return (
     <button
       onClick={async () => {
         document.cookie =
           "sess=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT"
         try {
-          await fetch("/api/auth/logout", { method: "POST" });
+          await fetch("/api/auth/logout", { method: "POST" })
         } catch {
           // ignora erro de rede
         }
-        window.location.replace("/login");
+        window.location.replace("/login")
       }}
       className={cn(
         "flex items-center gap-3 rounded-lg border border-transparent px-3 py-2 text-sm font-medium text-destructive hover:bg-destructive/10 hover:text-destructive transition-colors",

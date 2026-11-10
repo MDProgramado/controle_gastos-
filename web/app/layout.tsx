@@ -10,8 +10,17 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="pt-BR" className="dark">
+    <html
+      lang="pt-BR"
+      className="dark"
+      data-type="software"
+      data-radius="sharp"
+      data-buttons="solid"
+      data-motion="true"
+    >
       <body>
+        <meta name="page-type" content="software" />
+        <meta name="site-kind" content="software" />
         <TooltipProvider>
           <SidebarProvider>{children}</SidebarProvider>
         </TooltipProvider>
