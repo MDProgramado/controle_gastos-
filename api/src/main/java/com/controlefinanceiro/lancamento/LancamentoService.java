@@ -15,6 +15,7 @@ import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import org.springframework.data.domain.Page;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -28,6 +29,9 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Service
 public class LancamentoService {
+
+  /** Resposta paginada de listagem de lançamentos. */
+  public record LancamentoPage(List<LancamentoResponse> lancamentos, long total) {}
 
   private final LancamentoRepository lancamentoRepository;
   private final CategoriaRepository categoriaRepository;
@@ -154,19 +158,19 @@ public class LancamentoService {
    * @return página de respostas de lançamento
    */
   @Transactional(readOnly = true)
-  public List<LancamentoResponse> listar(
+  public LancamentoPage listar(
       Long empresaId, Integer ano, Integer mes, String tipo, Long categoriaId) {
-    return lancamentoRepository
-        .findByEmpresaIdAndFiltros(
+    Page<Lancamento> page =
+        lancamentoRepository.findByEmpresaIdAndFiltros(
             empresaId,
             ano,
             mes,
             tipo,
             categoriaId,
-            org.springframework.data.domain.PageRequest.of(0, 50))
-        .stream()
-        .map(LancamentoResponse::new)
-        .toList();
+            org.springframework.data.domain.PageRequest.of(0, 50));
+    List<LancamentoResponse> lista =
+        page.getContent().stream().map(LancamentoResponse::new).toList();
+    return new LancamentoPage(lista, page.getTotalElements());
   }
 
   /**

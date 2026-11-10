@@ -66,7 +66,7 @@ public class LancamentoController {
    * GET /api/lancamentos — lista lançamentos com filtros opcionais de mês, ano, tipo, categoria.
    */
   @GetMapping
-  public ResponseEntity<List<LancamentoResponse>> listar(
+  public ResponseEntity<LancamentoPage> listar(
       @RequestParam(required = false) Integer ano,
       @RequestParam(required = false) Integer mes,
       @RequestParam(required = false) String tipo,
@@ -78,10 +78,9 @@ public class LancamentoController {
   /** GET /api/lancamentos/{id} — busca lançamento por id. */
   @GetMapping("/{id}")
   public ResponseEntity<LancamentoResponse> buscarPorId(@PathVariable Long id) {
-    // Busca na lista paginada e filtra por id (simplificação para MVP)
-    List<LancamentoResponse> lista =
+    LancamentoPage pagina =
         lancamentoService.listar(TenantContext.getEmpresaId(), null, null, null, null);
-    return lista.stream()
+    return pagina.lancamentos().stream()
         .filter(l -> l.id().equals(id))
         .findFirst()
         .map(ResponseEntity::ok)

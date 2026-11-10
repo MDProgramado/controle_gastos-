@@ -124,8 +124,11 @@ export async function getLancamentos(
       },
     );
     if (!res.ok) return null;
-    const lista = (await res.json()) as LancamentoData[];
-    return { lancamentos: lista, total: lista.length };
+    const resJson = await res.json() as {
+      lancamentos: LancamentoData[];
+      total: number;
+    };
+    return { lancamentos: resJson.lancamentos, total: resJson.total };
   } catch {
     return null;
   }
