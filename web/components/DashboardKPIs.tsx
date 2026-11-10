@@ -1,58 +1,28 @@
-"use client";
+"use client"
 
-import { Card } from "@/components/ui/card";
-import { CardDescription } from "@/components/ui/card";
-import { CardFooter } from "@/components/ui/card";
-import { CardHeader } from "@/components/ui/card";
-import { CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card"
+import { CardContent } from "@/components/ui/card"
+import { CardHeader } from "@/components/ui/card"
+import { CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 
 const MONETARY = new Intl.NumberFormat("pt-BR", {
   style: "currency",
   currency: "BRL",
-});
-
-/** Formata a variação de um KPI.
- *
- * - Quando percentual === "—" (base do mês anterior zero): exibe apenas o
- *   valor absoluto, ex: "R$ 120,00".
- * - Caso contrário: exibe sinal +/-, valor absoluto e percentual, ex:
- *   "+R$ 120,00 (12,50%)" ou "-R$ 40,00 (-8,33%)".
- * Nunca exibe "NaN%" nem "Infinity%".
- */
-export function formatarVariacao(absoluto: number, percentual: string): string {
-  const abs = MONETARY.format(absoluto);
-  if (percentual === "—") {
-    return abs;
-  }
-  const sinal = absoluto >= 0 ? "+" : "-";
-  return `${sinal}${abs} (${percentual}%)`;
-}
-
-/** Cor do valor do Saldo conforme o sinal. */
-export function corSaldo(valor: number): string {
-  if (valor > 0) return "text-green-600";
-  if (valor < 0) return "text-red-600";
-  return "text-muted-foreground";
-}
-
-/** Cor de uma variação conforme o sinal (verde/vermelho). */
-export function corVariacao(valor: number): string {
-  if (valor > 0) return "text-green-600";
-  if (valor < 0) return "text-red-600";
-  return "text-muted-foreground";
-}
+})
 
 type DashboardKPIsProps = {
-  totalEntradas: number;
-  totalSaidas: number;
-  saldo: number;
-  variacaoEntradas: number;
-  variacaoSaidas: number;
-  variacaoSaldo: number;
-  percentualEntradas: string;
-  percentualSaidas: string;
-  percentualSaldo: string;
-};
+  totalEntradas: number
+  totalSaidas: number
+  saldo: number
+  variacaoEntradas: number
+  variacaoSaidas: number
+  percentualEntradas: string
+  percentualSaidas: string
+  totalEntradasMesAnterior: number
+  totalSaidasMesAnterior: number
+  saldoMesAnterior: number
+}
 
 export function DashboardKPIs({
   totalEntradas,
@@ -60,50 +30,92 @@ export function DashboardKPIs({
   saldo,
   variacaoEntradas,
   variacaoSaidas,
-  variacaoSaldo,
   percentualEntradas,
   percentualSaidas,
-  percentualSaldo,
+  totalEntradasMesAnterior,
+  totalSaidasMesAnterior,
+  saldoMesAnterior,
 }: DashboardKPIsProps) {
+  const saldoPositivo = saldo >= 0
+
   return (
-    <section className="w-full max-w-4xl grid grid-cols-1 gap-4 sm:grid-cols-3">
-      <Card className="border-l-4 border-l-green-600">
-        <CardHeader>
-          <CardTitle className="text-green-600">Entradas</CardTitle>
-          <CardDescription className="text-lg font-medium text-green-600">
-            {MONETARY.format(totalEntradas)}
-          </CardDescription>
+    <section className="w-full grid gap-4 sm:grid-cols-3">
+      {/* Saldo - primeiro card, em destaque */}
+      <Card className="col-span-1 sm:col-span-3">
+        <CardHeader className="flex flex-row items-center justify-between py-4">
+          <CardTitle className="text-sm font-semibold text-muted-foreground">
+            Saldo
+          </CardTitle>
         </CardHeader>
-        <CardFooter>
-          {formatarVariacao(variacaoEntradas, percentualEntradas)}
-        </CardFooter>
+        <CardContent className="pt-0">
+          <div className="flex items-baseline gap-2">
+            <span className={`text-4xl font-bold ${saldoPositivo ? "text-positive" : "text-destructive"}`}>
+              {MONETARY.format(saldo)}
+            </span>
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Saldo do mês anterior: {MONETARY.format(saldoMesAnterior)}
+          </p>
+        </CardContent>
       </Card>
 
-      <Card className="border-l-4 border-l-red-600">
-        <CardHeader>
-          <CardTitle className="text-red-600">Saídas</CardTitle>
-          <CardDescription className="text-lg font-medium text-red-600">
-            {MONETARY.format(totalSaidas)}
-          </CardDescription>
+      {/* Entradas */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-sm font-semibold text-muted-foreground">
+            Entradas
+          </CardTitle>
+          <Badge
+            variant="success"
+            className={`text-xs font-semibold ${
+              variacaoEntradas >= 0 ? "text-positive bg-positive/10" : "text-destructive bg-destructive/10"
+            }`}
+          >
+            {variacaoEntradas >= 0 ? "▲" : "▼"} {Math.abs(
+              Number(percentualEntradas.replace(/[^0-9,-]/g, "").replace(",", ".")) || 0
+            )}%
+          </Badge>
         </CardHeader>
-        <CardFooter>
-          {formatarVariacao(variacaoSaidas, percentualSaidas)}
-        </CardFooter>
+        <CardContent className="pt-0">
+          <div className="flex items-baseline gap-1">
+            <span className="text-2xl font-bold text-positive">
+              {MONETARY.format(totalEntradas)}
+            </span>
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Mês anterior: {MONETARY.format(totalEntradasMesAnterior)}
+          </p>
+        </CardContent>
       </Card>
 
-      <Card className="border-l-4">
-        <CardHeader>
-          <CardTitle className={corSaldo(saldo)}>Saldo</CardTitle>
-          <CardDescription className={`text-lg font-medium text-foreground ${corSaldo(saldo)}`}>
-            {MONETARY.format(saldo)}
-          </CardDescription>
+      {/* Saídas */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-sm font-semibold text-muted-foreground">
+            Saídas
+          </CardTitle>
+          <Badge
+            variant="destructive"
+            className={`text-xs font-semibold ${
+              variacaoSaidas <= 0 ? "text-positive bg-positive/10" : "text-destructive bg-destructive/10"
+            }`}
+          >
+            {variacaoSaidas <= 0 ? "▼" : "▲"} {Math.abs(
+              Number(percentualSaidas.replace(/[^0-9,-]/g, "").replace(",", ".")) || 0
+            )}%
+          </Badge>
         </CardHeader>
-        <CardFooter>
-          <span className={corVariacao(variacaoSaldo)}>
-            {formatarVariacao(variacaoSaldo, percentualSaldo)}
-          </span>
-        </CardFooter>
+        <CardContent className="pt-0">
+          <div className="flex items-baseline gap-1">
+            <span className="text-2xl font-bold text-destructive">
+              {MONETARY.format(totalSaidas)}
+            </span>
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Mês anterior: {MONETARY.format(totalSaidasMesAnterior)}
+          </p>
+        </CardContent>
       </Card>
     </section>
-  );
+  )
 }
