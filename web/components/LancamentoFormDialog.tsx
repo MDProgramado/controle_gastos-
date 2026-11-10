@@ -1,6 +1,9 @@
 "use client"
 
 import * as React from "react"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { z } from "zod"
 import { Dialog } from "@/components/ui/dialog"
 import { DialogTrigger } from "@/components/ui/dialog"
 import { DialogContent } from "@/components/ui/dialog"
@@ -51,7 +54,37 @@ type LancamentoFormDialogProps = {
   }
 }
 
-const VALOR_RE = /^-?\d+(\.\d{1,2})?$/
+const lancamentoSchema = z.object({
+  categoriaId: z.string().refine(
+    (val) => val !== "" && !isNaN(parseInt(val)),
+    { message: "Selecione uma categoria." }
+  ),
+  tipo: z.enum(["ENTRADA", "SAIDA"]).refine(
+    (val) => val === "ENTRADA" || val === "SAIDA",
+    { message: "Selecione o tipo (entrada ou saída)." },
+  ),
+  valor: z
+    .string()
+    .refine((val) => {
+      const v = parseFloat(val.replace(",", "."))
+      return !isNaN(v) && v > 0
+    }, {
+      message: "O valor deve ser maior que zero.",
+    })
+    .refine((val) => {
+      const v = parseFloat(val.replace(",", "."))
+      return !isNaN(v) || /^\d+(\.\d{1,2})?$/.test(val)
+    }, {
+      message: "O valor aceita no máximo 2 casas decimais.",
+    }),
+  data: z.string().refine(
+    (val) => !isNaN(new Date(val).getTime()),
+    { message: "Informe uma data válida." }
+  ),
+  descricao: z.string().optional(),
+})
+
+type LancamentoFormValues = z.infer<typeof lancamentoSchema>
 
 export function LancamentoFormDialog({
   isOpen,
@@ -61,72 +94,37 @@ export function LancamentoFormDialog({
   modo,
   lancamento,
 }: LancamentoFormDialogProps) {
-  const [categoriaId, setCategoriaId] = React.useState<number | null>(
-    lancamento?.categoriaId ?? null,
-  )
-  const [tipo, setTipo] = React.useState<TipoLancamento>(
-    (lancamento?.tipo || "ENTRADA") as TipoLancamento,
-  )
-  const [valor, setValor] = React.useState(lancamento?.valor.toString() ?? "")
-  const [data, setData] = React.useState(lancamento?.data ?? "")
-  const [descricao, setDescricao] = React.useState(lancamento?.descricao ?? "")
-  const [errosForm, setErrosForm] = React.useState<{
-    categoriaId?: string
-    tipo?: string
-    valor?: string
-    data?: string
-  }>({})
-  const [loading, setLoading] = React.useState(false)
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<LancamentoFormValues>({
+    resolver: zodResolver(lancamentoSchema),
+    defaultValues: {
+      categoriaId: lancamento?.categoriaId?.toString() ?? undefined,
+      tipo: (lancamento?.tipo || "ENTRADA") as TipoLancamento,
+      valor: lancamento?.valor.toString() ?? "",
+      data: lancamento?.data ?? "",
+      descricao: lancamento?.descricao ?? "",
+    },
+  })
 
   const chaveDialog = lancamento ? `editar-${lancamento.id}` : "novo"
 
   const categoriasFiltradas = categorias.filter(
-    (c) => c.tipo === tipo && c.ativo,
+    (c) => c.tipo === (lancamento?.tipo || "ENTRADA") && c.ativo,
   )
 
-  function validarForm(): boolean {
-    const novos: {
-      categoriaId?: string
-      tipo?: string
-      valor?: string
-      data?: string
-    } = {}
-    if (!categoriaId) novos.categoriaId = "Selecione uma categoria."
-    if (!tipo) novos.tipo = "Selecione o tipo (entrada ou saída)."
-    if (!data) novos.data = "Informe a data."
-    else if (isNaN(new Date(data).getTime())) novos.data = "Informe uma data válida."
-    if (!valor) {
-      novos.valor = "Informe o valor."
-    } else {
-      const v = parseFloat(valor)
-      if (!VALOR_RE.test(valor)) {
-        novos.valor = "O valor aceita no máximo 2 casas decimais."
-      } else if (v <= 0) {
-        novos.valor = "O valor deve ser maior que zero."
-      }
-    }
-    setErrosForm(novos)
-    return Object.keys(novos).length === 0
-  }
-
-  async function handleSubmit(event: React.FormEvent) {
-    event.preventDefault()
-    if (!validarForm()) return
-
-    setLoading(true)
-    try {
-      const resultado = await onSubmit({
-        categoriaId: categoriaId!,
-        tipo,
-        valor,
-        data,
-        descricao: descricao || undefined,
-      })
-      if (resultado) {
-        onClose()
-      }
-    } finally {
-      setLoading(false)
+  async function onFormSubmit(data: LancamentoFormValues) {
+    const resultado = await onSubmit({
+      categoriaId: parseInt(data.categoriaId),
+      tipo: data.tipo,
+      valor: data.valor,
+      data: data.data,
+      descricao: data.descricao || undefined,
+    })
+    if (resultado) {
+      onClose()
     }
   }
 
@@ -145,15 +143,16 @@ export function LancamentoFormDialog({
           </DialogTitle>
         </DialogHeader>
         <DialogDescription>
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <form
+            onSubmit={handleSubmit(onFormSubmit)}
+            className="flex flex-col gap-4"
+            noValidate
+          >
             <div className="flex flex-col gap-1">
               <Label htmlFor="categoria">Categoria</Label>
               <Select
-                value={categoriaId?.toString() ?? ""}
-                onValueChange={(valor) =>
-                  setCategoriaId(valor ? parseInt(valor) : null)}
-                disabled={loading}
-                aria-invalid={errosForm.categoriaId ? true : undefined}
+                {...register("categoriaId")}
+                disabled={isSubmitting}
               >
                 <SelectTrigger
                   className="h-11 w-full rounded-lg border border-input bg-transparent px-4 py-1 text-base focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
@@ -168,9 +167,9 @@ export function LancamentoFormDialog({
                   ))}
                 </SelectContent>
               </Select>
-              {errosForm.categoriaId && (
+              {errors.categoriaId && (
                 <p className="text-sm text-destructive mt-1">
-                  {errosForm.categoriaId}
+                  {errors.categoriaId.message}
                 </p>
               )}
             </div>
@@ -179,19 +178,16 @@ export function LancamentoFormDialog({
               <Label htmlFor="tipo">Tipo</Label>
               <select
                 id="tipo"
-                name="tipo"
-                value={tipo}
-                onChange={(e) => setTipo(e.target.value as TipoLancamento)}
-                disabled={loading}
+                {...register("tipo")}
+                disabled={isSubmitting}
                 className="h-11 w-full rounded-lg border border-input bg-transparent px-4 py-1 text-base focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
-                aria-invalid={errosForm.tipo ? true : undefined}
               >
                 <option value="ENTRADA">Entrada</option>
                 <option value="SAIDA">Saída</option>
               </select>
-              {errosForm.tipo && (
+              {errors.tipo && (
                 <p className="text-sm text-destructive mt-1">
-                  {errosForm.tipo}
+                  {errors.tipo.message}
                 </p>
               )}
             </div>
@@ -200,23 +196,15 @@ export function LancamentoFormDialog({
               <Label htmlFor="valor">Valor</Label>
               <Input
                 id="valor"
-                name="valor"
+                {...register("valor")}
                 type="text"
                 placeholder="0,00"
-                value={valor}
-                onChange={(e) => {
-                  const v = e.target.value.replace(",", ".")
-                  setValor(v)
-                  if (errosForm.valor)
-                    setErrosForm((atual) => ({ ...atual, valor: undefined }))
-                }}
-                disabled={loading}
+                disabled={isSubmitting}
                 className="h-11 w-full rounded-lg border border-input bg-transparent px-4 py-1 text-base focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
-                aria-invalid={errosForm.valor ? true : undefined}
               />
-              {errosForm.valor && (
+              {errors.valor && (
                 <p className="text-sm text-destructive mt-1">
-                  {errosForm.valor}
+                  {errors.valor.message}
                 </p>
               )}
             </div>
@@ -225,21 +213,14 @@ export function LancamentoFormDialog({
               <Label htmlFor="data">Data</Label>
               <Input
                 id="data"
-                name="data"
+                {...register("data")}
                 type="date"
-                value={data}
-                onChange={(e) => {
-                  setData(e.target.value)
-                  if (errosForm.data)
-                    setErrosForm((atual) => ({ ...atual, data: undefined }))
-                }}
-                disabled={loading}
+                disabled={isSubmitting}
                 className="h-11 w-full rounded-lg border border-input bg-transparent px-4 py-1 text-base focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
-                aria-invalid={errosForm.data ? true : undefined}
               />
-              {errosForm.data && (
+              {errors.data && (
                 <p className="text-sm text-destructive mt-1">
-                  {errosForm.data}
+                  {errors.data.message}
                 </p>
               )}
             </div>
@@ -248,12 +229,10 @@ export function LancamentoFormDialog({
               <Label htmlFor="descricao">Descrição</Label>
               <Input
                 id="descricao"
-                name="descricao"
+                {...register("descricao")}
                 type="text"
                 placeholder="Descrição do lançamento"
-                value={descricao}
-                onChange={(e) => setDescricao(e.target.value)}
-                disabled={loading}
+                disabled={isSubmitting}
                 className="h-11 w-full rounded-lg border border-input bg-transparent px-4 py-1 text-base focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
               />
             </div>
@@ -269,10 +248,10 @@ export function LancamentoFormDialog({
               <Button
                 type="submit"
                 variant="default"
-                disabled={loading}
+                disabled={isSubmitting}
                 className="h-11 w-auto font-semibold"
               >
-                {loading ? (
+                {isSubmitting ? (
                   <span className="flex items-center gap-1">
                     <Spinner className="mr-1" />
                     Salvando…

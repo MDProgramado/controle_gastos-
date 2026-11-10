@@ -84,6 +84,20 @@ export function LoteSheet({
     (l) => l.categoriaId !== null && l.valor && l.tipo && l.data,
   )
 
+  const adicionarLinha = () => {
+    setLinhas([
+      ...linhas,
+      {
+        id: crypto.randomUUID(),
+        categoriaId: null,
+        tipo: "ENTRADA",
+        valor: "",
+        data: new Date().toISOString().split("T")[0],
+        descricao: "",
+      },
+    ])
+  }
+
   async function handleSubmit() {
     const novasLinhas = linhas.map((l) => {
       let erro: string | undefined
@@ -157,6 +171,17 @@ export function LoteSheet({
 
             <div className="flex-1">
               <Label htmlFor="lote-linhas">Linhas do lote</Label>
+              <div className="mt-1 flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={adicionarLinha}
+                  disabled={loading}
+                >
+                  Adicionar linha
+                </Button>
+              </div>
               <div className="mt-1 flex flex-col gap-2 max-h-[400px] overflow-y-auto border border-input rounded-lg p-3 bg-muted/50">
                 {linhas.length === 0 ? (
                   <div className="p-3 text-sm text-muted-foreground text-center">

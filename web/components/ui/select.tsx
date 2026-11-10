@@ -86,9 +86,6 @@ const SelectItem = React.forwardRef<
       <span className="absolute left-1/2 -translate-x-1/2 top-[12%] w-[10px] h-[10px] rounded-full border border-current hidden" />
       {props.children}
     </span>
-    <span className="ml-auto text-xs font-semibold font-mono">
-      {props.children}
-    </span>
   </SelectPrimitive.Item>
 ))
 SelectItem.displayName = SelectPrimitive.Item.displayName
