@@ -7,6 +7,7 @@ import { MonthSelector } from "@/components/MonthSelector"
 import { DashboardKPIs } from "@/components/DashboardKPIs"
 import { CategoryBreakdown } from "@/components/CategoryBreakdown"
 import { MonthlyComparison } from "@/components/MonthlyComparison"
+import { ChatPanel } from "@/components/ai/chat-panel"
 
 // Cache Components (Next 16): a sessão é lida por request (cookies) — a rota
 // é dinâmica por natureza e bloqueia no servidor (docs: "Allow blocking route").
@@ -89,6 +90,11 @@ export default async function Home({
               />
               <MonthlyComparison />
             </div>
+          </div>
+
+          {/* Painel de chat com IA — coluna fixa 380px em desktop, abaixo em mobile */}
+          <div className="mt-8 lg:mt-0 lg:fixed lg:right-4 lg:top-24 lg:w-[380px] h-[560px]">
+            <ChatPanel />
           </div>
         </main>
       </div>
