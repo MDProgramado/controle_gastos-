@@ -30,9 +30,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class LancamentoService {
 
-  /** Resposta paginada de listagem de lançamentos. */
-  public record LancamentoPage(List<LancamentoResponse> lancamentos, long total) {}
-
   private final LancamentoRepository lancamentoRepository;
   private final CategoriaRepository categoriaRepository;
   private final UsuarioRepository usuarioRepository;
