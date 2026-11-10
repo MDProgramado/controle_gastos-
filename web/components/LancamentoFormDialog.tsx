@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { useForm } from "react-hook-form"
+import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { Dialog } from "@/components/ui/dialog"
@@ -96,6 +96,7 @@ export function LancamentoFormDialog({
 }: LancamentoFormDialogProps) {
   const {
     register,
+    control,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<LancamentoFormValues>({
@@ -149,24 +150,31 @@ export function LancamentoFormDialog({
         >
           <div className="flex flex-col gap-1">
             <Label htmlFor="categoria">Categoria</Label>
-            <Select
-              id="categoria"
-              {...register("categoriaId")}
-              disabled={isSubmitting}
-            >
-              <SelectTrigger
-                className="h-11 w-full rounded-lg border border-input bg-transparent px-4 py-1 text-base focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
-              >
-                <SelectValue placeholder="Selecione uma categoria" />
-              </SelectTrigger>
-              <SelectContent>
-                {categoriasFiltradas.map((c) => (
-                  <SelectItem key={c.id} value={c.id.toString()}>
-                    {c.nome}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Controller
+              control={control}
+              name="categoriaId"
+              render={({ field }) => (
+                <Select
+                  id="categoria"
+                  value={field.value ?? undefined}
+                  onValueChange={field.onChange}
+                  disabled={isSubmitting}
+                >
+                  <SelectTrigger
+                    className="h-11 w-full rounded-lg border border-input bg-transparent px-4 py-1 text-base focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
+                  >
+                    <SelectValue placeholder="Selecione uma categoria" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categoriasFiltradas.map((c) => (
+                      <SelectItem key={c.id} value={c.id.toString()}>
+                        {c.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
             {errors.categoriaId && (
               <p className="text-sm text-destructive mt-1">
                 {errors.categoriaId.message}
