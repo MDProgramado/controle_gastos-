@@ -1,7 +1,6 @@
 "use client";
 
 import { Card } from "@/components/ui/card";
-import { CardContent } from "@/components/ui/card";
 import { CardDescription } from "@/components/ui/card";
 import { CardFooter } from "@/components/ui/card";
 import { CardHeader } from "@/components/ui/card";

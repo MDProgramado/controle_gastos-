@@ -32,28 +32,27 @@ const PERCENTUAL = new Intl.NumberFormat("pt-BR", {
 type CategoriaGasto = {
   id: number;
   nome: string;
-  total: number;
+  total: string;
 };
 
 type CategoryBreakdownProps = {
   categorias: CategoriaGasto[];
-  totalSaidas: number;
+  totalSaidas: string;
 };
 
 export function CategoryBreakdown({
   categorias,
   totalSaidas,
 }: CategoryBreakdownProps) {
-  // Espelho do total de saídas do breakdown (conforme especificação do plano).
-  const total = categorias.reduce((sum, c) => sum + c.total, 0);
+  const ordenadas = [...categorias].sort((a, b) => Number(b.total) - Number(a.total));
 
-  const ordenadas = [...categorias].sort((a, b) => b.total - a.total);
+  const totalSaidasNum = Number(totalSaidas) || 0;
 
   const percentual = (categoria: CategoriaGasto): string => {
-    if (!totalSaidas) {
+    if (!totalSaidasNum) {
       return "—";
     }
-    return PERCENTUAL.format(categoria.total / totalSaidas);
+    return PERCENTUAL.format(Number(categoria.total) / totalSaidasNum);
   };
 
   if (categorias.length === 0) {
@@ -95,7 +94,7 @@ export function CategoryBreakdown({
                 <tr key={categoria.id} className="border-b border-border/50">
                   <td className="py-3">{categoria.nome}</td>
                   <td className="py-3 text-right">
-                    {MONETARY.format(categoria.total)}
+                    {MONETARY.format(Number(categoria.total))}
                   </td>
                   <td className="py-3 text-right">
                     {percentual(categoria)}
@@ -109,7 +108,7 @@ export function CategoryBreakdown({
         <Chart className="mt-6">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
-              data={ordenadas}
+              data={ordenadas.map(c => ({ ...c, total: Number(c.total) }))}
               layout="horizontal"
               margin={{ left: 120, right: 20, top: 20, bottom: 20 }}
             >

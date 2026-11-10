@@ -3,14 +3,16 @@ import { cookies } from "next/headers";
 import {
   getMe,
   getLancamentos,
-  LancamentoData,
-  LancamentoRequest,
+  type LancamentoData,
+  type LancamentoRequest,
   criarLancamento,
   editarLancamento,
   excluirLancamento,
 } from "@/lib/api";
 import { LancamentosClient } from "@/components/LancamentosClient";
 import { TopNav } from "@/components/TopNav";
+
+type LancamentoDataDisplay = Omit<LancamentoData, "valor"> & { valor: number };
 
 export const instant = false;
 
@@ -44,21 +46,26 @@ export default async function LancamentosPage({
     fetchCategorias(),
   ]);
 
-  const lancamentos: LancamentoData[] = lancamentosResp?.lancamentos ?? [];
+  const lancamentos: LancamentoDataDisplay[] = (lancamentosResp?.lancamentos ?? []).map(l => ({
+    ...l,
+    valor: Number(l.valor),
+  }));
   const total = lancamentosResp?.total ?? lancamentos.length;
 
   // ── Server Actions (executam no servidor, têm acesso ao cookie "sess") ──
-  async function actionCriarLancamento(request: LancamentoRequest) {
+  async function actionCriarLancamento(request: Omit<LancamentoRequest, "valor"> & { valor: number }) {
     "use server";
-    return criarLancamento(request);
+    const result = await criarLancamento({ ...request, valor: String(request.valor) });
+    return result ? { ...result, valor: Number(result.valor) } : null;
   }
 
   async function actionEditarLancamento(
     id: number,
-    request: LancamentoRequest,
+    request: Omit<LancamentoRequest, "valor"> & { valor: number },
   ) {
     "use server";
-    return editarLancamento(id, request);
+    const result = await editarLancamento(id, { ...request, valor: String(request.valor) });
+    return result ? { ...result, valor: Number(result.valor) } : null;
   }
 
   async function actionExcluirLancamento(id: number) {

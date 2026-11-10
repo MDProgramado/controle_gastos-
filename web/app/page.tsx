@@ -61,12 +61,12 @@ export default async function Home({
         </div>
 
         <DashboardKPIs
-          totalEntradas={dados.totalEntradas}
-          totalSaidas={dados.totalSaidas}
-          saldo={dados.saldo}
-          variacaoEntradas={dados.variacaoEntradas}
-          variacaoSaidas={dados.variacaoSaidas}
-          variacaoSaldo={dados.variacaoSaldo}
+          totalEntradas={Number(dados.totalEntradas)}
+          totalSaidas={Number(dados.totalSaidas)}
+          saldo={Number(dados.saldo)}
+          variacaoEntradas={Number(dados.variacaoEntradas)}
+          variacaoSaidas={Number(dados.variacaoSaidas)}
+          variacaoSaldo={Number(dados.variacaoSaldo)}
           percentualEntradas={dados.percentualEntradas}
           percentualSaidas={dados.percentualSaidas}
           percentualSaldo={dados.percentualSaldo}

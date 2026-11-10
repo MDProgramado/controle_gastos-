@@ -39,16 +39,16 @@ export async function getMe(): Promise<SessionUser | null> {
 
 /** Shape de `GET /api/dashboard?ano=&mes=` (contrato da API — plano 03-01). */
 export type DashboardData = {
-  totalEntradas: number;
-  totalSaidas: number;
-  saldo: number;
-  variacaoEntradas: number;
-  variacaoSaidas: number;
-  variacaoSaldo: number;
+  totalEntradas: string;
+  totalSaidas: string;
+  saldo: string;
+  variacaoEntradas: string;
+  variacaoSaidas: string;
+  variacaoSaldo: string;
   percentualEntradas: string;
   percentualSaidas: string;
   percentualSaldo: string;
-  categorias: Array<{ id: number; nome: string; total: number }>;
+  categorias: Array<{ id: number; nome: string; total: string }>;
 };
 
 /**
@@ -86,7 +86,7 @@ export async function getDashboard(
 export type LancamentoData = {
   id: number;
   tipo: string;
-  valor: number;
+  valor: string;
   data: string;
   descricao: string;
   categoriaNome: string;
@@ -97,7 +97,7 @@ export type LancamentoData = {
 export type LancamentoRequest = {
   categoriaId: number;
   tipo: string;
-  valor: number;
+  valor: string;
   data: string;
   descricao?: string;
 };
