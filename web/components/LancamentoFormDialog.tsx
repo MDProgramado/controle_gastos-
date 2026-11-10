@@ -155,12 +155,12 @@ export function LancamentoFormDialog({
               name="categoriaId"
               render={({ field }) => (
                 <Select
-                  id="categoria"
                   value={field.value ?? undefined}
                   onValueChange={field.onChange}
                   disabled={isSubmitting}
                 >
                   <SelectTrigger
+                    id="categoria"
                     className="h-11 w-full rounded-lg border border-input bg-transparent px-4 py-1 text-base focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
                   >
                     <SelectValue placeholder="Selecione uma categoria" />
