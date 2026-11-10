@@ -62,7 +62,7 @@ export function CategoryBreakdown({
           <CardTitle>Gasto por categoria</CardTitle>
         </CardHeader>
         <CardContent className="text-muted-foreground text-sm py-4">
-          Nenhuma categoria de saída neste mês
+          Nenhum lançamento neste mês
         </CardContent>
       </Card>
     );
@@ -92,7 +92,7 @@ export function CategoryBreakdown({
             <tbody>
               {ordenadas.map((categoria) => (
                 <tr key={categoria.id} className="border-b border-border/50">
-                  <td className="py-3">{categoria.nome}</td>
+                  <td className="py-4">{categoria.nome}</td>
                   <td className="py-3 text-right">
                     {MONETARY.format(Number(categoria.total))}
                   </td>

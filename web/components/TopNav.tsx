@@ -47,7 +47,7 @@ export function TopNav({ activeRoute, userRole }: TopNavProps) {
                 : "text-muted-foreground hover:text-foreground",
             )}
           >
-            <span className="text-[#0F766E] font-bold text-sm">Controle</span>
+            <span className="text-foreground font-semibold text-sm">Controle</span>
             <span className="text-muted-foreground font-semibold text-sm">
               Financeiro
             </span>
@@ -63,7 +63,7 @@ export function TopNav({ activeRoute, userRole }: TopNavProps) {
               className={cn(
                 "flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors",
                 estaAtivo(rota.href)
-                  ? "bg-accent text-primary font-medium"
+                  ? "bg-accent text-primary font-semibold"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted",
               )}
               aria-current={estaAtivo(rota.href) ? "page" : undefined}

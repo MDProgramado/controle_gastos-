@@ -84,7 +84,7 @@ export function CategoriasClient({
   function validarForm(): boolean {
     const novos: { nome?: string; tipo?: string } = {};
     if (!nome.trim()) novos.nome = "Informe o nome da categoria.";
-    if (!tipo) novos.tipo = "Informe o tipo.";
+    if (!tipo) novos.tipo = "Selecione o tipo (entrada ou saída).";
     setErrosForm(novos);
     return Object.keys(novos).length === 0;
   }
@@ -168,7 +168,7 @@ export function CategoriasClient({
       {/* Cabeçalho + ações */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-[20px] leading-[1.2] font-semibold text-foreground">
+          <h1 className="text-[28px] leading-[1.2] font-semibold text-foreground">
             Categorias
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -215,11 +215,11 @@ export function CategoriasClient({
           <table className="w-full text-sm text-left">
             <thead>
               <tr className="border-b bg-muted text-muted-foreground">
-                <th className="p-3">Nome</th>
-                <th className="p-3">Tipo</th>
-                <th className="p-3">Pessoal</th>
-                <th className="p-3">Ativo</th>
-                <th className="p-3 text-right">Ações</th>
+                <th className="p-4">Nome</th>
+                <th className="p-4">Tipo</th>
+                <th className="p-4">Pessoal</th>
+                <th className="p-4">Ativo</th>
+                <th className="p-4 text-right">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -231,18 +231,14 @@ export function CategoriasClient({
                     !c.ativo && "opacity-60",
                   )}
                 >
-                  <td className="p-3">
+                  <td className="p-4">
                     <span className={cn("font-medium", !c.ativo && "text-muted-foreground")}>
                       {c.nome}
                     </span>
                   </td>
-                  <td className="p-3">
+                  <td className="p-4">
                     <span
-                      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold ${
-                        c.tipo === "ENTRADA"
-                          ? "border-[#16A34A] text-[#16A34A] bg-[#16A34A]/10"
-                          : "border-[#DC2626] text-[#DC2626] bg-[#DC2626]/10"
-                      }`}
+                      className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs font-semibold ${c.tipo === "ENTRADA" ? "border-green-600 text-green-600 bg-green-600/10" : "border-red-600 text-red-600 bg-red-600/10"}`}
                     >
                       {c.tipo}
                     </span>
@@ -252,19 +248,19 @@ export function CategoriasClient({
                       {c.pessoal ? "Sim" : "Não"}
                     </span>
                   </td>
-                  <td className="p-3">
+                  <td className="p-4">
                     <span
                       className={cn(
-                        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold",
+                        "inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs font-semibold",
                         c.ativo
-                          ? "border-[#16A34A] text-[#16A34A] bg-[#16A34A]/10"
+                          ? "border-green-600 text-green-600 bg-green-600/10"
                           : "border-muted-foreground text-muted-foreground bg-muted",
                       )}
                     >
                       {c.ativo ? "Ativo" : "Inativo"}
                     </span>
                   </td>
-                  <td className="p-3 text-right">
+                  <td className="p-4 text-right">
                     <div className="flex items-center justify-end gap-2">
                       {podeEscrever && (
                         <Button
@@ -436,7 +432,7 @@ function CardForm({
                 <Spinner className="mr-1" />
                 Salvando…
               </span>
-            ) : podeEditar ? "Atualizar" : "Criar"
+            ) : podeEditar ? "Salvar alterações" : "Salvar"
             }
           </Button>
         </div>

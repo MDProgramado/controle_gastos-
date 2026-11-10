@@ -50,7 +50,7 @@ export default async function Home({
       <div className="w-full max-w-4xl">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-[20px] leading-[1.2] font-semibold text-foreground">
+            <h1 className="text-[28px] leading-[1.2] font-semibold text-foreground">
               Dashboard
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -76,6 +76,12 @@ export default async function Home({
           categorias={dados.categorias}
           totalSaidas={dados.totalSaidas}
         />
+
+        {dados.categorias.length === 0 && (
+          <p className="mt-4 text-sm text-muted-foreground">
+            Nenhum lançamento neste mês
+          </p>
+        )}
 
         <div className="mt-8 flex items-center gap-4">
           <LogoutButton />

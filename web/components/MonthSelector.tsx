@@ -41,12 +41,12 @@ export function MonthSelector() {
         type="month"
         value={urlMes}
         onChange={onChangeMes}
-        className="w-40"
+        className="w-40 h-11"
       />
-      <Button type="button" variant="outline" size="icon" onClick={() => mudarMes(-1)}>
+      <Button type="button" variant="outline" size="icon" onClick={() => mudarMes(-1)} aria-label="Mês anterior">
         ‹
       </Button>
-      <Button type="button" variant="outline" size="icon" onClick={() => mudarMes(1)}>
+      <Button type="button" variant="outline" size="icon" onClick={() => mudarMes(1)} aria-label="Mês seguinte">
         ›
       </Button>
     </div>

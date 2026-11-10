@@ -110,8 +110,8 @@ export function LancamentosClient({
 
   function validarForm(): boolean {
     const novos: { categoriaId?: string; tipo?: string; valor?: string; data?: string } = {};
-    if (!categoriaId) novos.categoriaId = "Informe a categoria.";
-    if (!tipo) novos.tipo = "Informe o tipo.";
+    if (!categoriaId) novos.categoriaId = "Selecione uma categoria.";
+    if (!tipo) novos.tipo = "Selecione o tipo (entrada ou saída).";
     if (!data) novos.data = "Informe a data.";
     else if (isNaN(new Date(data).getTime())) novos.data = "Informe uma data válida.";
     if (!valor) {
@@ -119,7 +119,7 @@ export function LancamentosClient({
     } else {
       const v = parseFloat(valor);
       if (!VALOR_RE.test(valor)) {
-        novos.valor = "O valor deve ter no máximo 2 casas decimais.";
+        novos.valor = "O valor aceita no máximo 2 casas decimais.";
       } else if (v <= 0) {
         novos.valor = "O valor deve ser maior que zero.";
       }
@@ -167,7 +167,7 @@ export function LancamentosClient({
         }
       }
     } catch {
-      setErro("Não foi possível conectar. Tente novamente em instantes.");
+      setErro("Não foi possível carregar os dados. Tente novamente em instantes.");
     } finally {
       setLoading(false);
     }
@@ -190,7 +190,7 @@ export function LancamentosClient({
         setErro("Não foi possível excluir o lançamento.");
       }
     } catch {
-      setErro("Não foi possível conectar. Tente novamente em instantes.");
+      setErro("Não foi possível carregar os dados. Tente novamente em instantes.");
     } finally {
       setExcluirAberto(false);
       setExcluirId(null);
@@ -205,7 +205,7 @@ export function LancamentosClient({
       {/* Cabeçalho + ações */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-[20px] leading-[1.2] font-semibold text-foreground">
+          <h1 className="text-[28px] leading-[1.2] font-semibold text-foreground">
             Lançamentos
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -261,35 +261,33 @@ export function LancamentosClient({
           <table className="w-full text-sm text-left">
             <thead>
               <tr className="border-b bg-muted text-muted-foreground">
-                <th className="p-3">Data</th>
-                <th className="p-3">Descrição</th>
-                <th className="p-3">Categoria</th>
-                <th className="p-3">Tipo</th>
-                <th className="p-3 text-right">Valor</th>
-                <th className="p-3 text-right">Ações</th>
+                <th className="p-4">Data</th>
+                <th className="p-4">Descrição</th>
+                <th className="p-4">Categoria</th>
+                <th className="p-4">Tipo</th>
+                <th className="p-4 text-right">Valor</th>
+                <th className="p-4 text-right">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {lancamentos.map((l) => {
                 const ehEntrada = l.tipo === "ENTRADA";
-                const corValor = ehEntrada ? "text-[#16A34A]" : "text-[#DC2626]";
+                const corValor = ehEntrada ? "text-green-600" : "text-red-600";
                 const categoriaNome =
                   l.categoriaNome || categoriaMap.get(l.id) || "—";
                 return (
                   <tr key={l.id} className="hover:bg-muted/50 transition-colors">
-                    <td className="p-3">{l.data}</td>
-                    <td className="p-3">{l.descricao || "—"}</td>
-                    <td className="p-3">{categoriaNome}</td>
-                    <td className="p-3">
+                    <td className="p-4">{l.data}</td>
+                    <td className="p-4">{l.descricao || "—"}</td>
+                    <td className="p-4">{categoriaNome}</td>
+                    <td className="p-4">
                       <span
-                        className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold ${
-                          ehEntrada ? "border-[#16A34A] text-[#16A34A] bg-[#16A34A]/10" : "border-[#DC2626] text-[#DC2626] bg-[#DC2626]/10"
-                        }`}
+                        className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs font-semibold ${ehEntrada ? "border-green-600 text-green-600 bg-green-600/10" : "border-red-600 text-red-600 bg-red-600/10"}`}
                       >
                         {l.tipo}
                       </span>
                     </td>
-                    <td className="p-3 text-right font-medium">
+                    <td className="p-4 text-right font-semibold">
                       <span className={corValor}>
                         {ehEntrada ? "+" : "-"} R$ {Math.abs(l.valor).toLocaleString(
                           "pt-BR",
@@ -297,7 +295,7 @@ export function LancamentosClient({
                         )}
                       </span>
                     </td>
-                    <td className="p-3 text-right">
+                    <td className="p-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <Button
                           type="button"
@@ -426,7 +424,7 @@ function CardForm({
             value={categoriaId ?? ""}
             onChange={(e) => setCategoriaId(e.target.value ? Number(e.target.value) : null)}
             disabled={loading}
-            className="h-11 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-base focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
+            className="h-11 w-full rounded-lg border border-input bg-transparent px-4 py-1 text-base focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
             aria-invalid={errosForm.categoriaId ? true : undefined}
           >
             <option value="">Selecione uma categoria</option>
@@ -449,7 +447,7 @@ function CardForm({
             value={tipo}
             onChange={(e) => setTipo(e.target.value as TipoLancamento)}
             disabled={loading}
-            className="h-11 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-base focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
+            className="h-11 w-full rounded-lg border border-input bg-transparent px-4 py-1 text-base focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
             aria-invalid={errosForm.tipo ? true : undefined}
           >
             <option value="ENTRADA">Entrada</option>
@@ -522,7 +520,7 @@ function CardForm({
                 <Spinner className="mr-1" />
                 Salvando…
               </span>
-            ) : podeEditar ? "Atualizar" : "Criar"
+            ) : podeEditar ? "Salvar alterações" : "Salvar"
             }
           </Button>
         </div>
