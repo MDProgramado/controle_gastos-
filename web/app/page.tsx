@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import { getMe } from "@/lib/api";
 import { getDashboard } from "@/lib/api";
-import { LogoutButton } from "@/components/LogoutButton";
-import { TopNav } from "@/components/TopNav";
+import { Sidebar } from "@/components/sidebar";
+import { Header } from "@/components/header";
 import { MonthSelector } from "@/components/MonthSelector";
 import { DashboardKPIs } from "@/components/DashboardKPIs";
 import { CategoryBreakdown } from "@/components/CategoryBreakdown";
@@ -30,7 +30,9 @@ export default async function Home({
   const mesSelecionado = Array.isArray(searchParams.mes)
     ? searchParams.mes[0]
     : searchParams.mes;
-  const [anoStr, mesStr] = (mesSelecionado ?? new Date().toISOString().slice(0, 7)).split("-");
+  const [anoStr, mesStr] = (
+    mesSelecionado ?? new Date().toISOString().slice(0, 7)
+  ).split("-");
   const ano = parseInt(anoStr, 10);
   const mes = parseInt(mesStr, 10);
 
@@ -44,50 +46,49 @@ export default async function Home({
   }
 
   return (
-    <div className="w-full">
-      <TopNav activeRoute="/" userRole={usuario.role} />
-      <main className="flex min-h-dvh w-full flex-col items-center justify-center px-4 py-12">
-      <div className="w-full max-w-4xl">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-          <div>
-            <h1 className="text-[28px] leading-[1.2] font-semibold text-foreground">
-              Dashboard
-            </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Entradas, saídas e saldo do mês selecionado
-            </p>
+    <div className="flex h-screen w-full overflow-hidden bg-background">
+      <Sidebar />
+      <div className="flex flex-col h-full w-full overflow-hidden">
+        <Header title="Dashboard" />
+        <main className="flex-1 overflow-y-auto bg-background px-4 py-6 md:px-24">
+          <div className="max-w-[1280px] mx-auto">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+              <div>
+                <h1 className="text-[28px] leading-[1.2] font-semibold text-foreground">
+                  Dashboard
+                </h1>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Entradas, saídas e saldo do mês selecionado
+                </p>
+              </div>
+              <MonthSelector />
+            </div>
+
+            <DashboardKPIs
+              totalEntradas={Number(dados.totalEntradas)}
+              totalSaidas={Number(dados.totalSaidas)}
+              saldo={Number(dados.saldo)}
+              variacaoEntradas={Number(dados.variacaoEntradas)}
+              variacaoSaidas={Number(dados.variacaoSaidas)}
+              variacaoSaldo={Number(dados.variacaoSaldo)}
+              percentualEntradas={dados.percentualEntradas}
+              percentualSaidas={dados.percentualSaidas}
+              percentualSaldo={dados.percentualSaldo}
+            />
+
+            <CategoryBreakdown
+              categorias={dados.categorias}
+              totalSaidas={dados.totalSaidas}
+            />
+
+            {dados.categorias.length === 0 && (
+              <p className="mt-4 text-sm text-muted-foreground">
+                Nenhum lançamento neste mês
+              </p>
+            )}
           </div>
-          <MonthSelector />
-        </div>
-
-        <DashboardKPIs
-          totalEntradas={Number(dados.totalEntradas)}
-          totalSaidas={Number(dados.totalSaidas)}
-          saldo={Number(dados.saldo)}
-          variacaoEntradas={Number(dados.variacaoEntradas)}
-          variacaoSaidas={Number(dados.variacaoSaidas)}
-          variacaoSaldo={Number(dados.variacaoSaldo)}
-          percentualEntradas={dados.percentualEntradas}
-          percentualSaidas={dados.percentualSaidas}
-          percentualSaldo={dados.percentualSaldo}
-        />
-
-        <CategoryBreakdown
-          categorias={dados.categorias}
-          totalSaidas={dados.totalSaidas}
-        />
-
-        {dados.categorias.length === 0 && (
-          <p className="mt-4 text-sm text-muted-foreground">
-            Nenhum lançamento neste mês
-          </p>
-        )}
-
-        <div className="mt-8 flex items-center gap-4">
-          <LogoutButton />
-        </div>
+        </main>
       </div>
-      </main>
     </div>
   );
 }

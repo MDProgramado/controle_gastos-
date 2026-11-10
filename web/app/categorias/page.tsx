@@ -1,7 +1,15 @@
 import { redirect } from "next/navigation";
-import { getMe, getCategorias, CategoriaData, criarCategoria, editarCategoria, desativarCategoria } from "@/lib/api";
+import {
+  getMe,
+  getCategorias,
+  CategoriaData,
+  criarCategoria,
+  editarCategoria,
+  desativarCategoria,
+} from "@/lib/api";
 import { CategoriasClient } from "@/components/CategoriasClient";
-import { TopNav } from "@/components/TopNav";
+import { Sidebar } from "@/components/sidebar";
+import { Header } from "@/components/header";
 
 export const instant = false;
 
@@ -42,17 +50,33 @@ export default async function CategoriasPage() {
   }
 
   return (
-    <div className="w-full">
-      <TopNav activeRoute="/categorias" userRole={usuario.role} />
-      <div className="w-full max-w-5xl mx-auto px-4 py-6">
-        <CategoriasClient
-        categorias={categorias}
-        userRole={usuario.role}
-        onCriar={actionCriarCategoria}
-        onEditar={actionEditarCategoria}
-        onDesativar={actionDesativarCategoria}
-      />
+    <div className="flex h-screen w-full overflow-hidden bg-background">
+      <Sidebar />
+      <div className="flex flex-col h-full w-full overflow-hidden">
+        <Header title="Categorias" />
+        <main className="flex-1 overflow-y-auto bg-background px-4 py-6 md:px-24">
+          <div className="max-w-[1280px] mx-auto">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+              <div>
+                <h1 className="text-[28px] leading-[1.2] font-semibold text-foreground">
+                  Categorias
+                </h1>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Gerencie as categorias de entrada e saída da empresa.
+                </p>
+              </div>
+            </div>
+
+            <CategoriasClient
+              categorias={categorias}
+              userRole={usuario.role}
+              onCriar={actionCriarCategoria}
+              onEditar={actionEditarCategoria}
+              onDesativar={actionDesativarCategoria}
+            />
+          </div>
+        </main>
+      </div>
     </div>
-  </div>
   );
 }

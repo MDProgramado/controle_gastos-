@@ -1,0 +1,69 @@
+import * as React from "react"
+import * as SheetPrimitive from "@radix-ui/react-dialog"
+import { cn } from "cn"
+
+const Sheet = SheetPrimitive.Root
+
+const SheetTrigger = SheetPrimitive.Trigger
+
+const SheetClose = SheetPrimitive.Close
+
+const SheetContent = React.forwardRef<
+  React.ElementRef<typeof SheetPrimitive.Content>,
+  React.ComponentPropsWithoutRef<typeof SheetPrimitive.Content> & {
+    side?: "top" | "right" | "bottom" | "left"
+  }
+>(({ className, side = "right", children, ...props }, ref) => (
+  <SheetPrimitive.Portal>
+    <SheetPrimitive.Overlay
+      className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm"
+    />
+    <SheetPrimitive.Content
+      ref={ref}
+      className={cn(
+        "fixed inset-z-50 flex h-full",
+        side === "right"
+          ? "right-0 border-l border-b md:shadow-md"
+          : side === "left"
+          ? "left-0 border-r border-b md:shadow-md"
+          : side === "top"
+          ? "top-0 border-b h-1/3 w-full"
+          : "bottom-0 border-t border-b w-full",
+        className
+      )}
+      {...props}
+    >
+      {children}
+    </SheetPrimitive.Content>
+  </SheetPrimitive.Portal>
+))
+SheetContent.displayName = SheetPrimitive.Content.displayName
+
+const SheetHeader = React.forwardRef<
+  React.ElementRef<typeof SheetPrimitive.Title>,
+  React.ComponentPropsWithoutRef<typeof SheetPrimitive.Title>
+>(({ className, ...props }, ref) => (
+  <SheetPrimitive.Title ref={ref} className={cn("text-lg font-semibold", className)} {...props} />
+))
+SheetHeader.displayName = SheetPrimitive.Title.displayName
+
+const SheetFooter = React.forwardRef<
+  React.ElementRef<typeof SheetPrimitive.Description>,
+  React.ComponentPropsWithoutRef<typeof SheetPrimitive.Description>
+>(({ className, ...props }, ref) => (
+  <SheetPrimitive.Description
+    ref={ref}
+    className={cn("text-sm text-muted-foreground", className)}
+    {...props}
+  />
+))
+SheetFooter.displayName = SheetPrimitive.Description.displayName
+
+export {
+  Sheet,
+  SheetTrigger,
+  SheetClose,
+  SheetContent,
+  SheetHeader,
+  SheetFooter,
+}
