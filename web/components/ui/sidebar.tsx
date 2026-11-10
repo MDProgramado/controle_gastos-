@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { usePathname } from "next/navigation"
-import { cn } from "cn"
+import { cn } from "@/lib/utils"
 import {
   Sheet,
   SheetTrigger,

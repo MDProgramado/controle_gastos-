@@ -44,7 +44,7 @@ export default async function Home({
       <SidebarInset>
         <div className="flex flex-col h-full w-full overflow-hidden">
           <Header title="Visão geral" />
-          <main className="flex-1 overflow-y-auto bg-background px-4 py-6">
+          <main className="flex-1 overflow-y-auto bg-[#0A2A20] px-4 py-6">
             <div className="max-w-[1280px] mx-auto">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
                 <div>
