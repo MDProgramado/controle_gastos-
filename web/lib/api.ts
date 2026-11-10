@@ -185,6 +185,47 @@ export async function editarLancamento(
   }
 }
 
+/** Shape de entrada para lote de lançamentos (POST /api/lancamentos/lote). */
+export type LancamentoLinha = {
+  categoriaId: number;
+  tipo: string;
+  valor: string;
+  data: string;
+  descricao?: string;
+};
+
+export type LoteRequest = {
+  linhas: LancamentoLinha[];
+};
+
+/** POST /api/lancamentos/lote — cria lote de lançamentos em transação tudo-ou-nada.
+ *  Retorna os lançamentos criados ou null. Em caso de erro em qualquer linha,
+ *  nada é gravado (rollback completo).
+ */
+export async function criarLote(
+  lote: LoteRequest,
+): Promise<LancamentoData[] | null> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("sess")?.value;
+  if (!token) return null;
+
+  try {
+    const res = await fetch(`${process.env.API_URL}/api/lancamentos/lote`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(lote),
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as LancamentoData[];
+  } catch {
+    return null;
+  }
+}
+
 /** DELETE /api/lancamentos/{id} — exclui lançamento. Retorna true se 204. */
 export async function excluirLancamento(id: number): Promise<boolean> {
   const cookieStore = await cookies();

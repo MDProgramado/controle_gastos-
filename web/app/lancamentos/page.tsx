@@ -8,8 +8,9 @@ import {
   criarLancamento,
   editarLancamento,
   excluirLancamento,
+  criarLote,
 } from "@/lib/api";
-import { LancamentosClient } from "@/components/LancamentosClient";
+import { LancamentosPageClient } from "@/components/LancamentosPageClient";
 import { Sidebar } from "@/components/sidebar";
 import { Header } from "@/components/header";
 
@@ -21,7 +22,7 @@ export const instant = false;
  * Página /lancamentos (Server Component).
  * Valida sessão via getMe(), filtra lançamentos pelo mês da URL (?mes=YYYY-MM)
  * e carrega categorias para o formulário. Toda a interatividade (formulário,
- * diálogo de exclusão) vive no cliente via `LancamentosClient`.
+ * diálogo de exclusão) vive no cliente via `LancamentosPageClient`.
  */
 export default async function LancamentosPage({
   searchParams,
@@ -76,6 +77,20 @@ export default async function LancamentosPage({
     return excluirLancamento(id);
   }
 
+  async function actionCriarLote(
+    linhas: Array<{
+      categoriaId: number
+      tipo: string
+      valor: string
+      data: string
+      descricao?: string
+    }>,
+  ) {
+    "use server";
+    const result = await criarLote({ linhas });
+    return result !== null;
+  }
+
   return (
     <div className="flex h-screen w-full overflow-hidden bg-background">
       <Sidebar />
@@ -94,13 +109,14 @@ export default async function LancamentosPage({
               </div>
             </div>
 
-            <LancamentosClient
+            <LancamentosPageClient
               lancamentos={lancamentos}
               total={total}
               categorias={categorias}
               onCriar={actionCriarLancamento}
               onEditar={actionEditarLancamento}
               onExcluir={actionExcluirLancamento}
+              onCriarLote={actionCriarLote}
             />
           </div>
         </main>

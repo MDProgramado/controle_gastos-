@@ -6,7 +6,7 @@ import { CardHeader } from "@/components/ui/card"
 import { CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 
-const MONETARY = new Intl.NumberFormat("pt-BR", {
+export const MONETARY = new Intl.NumberFormat("pt-BR", {
   style: "currency",
   currency: "BRL",
 })
