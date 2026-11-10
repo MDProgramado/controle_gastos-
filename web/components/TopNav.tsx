@@ -3,7 +3,6 @@
 import * as React from "react";
 import Link from "next/link";
 import { cn } from "cn";
-import { LogoutButton } from "@/components/LogoutButton";
 
 type RouteItem = {
   href: string;
@@ -73,10 +72,6 @@ export function TopNav({ activeRoute, userRole }: TopNavProps) {
           ))}
         </div>
 
-        {/* Ações à direita */}
-        <div className="flex items-center gap-2">
-          <LogoutButton />
-        </div>
       </div>
     </nav>
   );

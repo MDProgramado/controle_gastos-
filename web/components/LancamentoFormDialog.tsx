@@ -142,126 +142,125 @@ export function LancamentoFormDialog({
             {modo === "editar" ? "Editar lançamento" : "Novo lançamento"}
           </DialogTitle>
         </DialogHeader>
-        <DialogDescription>
-          <form
-            onSubmit={handleSubmit(onFormSubmit)}
-            className="flex flex-col gap-4"
-            noValidate
-          >
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="categoria">Categoria</Label>
-              <Select
-                {...register("categoriaId")}
-                disabled={isSubmitting}
-              >
-                <SelectTrigger
-                  className="h-11 w-full rounded-lg border border-input bg-transparent px-4 py-1 text-base focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
-                >
-                  <SelectValue placeholder="Selecione uma categoria" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categoriasFiltradas.map((c) => (
-                    <SelectItem key={c.id} value={c.id.toString()}>
-                      {c.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.categoriaId && (
-                <p className="text-sm text-destructive mt-1">
-                  {errors.categoriaId.message}
-                </p>
-              )}
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="tipo">Tipo</Label>
-              <select
-                id="tipo"
-                {...register("tipo")}
-                disabled={isSubmitting}
+        <form
+          onSubmit={handleSubmit(onFormSubmit)}
+          className="flex flex-col gap-4"
+          noValidate
+        >
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="categoria">Categoria</Label>
+            <Select
+              id="categoria"
+              {...register("categoriaId")}
+              disabled={isSubmitting}
+            >
+              <SelectTrigger
                 className="h-11 w-full rounded-lg border border-input bg-transparent px-4 py-1 text-base focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
               >
-                <option value="ENTRADA">Entrada</option>
-                <option value="SAIDA">Saída</option>
-              </select>
-              {errors.tipo && (
-                <p className="text-sm text-destructive mt-1">
-                  {errors.tipo.message}
-                </p>
-              )}
-            </div>
+                <SelectValue placeholder="Selecione uma categoria" />
+              </SelectTrigger>
+              <SelectContent>
+                {categoriasFiltradas.map((c) => (
+                  <SelectItem key={c.id} value={c.id.toString()}>
+                    {c.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {errors.categoriaId && (
+              <p className="text-sm text-destructive mt-1">
+                {errors.categoriaId.message}
+              </p>
+            )}
+          </div>
 
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="valor">Valor</Label>
-              <Input
-                id="valor"
-                {...register("valor")}
-                type="text"
-                placeholder="0,00"
-                disabled={isSubmitting}
-                className="h-11 w-full rounded-lg border border-input bg-transparent px-4 py-1 text-base focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
-              />
-              {errors.valor && (
-                <p className="text-sm text-destructive mt-1">
-                  {errors.valor.message}
-                </p>
-              )}
-            </div>
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="tipo">Tipo</Label>
+            <select
+              id="tipo"
+              {...register("tipo")}
+              disabled={isSubmitting}
+              className="h-11 w-full rounded-lg border border-input bg-transparent px-4 py-1 text-base focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
+            >
+              <option value="ENTRADA">Entrada</option>
+              <option value="SAIDA">Saída</option>
+            </select>
+            {errors.tipo && (
+              <p className="text-sm text-destructive mt-1">
+                {errors.tipo.message}
+              </p>
+            )}
+          </div>
 
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="data">Data</Label>
-              <Input
-                id="data"
-                {...register("data")}
-                type="date"
-                disabled={isSubmitting}
-                className="h-11 w-full rounded-lg border border-input bg-transparent px-4 py-1 text-base focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
-              />
-              {errors.data && (
-                <p className="text-sm text-destructive mt-1">
-                  {errors.data.message}
-                </p>
-              )}
-            </div>
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="valor">Valor</Label>
+            <Input
+              id="valor"
+              {...register("valor")}
+              type="text"
+              placeholder="0,00"
+              disabled={isSubmitting}
+              className="h-11 w-full rounded-lg border border-input bg-transparent px-4 py-1 text-base focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
+            />
+            {errors.valor && (
+              <p className="text-sm text-destructive mt-1">
+                {errors.valor.message}
+              </p>
+            )}
+          </div>
 
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="descricao">Descrição</Label>
-              <Input
-                id="descricao"
-                {...register("descricao")}
-                type="text"
-                placeholder="Descrição do lançamento"
-                disabled={isSubmitting}
-                className="h-11 w-full rounded-lg border border-input bg-transparent px-4 py-1 text-base focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
-              />
-            </div>
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="data">Data</Label>
+            <Input
+              id="data"
+              {...register("data")}
+              type="date"
+              disabled={isSubmitting}
+              className="h-11 w-full rounded-lg border border-input bg-transparent px-4 py-1 text-base focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
+            />
+            {errors.data && (
+              <p className="text-sm text-destructive mt-1">
+                {errors.data.message}
+              </p>
+            )}
+          </div>
 
-            <div className="flex items-center justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onClose}
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                variant="default"
-                disabled={isSubmitting}
-                className="h-11 w-auto font-semibold"
-              >
-                {isSubmitting ? (
-                  <span className="flex items-center gap-1">
-                    <Spinner className="mr-1" />
-                    Salvando…
-                  </span>
-                ) : modo === "editar" ? "Salvar alterações" : "Salvar"
-                }
-              </Button>
-            </div>
-          </form>
-        </DialogDescription>
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="descricao">Descrição</Label>
+            <Input
+              id="descricao"
+              {...register("descricao")}
+              type="text"
+              placeholder="Descrição do lançamento"
+              disabled={isSubmitting}
+              className="h-11 w-full rounded-lg border border-input bg-transparent px-4 py-1 text-base focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              variant="default"
+              disabled={isSubmitting}
+              className="h-11 w-auto font-semibold"
+            >
+              {isSubmitting ? (
+                <span className="flex items-center gap-1">
+                  <Spinner className="mr-1" />
+                  Salvando…
+                </span>
+              ) : modo === "editar" ? "Salvar alterações" : "Salvar"
+              }
+            </Button>
+          </div>
+        </form>
       </DialogContent>
     </Dialog>
   )

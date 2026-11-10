@@ -40,24 +40,42 @@ const SheetContent = React.forwardRef<
 SheetContent.displayName = SheetPrimitive.Content.displayName
 
 const SheetHeader = React.forwardRef<
-  React.ElementRef<typeof SheetPrimitive.Title>,
-  React.ComponentPropsWithoutRef<typeof SheetPrimitive.Title>
+  React.ElementRef<"div">,
+  React.ComponentPropsWithRef<"div">
 >(({ className, ...props }, ref) => (
-  <SheetPrimitive.Title ref={ref} className={cn("text-lg font-semibold", className)} {...props} />
-))
-SheetHeader.displayName = SheetPrimitive.Title.displayName
-
-const SheetFooter = React.forwardRef<
-  React.ElementRef<typeof SheetPrimitive.Description>,
-  React.ComponentPropsWithoutRef<typeof SheetPrimitive.Description>
->(({ className, ...props }, ref) => (
-  <SheetPrimitive.Description
+  <div
     ref={ref}
-    className={cn("text-sm text-muted-foreground", className)}
+    className={cn("flex flex-col space-y-1 text-center sm:text-left", className)}
     {...props}
   />
 ))
-SheetFooter.displayName = SheetPrimitive.Description.displayName
+SheetHeader.displayName = "SheetHeader"
+
+const SheetTitle = React.forwardRef<
+  React.ElementRef<typeof SheetPrimitive.Title>,
+  React.ComponentPropsWithoutRef<typeof SheetPrimitive.Title> & {
+    className?: string
+  }
+>(({ className, ...props }, ref) => (
+  <SheetPrimitive.Title
+    ref={ref}
+    className={cn("text-lg font-semibold", className)}
+    {...props}
+  />
+))
+SheetTitle.displayName = "SheetTitle"
+
+const SheetFooter = React.forwardRef<
+  React.ElementRef<"div">,
+  React.ComponentPropsWithRef<"div">
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn("flex flex-col space-y-1 text-center sm:text-left", className)}
+    {...props}
+  />
+))
+SheetFooter.displayName = "SheetFooter"
 
 export {
   Sheet,
@@ -65,5 +83,6 @@ export {
   SheetClose,
   SheetContent,
   SheetHeader,
+  SheetTitle,
   SheetFooter,
 }

@@ -11,19 +11,15 @@ import {
   criarLote,
 } from "@/lib/api";
 import { LancamentosPageClient } from "@/components/LancamentosPageClient";
-import { Sidebar } from "@/components/sidebar";
+import { Sidebar } from "@/components/ui/sidebar";
+import { SidebarContent } from "@/components/ui/sidebar";
+import { SidebarInset } from "@/components/ui/sidebar";
 import { Header } from "@/components/header";
 
 type LancamentoDataDisplay = Omit<LancamentoData, "valor"> & { valor: number };
 
 export const instant = false;
 
-/**
- * Página /lancamentos (Server Component).
- * Valida sessão via getMe(), filtra lançamentos pelo mês da URL (?mes=YYYY-MM)
- * e carrega categorias para o formulário. Toda a interatividade (formulário,
- * diálogo de exclusão) vive no cliente via `LancamentosPageClient`.
- */
 export default async function LancamentosPage({
   searchParams,
 }: {
@@ -34,17 +30,15 @@ export default async function LancamentosPage({
     redirect("/login?expirada=1");
   }
 
-  // Mês selecionado via ?mes=YYYY-MM; padrão = mês corrente.
-  const mesSelecionado = Array.isArray(searchParams.mes)
-    ? searchParams.mes[0]
-    : searchParams.mes;
+  const sp = await searchParams;
+
+  const mesSelecionado = Array.isArray(sp.mes) ? sp.mes[0] : sp.mes;
   const [anoStr, mesStr] = (
     mesSelecionado ?? new Date().toISOString().slice(0, 7)
   ).split("-");
   const ano = parseInt(anoStr, 10);
   const mes = parseInt(mesStr, 10);
 
-  // Carrega lançamentos do mês + categorias (para o select do formulário) em paralelo.
   const [lancamentosResp, categorias] = await Promise.all([
     getLancamentos(ano, mes),
     fetchCategorias(),
@@ -56,7 +50,6 @@ export default async function LancamentosPage({
   }));
   const total = lancamentosResp?.total ?? lancamentos.length;
 
-  // ── Server Actions (executam no servidor, têm acesso ao cookie "sess") ──
   async function actionCriarLancamento(request: Omit<LancamentoRequest, "valor"> & { valor: number }) {
     "use server";
     const result = await criarLancamento({ ...request, valor: String(request.valor) });
@@ -92,44 +85,41 @@ export default async function LancamentosPage({
   }
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-background">
-      <Sidebar />
-      <div className="flex flex-col h-full w-full overflow-hidden">
-        <Header title="Lançamentos" />
-        <main className="flex-1 overflow-y-auto bg-background px-4 py-6 md:px-24">
-          <div className="max-w-[1280px] mx-auto">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-              <div>
-                <h1 className="text-[28px] leading-[1.2] font-semibold text-foreground">
-                  Lançamentos
-                </h1>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Listagem filtrada por mês. Valor positivo = entrada, negativo = saída.
-                </p>
+    <Sidebar>
+      <SidebarContent />
+      <SidebarInset>
+        <div className="flex flex-col h-full w-full overflow-hidden">
+          <Header title="Lançamentos" />
+          <main className="flex-1 overflow-y-auto bg-background px-4 py-6">
+            <div className="max-w-[1280px] mx-auto">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+                <div>
+                  <h1 className="text-[28px] leading-[1.2] font-semibold text-foreground">
+                    Lançamentos
+                  </h1>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Listagem filtrada por mês. Valor positivo = entrada, negativo = saída.
+                  </p>
+                </div>
               </div>
-            </div>
 
-            <LancamentosPageClient
-              lancamentos={lancamentos}
-              total={total}
-              categorias={categorias}
-              onCriar={actionCriarLancamento}
-              onEditar={actionEditarLancamento}
-              onExcluir={actionExcluirLancamento}
-              onCriarLote={actionCriarLote}
-            />
-          </div>
-        </main>
-      </div>
-    </div>
+              <LancamentosPageClient
+                lancamentos={lancamentos}
+                total={total}
+                categorias={categorias}
+                onCriar={actionCriarLancamento}
+                onEditar={actionEditarLancamento}
+                onExcluir={actionExcluirLancamento}
+                onCriarLote={actionCriarLote}
+              />
+            </div>
+          </main>
+        </div>
+      </SidebarInset>
+    </Sidebar>
   );
 }
 
-/**
- * Busca a lista de categorias do tenant (usada no select do formulário de
- * lançamento). Segue o padrão de autenticação de `getMe()`: cookie "sess" +
- * Bearer token.
- */
 async function fetchCategorias(): Promise<
   Array<{ id: number; nome: string; tipo: string; pessoal: boolean; ativo: boolean }>
 > {

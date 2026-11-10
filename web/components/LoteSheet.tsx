@@ -6,6 +6,7 @@ import { SheetTrigger } from "@/components/ui/sheet"
 import { SheetClose } from "@/components/ui/sheet"
 import { SheetContent } from "@/components/ui/sheet"
 import { SheetHeader } from "@/components/ui/sheet"
+import { SheetTitle } from "@/components/ui/sheet"
 import { SheetFooter } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -140,6 +141,7 @@ export function LoteSheet({
       </SheetTrigger>
       <SheetContent side="right" className="w-[600px] max-w-[95vw]">
         <SheetHeader>
+          <SheetTitle>Lançar em lote</SheetTitle>
           <SheetClose asChild>
             <button className="p-2 rounded-lg text-muted-foreground hover:bg-accent/50">
               <span className="sr-only">Fechar</span>
