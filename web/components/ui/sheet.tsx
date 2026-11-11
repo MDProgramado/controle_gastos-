@@ -1,6 +1,6 @@
 import * as React from "react"
 import * as SheetPrimitive from "@radix-ui/react-dialog"
-import { cn } from "cn"
+import { cn } from "@/lib/utils"
 
 const Sheet = SheetPrimitive.Root
 
@@ -21,7 +21,7 @@ const SheetContent = React.forwardRef<
     <SheetPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed inset-z-50 flex h-full",
+        "fixed z-50 flex h-full",
         side === "right"
           ? "right-0 border-l border-b md:shadow-md"
           : side === "left"

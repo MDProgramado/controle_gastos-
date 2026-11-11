@@ -19,6 +19,14 @@ Aplicação de controle financeiro (entradas e saídas) para uma empresa cliente
 - **Escopo de IA**: restrito à fase 4 (OpenRouter)
 <!-- GSD:project-end -->
 
+## Regras de Fluxo e Skills do Projeto
+
+Sempre siga esta ordem ao desenvolver novas funcionalidades (dentro dos comandos `/gsd-quick`, `/gsd-debug` ou `/gsd-execute-phase`):
+
+1. **Lógica e Backend (Java / Spring Boot):** Use as práticas da skill `superpowers` (planejamento e TDD rigoroso com JUnit/Testcontainers antes de implementar). Garanta precisão com `BigDecimal` e isolamento por `empresa_id`.
+2. **Frontend e UI (Next.js / TypeScript):** Use a skill `design-taste-frontend` para qualquer alteração visual, mantendo o dashboard financeiro limpo, alinhado e validando no navegador.
+3. **Revisão Final e Segurança:** Antes de concluir tarefas grandes ou deploy (Render/Vercel), verifique falhas de autenticação, JWT e exposição de dados com `security-audit`, e valide meta tags das páginas públicas com `seo-audit`.
+
 <!-- GSD:stack-start source:STACK.md -->
 ## Technology Stack
 
@@ -55,8 +63,6 @@ Use these entry points:
 
 Do not make direct repo edits outside a GSD workflow unless the user explicitly asks to bypass it.
 <!-- GSD:workflow-end -->
-
-
 
 <!-- GSD:profile-start -->
 ## Developer Profile

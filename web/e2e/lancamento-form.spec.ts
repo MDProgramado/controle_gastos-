@@ -13,6 +13,10 @@ async function login(page: import("@playwright/test").Page) {
 
 async function clicarPorCoordenadas(page: import("@playwright/test").Page, seletor: string) {
   const el = page.locator(seletor).first();
+  // o hero do kit ocupa a primeira tela inteira: o botão começa fora do
+  // viewport, e mouse.click(x, y) usa coordenadas de viewport — rola até ele
+  // antes de medir a caixa.
+  await el.scrollIntoViewIfNeeded();
   const box = await el.boundingBox();
   if (box) {
     await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);

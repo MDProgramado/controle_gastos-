@@ -1,0 +1,261 @@
+{
+ "start": "2026-11-11T14:48:25.534Z",
+ "round": 1,
+ "idle": 0,
+ "errors": 2,
+ "status": "error",
+ "history": [
+  {
+   "at": "2026-11-11T14:49:15.019Z",
+   "mode": "manual",
+   "status": "fail",
+   "fails": 2,
+   "round": 1,
+   "reused": false,
+   "stopHookActive": false
+  },
+  {
+   "at": "2026-11-11T14:50:47.699Z",
+   "mode": "manual",
+   "status": "error",
+   "fails": 0,
+   "round": 1,
+   "reused": false,
+   "stopHookActive": false
+  },
+  {
+   "at": "2026-11-11T14:51:52.472Z",
+   "mode": "manual",
+   "status": "error",
+   "fails": 0,
+   "round": 1,
+   "reused": true,
+   "stopHookActive": false
+  },
+  {
+   "at": "2026-11-11T14:54:04.293Z",
+   "mode": "manual",
+   "status": "error",
+   "fails": 0,
+   "round": 1,
+   "reused": true,
+   "stopHookActive": false
+  },
+  {
+   "at": "2026-11-11T14:59:35.707Z",
+   "mode": "manual",
+   "status": "error",
+   "fails": 0,
+   "round": 1,
+   "reused": true,
+   "stopHookActive": false
+  },
+  {
+   "at": "2026-11-11T15:04:27.294Z",
+   "mode": "manual",
+   "status": "error",
+   "fails": 0,
+   "round": 1,
+   "reused": true,
+   "stopHookActive": false
+  },
+  {
+   "at": "2026-11-11T15:09:48.960Z",
+   "mode": "manual",
+   "status": "error",
+   "fails": 0,
+   "round": 1,
+   "reused": true,
+   "stopHookActive": false
+  },
+  {
+   "at": "2026-11-11T15:11:06.301Z",
+   "mode": "manual",
+   "status": "error",
+   "fails": 0,
+   "round": 1,
+   "reused": true,
+   "stopHookActive": false
+  },
+  {
+   "at": "2026-11-11T15:11:06.488Z",
+   "mode": "manual",
+   "status": "error",
+   "fails": 0,
+   "round": 1,
+   "reused": true,
+   "stopHookActive": false
+  },
+  {
+   "at": "2026-11-11T15:15:13.474Z",
+   "mode": "manual",
+   "status": "error",
+   "fails": 0,
+   "round": 1,
+   "reused": true,
+   "stopHookActive": false
+  },
+  {
+   "at": "2026-11-11T15:18:22.342Z",
+   "mode": "manual",
+   "status": "error",
+   "fails": 0,
+   "round": 1,
+   "reused": true,
+   "stopHookActive": false
+  },
+  {
+   "at": "2026-11-11T15:18:24.745Z",
+   "mode": "manual",
+   "status": "error",
+   "fails": 0,
+   "round": 1,
+   "reused": true,
+   "stopHookActive": false
+  }
+ ],
+ "max": 3,
+ "marker": {
+  "page": null,
+  "url": "http://localhost:5199/",
+  "root": null,
+  "kind": null,
+  "category": null,
+  "primary": null,
+  "rounds": 3,
+  "start": "2026-11-11T14:48:25.534Z",
+  "by": "gate.mjs --start"
+ },
+ "manual": true,
+ "roundKey": "aa3854697ff4024e:a6257977",
+ "roundFree": false,
+ "idleFree": false,
+ "blockKey": null,
+ "fp": "aa3854697ff4024e",
+ "page": "http://localhost:5199/",
+ "found": {
+  "fails": [
+   {
+    "check": "container",
+    "where": "page",
+    "msg": "no .wrap",
+    "fix": "put the content in one .wrap",
+    "widths": [
+     1440,
+     390
+    ],
+    "from": "layout",
+    "ids": [
+     "container"
+    ],
+    "wheres": [
+     "page"
+    ]
+   }
+  ],
+  "warns": [
+   {
+    "check": "hero-fill",
+    "where": "(the page)",
+    "msg": "partly measured: the first screen (navigate: net::ERR_CONNECTION_REFUSED)",
+    "fix": "run the check again on a quieter machine; if it keeps failing, the probe error line says what stopped it",
+    "widths": [
+     1280,
+     1152,
+     1024,
+     896,
+     768
+    ],
+    "from": "consistency"
+   },
+   {
+    "check": "nav",
+    "where": "(the page)",
+    "msg": "partly measured: the first screen (navigate: net::ERR_CONNECTION_REFUSED)",
+    "fix": "run the check again on a quieter machine; if it keeps failing, the probe error line says what stopped it",
+    "widths": [
+     1280,
+     1152,
+     1024,
+     896,
+     768
+    ],
+    "from": "consistency"
+   },
+   {
+    "check": "spill",
+    "where": "(the page)",
+    "msg": "partly measured: the first screen (navigate: net::ERR_CONNECTION_REFUSED)",
+    "fix": "run the check again on a quieter machine; if it keeps failing, the probe error line says what stopped it",
+    "widths": [
+     1280,
+     1152,
+     1024,
+     896,
+     768
+    ],
+    "from": "consistency"
+   },
+   {
+    "check": "off-viewport",
+    "where": "(the page)",
+    "msg": "partly measured: the first screen (navigate: net::ERR_CONNECTION_REFUSED)",
+    "fix": "run the check again on a quieter machine; if it keeps failing, the probe error line says what stopped it",
+    "widths": [
+     1280,
+     1152,
+     1024,
+     896,
+     768
+    ],
+    "from": "consistency"
+   },
+   {
+    "check": "cut-text",
+    "where": "(the page)",
+    "msg": "partly measured: the first screen (navigate: net::ERR_CONNECTION_REFUSED)",
+    "fix": "run the check again on a quieter machine; if it keeps failing, the probe error line says what stopped it",
+    "widths": [
+     1280,
+     1152,
+     1024,
+     896,
+     768
+    ],
+    "from": "consistency"
+   }
+  ],
+  "crashed": [
+   "the copy (the page showed no <main>, <section> or <h1> to lint)",
+   "consistency.mjs could not walk 1440, 390"
+  ],
+  "seconds": {
+   "consistency": 24,
+   "layout": 17
+  }
+ },
+ "open": [],
+ "waived": [
+  {
+   "check": "container",
+   "where": "page",
+   "msg": "no .wrap",
+   "fix": "put the content in one .wrap",
+   "widths": [
+    1440,
+    390
+   ],
+   "from": "layout",
+   "ids": [
+    "container"
+   ],
+   "wheres": [
+    "page"
+   ],
+   "reason": "Sidebar shell wraps content per-section in .wrap (SR-6) rather than one page-level .wrap; required by e2e layout.spec sidebar/content separation"
+  }
+ ],
+ "warnCount": 5,
+ "at": "2026-11-11T15:18:24.748Z",
+ "note": "the copy (the page showed no <main>, <section> or <h1> to lint); consistency.mjs could not walk 1440, 390"
+}

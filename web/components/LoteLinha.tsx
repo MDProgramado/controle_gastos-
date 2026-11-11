@@ -79,20 +79,25 @@ export function LinhaLote({
       </div>
       <div className="flex flex-col gap-1">
         <Label htmlFor={`tipo-${linha.id}`}>Tipo</Label>
-        <select
-          id={`tipo-${linha.id}`}
-          name={`tipo-${linha.id}`}
+        <Select
           value={linha.tipo}
-          onChange={(e) =>
+          onValueChange={(valor) =>
             onChange(linha.id, {
-              tipo: e.target.value as TipoLancamento,
+              tipo: valor as TipoLancamento,
             })}
           disabled={loading}
-          className="h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
         >
-          <option value="ENTRADA">Entrada</option>
-          <option value="SAIDA">Saída</option>
-        </select>
+          <SelectTrigger
+            id={`tipo-${linha.id}`}
+            className="h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
+          >
+            <SelectValue placeholder={linha.tipo} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ENTRADA">Entrada</SelectItem>
+            <SelectItem value="SAIDA">Saída</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
       <div className="flex flex-col gap-1">
         <Label htmlFor={`valor-${linha.id}`}>Valor</Label>
