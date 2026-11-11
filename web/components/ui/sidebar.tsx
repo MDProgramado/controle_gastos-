@@ -5,13 +5,11 @@ import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import {
   Sheet,
-  SheetTrigger,
   SheetClose,
   SheetContent,
   SheetHeader,
 } from "@/components/ui/sheet"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Home, DollarSign, Layout, LogOut, Menu, ChevronLeft } from "lucide-react"
+import { Home, DollarSign, Layout, LogOut, ChevronLeft, ChevronRight } from "lucide-react"
 
 const sidebarItems = [
   { href: "/", label: "Dashboard", icon: Home },
@@ -24,6 +22,8 @@ const sidebarItems = [
 interface SidebarContextType {
   collapsed: boolean
   onCollapseChange: (collapsed: boolean) => void
+  mobileOpen: boolean
+  onMobileOpenChange: (open: boolean) => void
 }
 
 const SidebarContext = React.createContext<SidebarContextType | null>(null)
@@ -38,15 +38,23 @@ export function SidebarProvider({
   defaultCollapsed = false,
 }: SidebarProviderProps) {
   const [collapsed, setCollapsed] = React.useState(defaultCollapsed)
+  const [mobileOpen, setMobileOpen] = React.useState(false)
 
   return (
-    <SidebarContext.Provider value={{ collapsed, onCollapseChange: setCollapsed }}>
+    <SidebarContext.Provider
+      value={{
+        collapsed,
+        onCollapseChange: setCollapsed,
+        mobileOpen,
+        onMobileOpenChange: setMobileOpen,
+      }}
+    >
       {children}
     </SidebarContext.Provider>
   )
 }
 
-function useSidebar() {
+export function useSidebar() {
   const context = React.useContext(SidebarContext)
   if (!context) {
     throw new Error("useSidebar deve ser usado dentro de <SidebarProvider>")
@@ -125,7 +133,7 @@ function SidebarItem({
 function SidebarNav({ collapsed }: { collapsed: boolean }) {
   const pathname = usePathname()
   return (
-    <nav className="flex flex-col gap-1 px-2 py-3">
+    <nav className="flex-1 flex flex-col gap-1 px-2 py-3">
       {sidebarItems.map((item) => (
         <SidebarItem
           key={item.href}
@@ -148,13 +156,13 @@ export function SidebarContent({
   className,
   ...props
 }: SidebarContentProps) {
-  const { collapsed } = useSidebar()
+  const { collapsed, onCollapseChange, mobileOpen, onMobileOpenChange } = useSidebar()
 
   // Desktop: sidebar fixo no fluxo (nÃ£o position:fixed para nÃ£o sobrepor conteÃºdo)
   const desktop = (
     <aside
       className={cn(
-        "hidden md:flex flex-col border-r h-screen",
+        "hidden md:flex flex-col h-full border-r",
         collapsed ? "w-16" : "w-64",
         className
       )}
@@ -167,18 +175,21 @@ export function SidebarContent({
             Financeiro
           </span>
         </div>
-        {!collapsed && (
-          <button
-            className="p-2 rounded-lg text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
-            aria-label="Reduzir menu"
-          >
+        <button
+          onClick={() => onCollapseChange(!collapsed)}
+          className="p-2 rounded-lg text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+          aria-label={collapsed ? "Expandir menu" : "Reduzir menu"}
+        >
+          {collapsed ? (
+            <ChevronRight className="h-4 w-4" />
+          ) : (
             <ChevronLeft className="h-4 w-4" />
-          </button>
-        )}
+          )}
+        </button>
       </div>
-      <ScrollArea className="h-full">
+      <div className="flex-1 overflow-y-auto">
         <SidebarNav collapsed={collapsed} />
-      </ScrollArea>
+      </div>
       <div className="flex flex-col gap-1 px-3 py-3 border-t border-border">
         <SairButton collapsed={collapsed} />
       </div>
@@ -187,15 +198,7 @@ export function SidebarContent({
 
   // Mobile: Sheet (drawer) â€” nÃ£o ocupa largura do conteÃºdo
   const mobile = (
-    <Sheet>
-      <SheetTrigger asChild>
-        <button
-          className="md:hidden p-2 rounded-lg text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
-          aria-label="Abrir menu"
-        >
-          <Menu className="h-5 w-5" />
-        </button>
-      </SheetTrigger>
+    <Sheet open={mobileOpen} onOpenChange={onMobileOpenChange}>
       <SheetContent side="left" className="w-[256px]">
         <SheetHeader className="flex items-center justify-between">
           <div className="flex items-center gap-2 px-3 py-4">
@@ -210,9 +213,9 @@ export function SidebarContent({
             </button>
           </SheetClose>
         </SheetHeader>
-        <ScrollArea className="h-full">
+        <div className="flex-1 overflow-y-auto">
           <SidebarNav collapsed={true} />
-        </ScrollArea>
+        </div>
         <div className="flex flex-col gap-1 px-3 py-3 border-t border-border">
           <SairButton collapsed={true} />
         </div>

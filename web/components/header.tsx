@@ -1,7 +1,8 @@
 ﻿"use client"
 
 import * as React from "react"
-import { Bell, User } from "lucide-react"
+import { Bell, User, Menu } from "lucide-react"
+import { useSidebar } from "@/components/ui/sidebar"
 
 interface HeaderProps {
   showNotification?: boolean
@@ -21,9 +22,19 @@ export function Header({
   onNotificationClick,
   onUserClick,
 }: HeaderProps) {
+  const { onMobileOpenChange } = useSidebar()
+
   return (
     <header className="nav flex items-center justify-end border-b border-border px-4 py-4">
       <div className="nav__actions flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => onMobileOpenChange(true)}
+          className="md:hidden p-2 rounded-lg text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          aria-label="Abrir menu"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
         {showNotification && (
           <button
             type="button"

@@ -8,7 +8,6 @@ import { MonthSelector } from "@/components/MonthSelector";
 import { DashboardKPIs } from "@/components/DashboardKPIs";
 import { CategoryBreakdown } from "@/components/CategoryBreakdown";
 import { MonthlyComparison, type MonthlyData } from "@/components/MonthlyComparison";
-import { AppPreview } from "@/components/AppPreview";
 import { SkipLink } from "@/components/SkipLink";
 import { KitBoot } from "@/components/KitBoot";
 
@@ -115,7 +114,7 @@ export default async function Home({
                     </div>
                   </div>
                   <div className="w-full shrink-0 lg:w-[420px]">
-                    <AppPreview />
+                    {/* espaço reservado para visual do produto (sem preview de demonstração) */}
                   </div>
                 </div>
               </div>
