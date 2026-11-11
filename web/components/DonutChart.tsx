@@ -11,7 +11,13 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 
-const COLORS = ["#4C956C", "#A85BA6", "#E0B25A", "#5B9BD5", "#E5484D"]
+const COLORS = [
+  "var(--chart-1)",
+  "var(--chart-2)",
+  "var(--chart-3)",
+  "var(--chart-4)",
+  "var(--chart-5)",
+]
 
 const MONETARY = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -38,12 +44,20 @@ export function DonutChart({
     (a, b) => Number(b.total) - Number(a.total)
   )
   const top5 = ordenadas.slice(0, 5)
+  const outrosTotal = ordenadas
+    .slice(5)
+    .reduce((sum, c) => sum + Number(c.total), 0)
 
-  const pieData = top5.map((c, i) => ({
-    name: c.nome,
-    value: Number(c.total),
-    fill: COLORS[i % COLORS.length],
-  }))
+  const pieData = [
+    ...top5.map((c, i) => ({
+      name: c.nome,
+      value: Number(c.total),
+      fill: COLORS[i % COLORS.length],
+    })),
+    ...(outrosTotal > 0
+      ? [{ name: "Outros", value: outrosTotal, fill: "var(--muted-foreground)" }]
+      : []),
+  ]
 
   return (
     <Card className="h-full">
@@ -65,8 +79,8 @@ export function DonutChart({
                     paddingAngle={2}
                     dataKey="value"
                   >
-                    {top5.map((c, i) => (
-                      <Cell key={c.id} fill={COLORS[i % COLORS.length]} />
+                    {pieData.map((c, i) => (
+                      <Cell key={i} fill={c.fill} />
                     ))}
                   </Pie>
                 </PieChart>
@@ -78,7 +92,7 @@ export function DonutChart({
               {MONETARY.format(totalSaidasNum)}
             </span>
             <span className="text-xs text-muted-foreground">
-              Total de sa\u00eddas
+              Total de saídas
             </span>
           </div>
         </div>

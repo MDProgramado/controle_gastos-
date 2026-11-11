@@ -44,7 +44,45 @@ body {
   padding-inline: 1rem;
 }
 
-/* ===== UI-SPEC fase 1 — bases e estados (regras fora de camada vencem as utilities) ===== */
+/* ===== UI-SPEC fase 1 — cores da marca e paleta (financeiro) =====
+
+   Verde escuro #0F3D2E = fundo escuro (dark ground)
+   Verde médio  #9DBBA9 = legendas, bons ~6:1 sobre o fundo escuro
+   Verde claro   #A8D5BA = texto principal, contraste sobre fundo escuro
+   Verde marca   #4C956C = primary (botões de ação) — NUNCA texto pequeno sobre escuro
+   Verde entrada --positive = tom mais claro que primary (diferencia de "ação")
+   Vermelho      --destructive = saída
+*/
+:root {
+  --background: #0F3D2E;
+  --foreground: #A8D5BA;
+  --muted: rgba(157, 187, 169, 0.15);
+  --muted-foreground: #9DBBA9;
+  --card: #0F3D2E;
+  --card-foreground: #A8D5BA;
+  --popover: #0F3D2E;
+  --popover-foreground: #A8D5BA;
+  --primary: #4C956C;
+  --primary-foreground: #FFFFFF;
+  --secondary: #9DBBA9;
+  --secondary-foreground: #0F3D2E;
+  --muted-foreground: #9DBBA9;
+  --accent: #164532;
+  --accent-foreground: #A8D5BA;
+  --destructive: #E5484D;
+  --destructive-foreground: #FFFFFF;
+  --border: #9DBBA9;
+  --input: #9DBBA9;
+  --ring: #A8D5BA;
+  --positive: #A8D5BA;
+  --positive-foreground: #0F3D2E;
+  --chart-1: #A8D5BA;
+  --chart-2: #9DBBA9;
+  --chart-3: #4C956C;
+  --chart-4: #164532;
+  --chart-5: #2D5A46;
+  --radius: 0.75rem;
+}
 
 /* Base font 16px (UI-SPEC Typography: override do default 14px do shadcn) */
 html {
@@ -83,4 +121,27 @@ html {
 }
 .section__ground {
   background: linear-gradient(0deg, var(--primary) 0%, transparent 50%);
+}
+
+/* ===== Elevação no dark =====
+   Sombra quase não aparece no dark. Separar cards por diferença de
+   luminosidade e borda 1px (--border), não por sombra.
+*/
+.dark .card,
+.dark [data-slot="card"] {
+  box-shadow: none;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--card-foreground);
+}
+.dark .card:hover,
+.dark [data-slot="card"]:hover {
+  border-color: var(--ring);
+  background: color-mix(in oklab, var(--card) 92%, var(--foreground));
+}
+/* Cards em seções (hero/resumo/análise) — borda sutil, sem sombra */
+.dark section .card,
+.dark section [data-slot="card"] {
+  border: 1px solid var(--border);
+  box-shadow: none;
 }
