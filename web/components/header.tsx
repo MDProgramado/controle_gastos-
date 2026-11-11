@@ -1,43 +1,45 @@
-"use client"
+﻿"use client"
 
 import * as React from "react"
 import { Bell, User } from "lucide-react"
 
 interface HeaderProps {
-  title: string
   showNotification?: boolean
   showUser?: boolean
   onNotificationClick?: () => void
   onUserClick?: () => void
 }
 
+/**
+ * Barra superior (header.nav do kit): aÃ§Ãµes Ã  direita. A marca fica na sidebar
+ * e o nome da pÃ¡gina no <h1> dentro de <main> â€” a barra nÃ£o repete nenhum dos
+ * dois.
+ */
 export function Header({
-  title,
   showNotification = true,
   showUser = true,
   onNotificationClick,
   onUserClick,
 }: HeaderProps) {
   return (
-    <header className="flex items-center justify-between px-3 py-4 border-b border-border">
-      <div className="flex items-center gap-2">
-        <h1 className="font-semibold text-lg text-foreground">{title}</h1>
-      </div>
-      <div className="flex items-center gap-2">
+    <header className="nav flex items-center justify-end border-b border-border px-4 py-4">
+      <div className="nav__actions flex items-center gap-2">
         {showNotification && (
           <button
+            type="button"
             onClick={onNotificationClick}
-            className="p-2 rounded-lg text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
-            aria-label="Notificações"
+            className="rounded-lg p-2 text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            aria-label="NotificaÃ§Ãµes"
           >
             <Bell className="h-5 w-5" />
           </button>
         )}
         {showUser && (
           <button
+            type="button"
             onClick={onUserClick}
-            className="p-2 rounded-lg text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
-            aria-label="Usuário"
+            className="rounded-lg p-2 text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            aria-label="Perfil"
           >
             <User className="h-5 w-5" />
           </button>

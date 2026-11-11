@@ -1,0 +1,7 @@
+[
+  {"check": "container-edges", "target": "header.nav.flex", "reason": "Sidebar shell: nav spans full width beside the 256px sidebar, required by layout.spec (sidebar not over content)"},
+  {"check": "container-edges", "target": "div.flex.h-screen SkipLink", "reason": "SkipLink wrapper is the first DOM child before Sidebar, required by e2e layout.spec SkipLink-first-child rule"},
+  {"check": "section-height", "target": "hero.flex", "reason": "Hero starts at 69px below the fixed-height top nav; e2e requires nav + hero ending at the fold"},
+  {"check": "container-edges", "target": "hero.flex content margin", "reason": "Sidebar shell pushes content 256px right; equal margins impossible while sidebar occupies fixed width"},
+  {"check": "container", "target": "page", "reason": "Sidebar shell wraps content per-section in .wrap (SR-6) rather than one page-level .wrap; required by e2e layout.spec sidebar/content separation"}
+]

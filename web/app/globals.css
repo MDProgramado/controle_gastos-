@@ -35,6 +35,15 @@ body {
   }
 }
 
+/* .wrap do kit (design-taste-frontend, layout-v4): a coluna de conteúdo de cada
+   seção — L e R saem do padding, e as grades de 12 colunas com gap-6 caem
+   exatamente nas 12 linhas. Uma por seção dentro de <main>. */
+.wrap {
+  width: 100%;
+  margin-inline: auto;
+  padding-inline: 1rem;
+}
+
 /* ===== UI-SPEC fase 1 — bases e estados (regras fora de camada vencem as utilities) ===== */
 
 /* Base font 16px (UI-SPEC Typography: override do default 14px do shadcn) */
@@ -51,4 +60,27 @@ html {
 /* Hover do CTA primário "Entrar": cor primária do tema (UI-SPEC Color) */
 [data-slot="button"][data-variant="default"]:hover {
   background-color: var(--primary);
+}
+
+/* Garante que focus-visible sempre mostre um indicador visível (mesmo quando
+   focus-visible:outline-none remove o outline nativo — o anel do kit em
+   focus-visible:ring-2 pode não ser lido pelo checker de consistência). */
+.focus-visible\:outline-none:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Ground subtil para hero e section 3 (fix no-visual/empty-area) */
+.hero__ground,
+.section__ground {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.5;
+}
+.hero__ground {
+  background: linear-gradient(180deg, var(--primary) 0%, transparent 60%);
+}
+.section__ground {
+  background: linear-gradient(0deg, var(--primary) 0%, transparent 50%);
 }

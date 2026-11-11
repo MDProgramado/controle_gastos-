@@ -1,5 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { LoginForm } from "@/components/LoginForm";
+import { SkipLink } from "@/components/SkipLink";
 
 // Cache Components (Next 16): o banner depende de searchParams (request time) —
 // a rota bloqueia no servidor em vez de entrar no shell estático (docs oficiais).
@@ -18,7 +19,12 @@ export default async function LoginPage({
   const sessaoExpirada = expirada === "1";
 
   return (
-    <main className="flex min-h-dvh w-full flex-col items-center justify-center px-4 py-12">
+    <>
+      <SkipLink />
+      <main
+        id="main-content"
+        className="flex min-h-dvh w-full flex-col items-center justify-center px-4 py-12"
+      >
       <div className="w-full max-w-[400px]">
         <header className="mb-6 text-center">
           <h1 className="text-[28px] leading-[1.2] font-semibold text-foreground">
@@ -39,6 +45,7 @@ export default async function LoginPage({
           <LoginForm sessaoExpirada={sessaoExpirada} />
         </Card>
       </div>
-    </main>
+      </main>
+    </>
   );
 }

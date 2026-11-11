@@ -15,6 +15,8 @@ import { Sidebar } from "@/components/ui/sidebar";
 import { SidebarContent } from "@/components/ui/sidebar";
 import { SidebarInset } from "@/components/ui/sidebar";
 import { Header } from "@/components/header";
+import { SkipLink } from "@/components/SkipLink";
+import { KitBoot } from "@/components/KitBoot";
 
 type LancamentoDataDisplay = Omit<LancamentoData, "valor"> & { valor: number };
 
@@ -84,35 +86,62 @@ export default async function LancamentosPage({
     return result !== null;
   }
 
+  const nomeMes = new Date(ano, mes - 1, 1)
+    .toLocaleString("pt-BR", { month: "long" })
+    .replace(/^./, (c) => c.toUpperCase());
+
   return (
     <Sidebar>
+      <SkipLink />
       <SidebarContent />
       <SidebarInset>
         <div className="flex flex-col h-full w-full overflow-hidden">
-          <Header title="Lançamentos" />
-          <main className="flex-1 overflow-y-auto bg-background px-4 py-6">
-            <div className="max-w-[1280px] mx-auto">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-                <div>
-                  <h1 className="text-[28px] leading-[1.2] font-semibold text-foreground">
-                    Lançamentos
-                  </h1>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Listagem filtrada por mês. Valor positivo = entrada, negativo = saída.
-                  </p>
-                </div>
+          <Header />
+          <main id="main-content" className="flex-1 overflow-y-auto bg-background">
+            {/* Hero — a primeira tela: título + lead (entra no carregamento) */}
+            <section
+              className="hero flex min-h-full flex-col justify-center"
+              data-enter
+              data-screen="free"
+              aria-labelledby="hero-h"
+            >
+              <div className="wrap w-full py-8">
+                <h1
+                  id="hero-h"
+                  className="text-2xl font-semibold tracking-tight text-foreground"
+                >
+                  Lançamentos
+                </h1>
+                <p className="hero__lead mt-3 max-w-[52ch] text-base leading-relaxed text-muted-foreground">
+                  Listagem filtrada por mês. Valor positivo = entrada, negativo
+                  = saída.
+                </p>
               </div>
+            </section>
 
-              <LancamentosPageClient
-                lancamentos={lancamentos}
-                total={total}
-                categorias={categorias}
-                onCriar={actionCriarLancamento}
-                onEditar={actionEditarLancamento}
-                onExcluir={actionExcluirLancamento}
-                onCriarLote={actionCriarLote}
-              />
-            </div>
+            {/* Conteúdo — resumo em counter-rolls + tabela do mês */}
+            <section
+              className="flex min-h-screen flex-col justify-center"
+              data-screen="free"
+              aria-labelledby="lista-h"
+            >
+              <div className="wrap w-full py-10">
+                <h2 id="lista-h" className="sr-only">
+                  Lançamentos de {nomeMes}
+                </h2>
+                <LancamentosPageClient
+                  lancamentos={lancamentos}
+                  total={total}
+                  categorias={categorias}
+                  onCriar={actionCriarLancamento}
+                  onEditar={actionEditarLancamento}
+                  onExcluir={actionExcluirLancamento}
+                  onCriarLote={actionCriarLote}
+                />
+                {/* motion.js/moments.js só DEPOIS da hidratação deste segmento */}
+                <KitBoot />
+              </div>
+            </section>
           </main>
         </div>
       </SidebarInset>

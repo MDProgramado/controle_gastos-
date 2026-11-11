@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import * as React from "react"
 import { usePathname, useRouter } from "next/navigation"
@@ -16,11 +16,11 @@ import { Home, DollarSign, Layout, LogOut, Menu, ChevronLeft } from "lucide-reac
 
 const sidebarItems = [
   { href: "/", label: "Dashboard", icon: Home },
-  { href: "/lancamentos", label: "Lançamentos", icon: DollarSign },
+  { href: "/lancamentos", label: "LanÃ§amentos", icon: DollarSign },
   { href: "/categorias", label: "Categorias", icon: Layout },
 ] as const
 
-// ── Contexto (SidebarProvider) ──────────────────────────────────────────
+// â”€â”€ Contexto (SidebarProvider) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface SidebarContextType {
   collapsed: boolean
@@ -55,7 +55,7 @@ function useSidebar() {
   return context
 }
 
-// ── Sidebar (shell flex container) ──────────────────────────────────────
+// â”€â”€ Sidebar (shell flex container) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface SidebarProps {
   children: React.ReactNode
@@ -69,7 +69,7 @@ export function Sidebar({ children }: SidebarProps) {
   )
 }
 
-// ── Sair (botão de logout, apenas no rodapé da sidebar) ─────────────────
+// â”€â”€ Sair (botÃ£o de logout, apenas no rodapÃ© da sidebar) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function SairButton({ collapsed }: { collapsed?: boolean }) {
   const router = useRouter()
@@ -86,7 +86,7 @@ function SairButton({ collapsed }: { collapsed?: boolean }) {
         window.location.replace("/login")
       }}
       className={cn(
-        "flex items-center gap-3 rounded-lg border border-transparent px-3 py-2 text-sm font-medium text-destructive hover:bg-destructive/10 hover:text-destructive transition-colors",
+        "flex items-center gap-3 rounded-lg border border-transparent px-3 py-2 text-sm font-medium text-destructive hover:bg-destructive/10 hover:text-destructive transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:bg-destructive/20",
         collapsed ? "justify-center px-2" : ""
       )}
     >
@@ -96,7 +96,7 @@ function SairButton({ collapsed }: { collapsed?: boolean }) {
   )
 }
 
-// ── SidebarItem ─────────────────────────────────────────────────────────
+// â”€â”€ SidebarItem â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function SidebarItem({
   item,
@@ -111,7 +111,7 @@ function SidebarItem({
     <a
       href={item.href}
       className={cn(
-        "flex items-center gap-3 rounded-lg border border-transparent px-3 py-2 text-sm font-medium transition-colors",
+        "flex items-center gap-3 rounded-lg border border-transparent px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
         isActive
           ? "bg-accent text-accent-foreground"
           : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground",
@@ -140,7 +140,7 @@ function SidebarNav({ collapsed }: { collapsed: boolean }) {
   )
 }
 
-// ── SidebarContent (sidebar fixo à esquerda / Sheet em mobile) ──────────
+// â”€â”€ SidebarContent (sidebar fixo Ã  esquerda / Sheet em mobile) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface SidebarContentProps extends React.ComponentProps<"aside"> {
   className?: string
@@ -152,7 +152,7 @@ export function SidebarContent({
 }: SidebarContentProps) {
   const { collapsed } = useSidebar()
 
-  // Desktop: sidebar fixo no fluxo (não position:fixed para não sobrepor conteúdo)
+  // Desktop: sidebar fixo no fluxo (nÃ£o position:fixed para nÃ£o sobrepor conteÃºdo)
   const desktop = (
     <aside
       className={cn(
@@ -187,7 +187,7 @@ export function SidebarContent({
     </aside>
   )
 
-  // Mobile: Sheet (drawer) — não ocupa largura do conteúdo
+  // Mobile: Sheet (drawer) â€” nÃ£o ocupa largura do conteÃºdo
   const mobile = (
     <Sheet>
       <SheetTrigger asChild>
@@ -230,7 +230,7 @@ export function SidebarContent({
   )
 }
 
-// ── SidebarInset (conteúdo principal, flex-1, sem largura fixa) ─────────
+// â”€â”€ SidebarInset (conteÃºdo principal, flex-1, sem largura fixa) â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface SidebarInsetProps extends React.ComponentProps<"div"> {
   className?: string

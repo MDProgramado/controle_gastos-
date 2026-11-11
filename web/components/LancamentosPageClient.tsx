@@ -249,6 +249,27 @@ export function LancamentosPageClient({
     [onCriarLote],
   )
 
+  // Resumo real do mês (soma dos lançamentos recebidos) — o momento
+  // counter-rolls da página: os números rolam uma vez ao entrar na tela.
+  const resumo = React.useMemo(() => {
+    let entradas = 0
+    let saidas = 0
+    for (const l of lancamentosIniciais) {
+      if (l.tipo === "ENTRADA") entradas += l.valor
+      else saidas += Math.abs(l.valor)
+    }
+    return { entradas, saidas, saldo: entradas - saidas }
+  }, [lancamentosIniciais])
+
+  const resumoFmt = React.useMemo(
+    () =>
+      new Intl.NumberFormat("pt-BR", {
+        style: "currency",
+        currency: "BRL",
+      }),
+    [],
+  )
+
   return (
     <div className="space-y-6">
       {/* Botão de ação principal */}
@@ -284,6 +305,65 @@ export function LancamentosPageClient({
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
+      </div>
+
+      {/* Resumo do mês — counter-rolls (números reais da listagem) */}
+      <div
+        className="grid grid-cols-12 gap-x-6 gap-y-6"
+        data-moment="counter-rolls"
+      >
+        <div className="col-span-12 border-t border-border pt-3 sm:col-span-4">
+          <span className="text-xs font-medium text-muted-foreground">
+            Entradas
+          </span>
+          <p className="t-stat mt-1.5 text-2xl font-semibold tabular-nums text-positive">
+            {resumoFmt.format(resumo.entradas)}
+          </p>
+          <button
+            type="button"
+            className="mt-2 text-xs text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            onClick={() => setTipo("ENTRADA")}
+            aria-label="Filtrar apenas entradas"
+          >
+            Filtrar
+          </button>
+        </div>
+        <div className="col-span-12 border-t border-border pt-3 sm:col-span-4">
+          <span className="text-xs font-medium text-muted-foreground">
+            Saídas
+          </span>
+          <p className="t-stat mt-1.5 text-2xl font-semibold tabular-nums text-destructive">
+            {resumoFmt.format(resumo.saidas)}
+          </p>
+          <button
+            type="button"
+            className="mt-2 text-xs text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            onClick={() => setTipo("SAIDA")}
+            aria-label="Filtrar apenas saídas"
+          >
+            Filtrar
+          </button>
+        </div>
+        <div className="col-span-12 border-t border-border pt-3 sm:col-span-4">
+          <span className="text-xs font-medium text-muted-foreground">
+            Saldo
+          </span>
+          <p
+            className={`t-stat mt-1.5 text-2xl font-semibold tabular-nums ${
+              resumo.saldo >= 0 ? "text-positive" : "text-destructive"
+            }`}
+          >
+            {resumoFmt.format(resumo.saldo)}
+          </p>
+          <button
+            type="button"
+            className="mt-2 text-xs text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            onClick={() => setTipo(null)}
+            aria-label="Mostrar todas"
+          >
+            Todas
+          </button>
+        </div>
       </div>
 
       {/* Tabela de lançamentos */}

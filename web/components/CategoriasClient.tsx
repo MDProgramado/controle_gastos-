@@ -235,15 +235,37 @@ export function CategoriasClient({
 
   return (
     <div className="space-y-6">
-      {/* Cabeçalho + ações */}
+      {/* Cabeçalho + ações — o <h1> da página vive no hero (page.tsx) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-[28px] leading-[1.2] font-semibold text-foreground">
-            Categorias
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Gerencie as categorias de entrada e saída da empresa.
-          </p>
+        {/* Momento counter-rolls: as contagens reais rolam uma vez ao entrar */}
+        <div
+          className="grid w-full max-w-xl grid-cols-3 gap-x-6"
+          data-moment="counter-rolls"
+        >
+          <div className="border-t border-border pt-3">
+            <span className="text-xs font-medium text-muted-foreground">
+              Total
+            </span>
+            <p className="t-stat mt-1.5 text-2xl font-semibold tabular-nums text-foreground">
+              {categorias.length}
+            </p>
+          </div>
+          <div className="border-t border-border pt-3">
+            <span className="text-xs font-medium text-muted-foreground">
+              Entradas
+            </span>
+            <p className="t-stat mt-1.5 text-2xl font-semibold tabular-nums text-positive">
+              {entradas.length}
+            </p>
+          </div>
+          <div className="border-t border-border pt-3">
+            <span className="text-xs font-medium text-muted-foreground">
+              Saídas
+            </span>
+            <p className="t-stat mt-1.5 text-2xl font-semibold tabular-nums text-destructive">
+              {saidas.length}
+            </p>
+          </div>
         </div>
 
         {podeEscrever && (
@@ -252,7 +274,7 @@ export function CategoriasClient({
             variant="default"
             onClick={abrirCriar}
             disabled={loading}
-            className="h-11"
+            className="h-11 shrink-0"
           >
             {loading ? (
               <span className="flex items-center gap-1">

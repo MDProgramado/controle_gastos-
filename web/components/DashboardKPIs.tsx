@@ -1,10 +1,8 @@
 "use client"
 
-import { Card } from "@/components/ui/card"
-import { CardContent } from "@/components/ui/card"
-import { CardHeader } from "@/components/ui/card"
-import { CardTitle } from "@/components/ui/card"
+import type { ReactNode } from "react"
 import { Badge } from "@/components/ui/badge"
+import { cn } from "@/lib/utils"
 
 export const MONETARY = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -24,6 +22,17 @@ type DashboardKPIsProps = {
   saldoMesAnterior: number
 }
 
+function percentualNum(p: string): number {
+  return (
+    Math.abs(Number(p.replace(/[^0-9,-]/g, "").replace(",", "."))) || 0
+  )
+}
+
+/**
+ * Linha de números do dashboard: stats editoriais (borda em cima, sem card) —
+ * também é o momento `counter-rolls` da página (os dígitos rolam uma vez quando
+ * a linha entra na tela; sem script os números ficam como escritos).
+ */
 export function DashboardKPIs({
   totalEntradas,
   totalSaidas,
@@ -38,84 +47,79 @@ export function DashboardKPIs({
 }: DashboardKPIsProps) {
   const saldoPositivo = saldo >= 0
 
+  const stats = [
+    {
+      label: "Saldo",
+      valor: saldo,
+      classe: saldoPositivo ? "text-positive" : "text-destructive",
+      badge: null as ReactNode,
+      legenda: `Saldo do mês anterior: ${MONETARY.format(saldoMesAnterior)}`,
+    },
+    {
+      label: "Entradas",
+      valor: totalEntradas,
+      classe: "text-positive",
+      badge: (
+        <Badge
+          variant="success"
+          className={`text-xs font-semibold ${
+            variacaoEntradas >= 0
+              ? "text-positive bg-positive/10"
+              : "text-destructive bg-destructive/10"
+          }`}
+        >
+          {variacaoEntradas >= 0 ? "▲" : "▼"} {percentualNum(percentualEntradas)}%
+        </Badge>
+      ),
+      legenda: `Mês anterior: ${MONETARY.format(totalEntradasMesAnterior)}`,
+    },
+    {
+      label: "Saídas",
+      valor: totalSaidas,
+      classe: "text-destructive",
+      badge: (
+        <Badge
+          variant="destructive"
+          className={`text-xs font-semibold ${
+            variacaoSaidas <= 0
+              ? "text-positive bg-positive/10"
+              : "text-destructive bg-destructive/10"
+          }`}
+        >
+          {variacaoSaidas <= 0 ? "▼" : "▲"} {percentualNum(percentualSaidas)}%
+        </Badge>
+      ),
+      legenda: `Mês anterior: ${MONETARY.format(totalSaidasMesAnterior)}`,
+    },
+  ]
+
   return (
-    <section className="w-full grid gap-4 sm:grid-cols-3">
-      {/* Saldo - primeiro card, em destaque */}
-      <Card className="col-span-1 sm:col-span-3">
-        <CardHeader className="flex flex-row items-center justify-between py-4">
-          <CardTitle className="text-sm font-semibold text-muted-foreground">
-            Saldo
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <div className="flex items-baseline gap-2">
-            <span className={`text-4xl font-bold ${saldoPositivo ? "text-positive" : "text-destructive"}`}>
-              {MONETARY.format(saldo)}
+    <div
+      className="grid w-full grid-cols-12 gap-x-6 gap-y-8"
+      data-moment="counter-rolls"
+    >
+      {stats.map((s) => (
+        <div
+          key={s.label}
+          className="col-span-12 border-t border-border pt-4 sm:col-span-4"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-sm font-medium text-muted-foreground">
+              {s.label}
             </span>
+            {s.badge}
           </div>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Saldo do mês anterior: {MONETARY.format(saldoMesAnterior)}
-          </p>
-        </CardContent>
-      </Card>
-
-      {/* Entradas */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-sm font-semibold text-muted-foreground">
-            Entradas
-          </CardTitle>
-          <Badge
-            variant="success"
-            className={`text-xs font-semibold ${
-              variacaoEntradas >= 0 ? "text-positive bg-positive/10" : "text-destructive bg-destructive/10"
-            }`}
+          <p
+            className={cn(
+              "t-stat mt-3 text-xl font-semibold tracking-tight tabular-nums",
+              s.classe,
+            )}
           >
-            {variacaoEntradas >= 0 ? "▲" : "▼"} {Math.abs(
-              Number(percentualEntradas.replace(/[^0-9,-]/g, "").replace(",", ".")) || 0
-            )}%
-          </Badge>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <div className="flex items-baseline gap-1">
-            <span className="text-2xl font-bold text-positive">
-              {MONETARY.format(totalEntradas)}
-            </span>
-          </div>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Mês anterior: {MONETARY.format(totalEntradasMesAnterior)}
+            {MONETARY.format(s.valor)}
           </p>
-        </CardContent>
-      </Card>
-
-      {/* Saídas */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-sm font-semibold text-muted-foreground">
-            Saídas
-          </CardTitle>
-          <Badge
-            variant="destructive"
-            className={`text-xs font-semibold ${
-              variacaoSaidas <= 0 ? "text-positive bg-positive/10" : "text-destructive bg-destructive/10"
-            }`}
-          >
-            {variacaoSaidas <= 0 ? "▼" : "▲"} {Math.abs(
-              Number(percentualSaidas.replace(/[^0-9,-]/g, "").replace(",", ".")) || 0
-            )}%
-          </Badge>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <div className="flex items-baseline gap-1">
-            <span className="text-2xl font-bold text-destructive">
-              {MONETARY.format(totalSaidas)}
-            </span>
-          </div>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Mês anterior: {MONETARY.format(totalSaidasMesAnterior)}
-          </p>
-        </CardContent>
-      </Card>
-    </section>
+          <p className="mt-1.5 text-sm text-muted-foreground">{s.legenda}</p>
+        </div>
+      ))}
+    </div>
   )
 }
