@@ -33,7 +33,7 @@ export function TopNav({ activeRoute, userRole }: TopNavProps) {
   void userRole;
 
   return (
-    <nav className="sticky top-0 z-20 w-full border-b border-border bg-[#0A2A20]/95 backdrop-blur supports-[backdrop-filter]:bg-[#0A2A20]/60">
+    <nav className="sticky top-0 z-20 w-full border-b border-border bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/70">
       <div className="flex h-16 items-center justify-between px-4">
         {/* Marca */}
         <div className="mr-auto flex items-center gap-2">
