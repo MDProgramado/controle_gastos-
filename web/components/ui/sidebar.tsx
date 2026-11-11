@@ -1,7 +1,7 @@
 ﻿"use client"
 
 import * as React from "react"
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import {
   Sheet,
@@ -9,7 +9,6 @@ import {
   SheetClose,
   SheetContent,
   SheetHeader,
-  SheetFooter,
 } from "@/components/ui/sheet"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Home, DollarSign, Layout, LogOut, Menu, ChevronLeft } from "lucide-react"
@@ -72,7 +71,6 @@ export function Sidebar({ children }: SidebarProps) {
 // â”€â”€ Sair (botÃ£o de logout, apenas no rodapÃ© da sidebar) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function SairButton({ collapsed }: { collapsed?: boolean }) {
-  const router = useRouter()
   return (
     <button
       onClick={async () => {
