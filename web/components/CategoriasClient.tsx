@@ -13,6 +13,11 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Spinner } from "@/components/Spinner"
 import { Switch } from "@/components/ui/switch"
+import { Select } from "@/components/ui/select"
+import { SelectTrigger } from "@/components/ui/select"
+import { SelectValue } from "@/components/ui/select"
+import { SelectContent } from "@/components/ui/select"
+import { SelectItem } from "@/components/ui/select"
 import { Dialog } from "@/components/ui/dialog"
 import { DialogTrigger } from "@/components/ui/dialog"
 import { DialogContent } from "@/components/ui/dialog"
@@ -242,7 +247,7 @@ export function CategoriasClient({
           className="grid w-full max-w-xl grid-cols-3 gap-x-6"
           data-moment="counter-rolls"
         >
-          <div className="border-t border-border pt-3">
+          <div className="flex flex-col border-t border-border pt-3">
             <span className="text-xs font-medium text-muted-foreground">
               Total
             </span>
@@ -250,7 +255,7 @@ export function CategoriasClient({
               {categorias.length}
             </p>
           </div>
-          <div className="border-t border-border pt-3">
+          <div className="flex flex-col border-t border-border pt-3">
             <span className="text-xs font-medium text-muted-foreground">
               Entradas
             </span>
@@ -258,7 +263,7 @@ export function CategoriasClient({
               {entradas.length}
             </p>
           </div>
-          <div className="border-t border-border pt-3">
+          <div className="flex flex-col border-t border-border pt-3">
             <span className="text-xs font-medium text-muted-foreground">
               Saídas
             </span>
@@ -385,92 +390,107 @@ export function CategoriasClient({
               <DialogTitle>
                 {editandoId ? "Editar categoria" : "Nova categoria"}
               </DialogTitle>
+              <DialogDescription>
+                {editandoId
+                  ? "Altere o nome ou o tipo da categoria."
+                  : "Crie uma categoria de entrada ou de saída."}
+              </DialogDescription>
             </DialogHeader>
-            <DialogDescription>
-              <form onSubmit={onSubmit} className="grid gap-4 sm:grid-cols-2 sm:gap-4" noValidate>
-                <div className="flex flex-col gap-1 sm:col-span-2">
-                  <Label htmlFor="nome">Nome</Label>
-                  <Input
-                    id="nome"
-                    name="nome"
-                    type="text"
-                    placeholder="Nome da categoria"
-                    value={nome}
-                    onChange={(e) => {
-                      setNome(e.target.value)
-                      if (errosForm.nome)
-                        setErrosForm((atual) => ({ ...atual, nome: undefined }))
-                    }}
-                    disabled={loading}
-                    className="h-11"
-                    aria-invalid={errosForm.nome ? true : undefined}
-                  />
-                  {errosForm.nome && (
-                    <p className="text-sm text-destructive">{errosForm.nome}</p>
-                  )}
-                </div>
+            {/* O <form> fica FORA do DialogDescription: o Radix renderiza a
+                descrição como <p> e <form>/<div> dentro de <p> quebra a
+                hidratação ("<div> cannot be a descendant of <p>"). */}
+            <form
+              onSubmit={onSubmit}
+              className="grid gap-4 sm:grid-cols-2 sm:gap-4"
+              noValidate
+            >
+              <div className="flex flex-col gap-1 sm:col-span-2">
+                <Label htmlFor="nome">Nome</Label>
+                <Input
+                  id="nome"
+                  name="nome"
+                  type="text"
+                  placeholder="Nome da categoria"
+                  value={nome}
+                  onChange={(e) => {
+                    setNome(e.target.value)
+                    if (errosForm.nome)
+                      setErrosForm((atual) => ({ ...atual, nome: undefined }))
+                  }}
+                  disabled={loading}
+                  className="h-11"
+                  aria-invalid={errosForm.nome ? true : undefined}
+                />
+                {errosForm.nome && (
+                  <p className="text-sm text-destructive">{errosForm.nome}</p>
+                )}
+              </div>
 
-                <div className="flex flex-col gap-1">
-                  <Label htmlFor="tipo">Tipo</Label>
-                  <select
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="tipo">Tipo</Label>
+                <Select
+                  value={tipo}
+                  onValueChange={setTipo}
+                  disabled={loading}
+                >
+                  <SelectTrigger
                     id="tipo"
-                    name="tipo"
-                    value={tipo}
-                    onChange={(e) => setTipo(e.target.value)}
-                    disabled={loading}
                     className="h-11 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-base focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
                     aria-invalid={errosForm.tipo ? true : undefined}
                   >
-                    <option value="ENTRADA">Entrada</option>
-                    <option value="SAIDA">Saída</option>
-                  </select>
-                  {errosForm.tipo && (
-                    <p className="text-sm text-destructive">{errosForm.tipo}</p>
-                  )}
-                </div>
+                    <SelectValue placeholder="Selecione o tipo" />
+                  </SelectTrigger>
+                  <SelectContent position="popper">
+                    <SelectItem value="ENTRADA">Entrada</SelectItem>
+                    <SelectItem value="SAIDA">Saída</SelectItem>
+                  </SelectContent>
+                </Select>
+                {errosForm.tipo && (
+                  <p className="text-sm text-destructive">{errosForm.tipo}</p>
+                )}
+              </div>
 
-                <div className="flex items-center gap-2 sm:col-span-2">
-                  <input
-                    id="pessoal"
-                    name="pessoal"
-                    type="checkbox"
-                    checked={pessoal}
-                    onChange={(e) => setPessoal(e.target.checked)}
-                    disabled={loading}
-                    className="h-4 w-4 rounded border-input text-primary focus:ring-primary"
-                  />
-                  <Label htmlFor="pessoal" className="text-sm text-foreground">
-                    Pessoal
-                  </Label>
-                </div>
+              <div className="flex items-center gap-2 sm:col-span-2">
+                <input
+                  id="pessoal"
+                  name="pessoal"
+                  type="checkbox"
+                  checked={pessoal}
+                  onChange={(e) => setPessoal(e.target.checked)}
+                  disabled={loading}
+                  className="h-4 w-4 rounded border-input text-primary focus:ring-primary"
+                />
+                <Label htmlFor="pessoal" className="text-sm text-foreground">
+                  Pessoal
+                </Label>
+              </div>
 
-                <div className="flex items-center justify-end gap-2 sm:col-span-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setFormAberto(false)
-                      resetForm()
-                    }}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button
-                    type="submit"
-                    variant="default"
-                    disabled={loading}
-                    className="h-11 w-auto font-semibold"
-                  >
-                    {loading ? (
-                      <span className="flex items-center gap-1">
-                        <Spinner className="mr-1" />
-                        Salvando…
-                      </span>
-                    ) : editandoId ? "Salvar alterações" : "Salvar"}
-                  </Button>
-                </div>
-              </form>
-            </DialogDescription>
+              <div className="flex items-center justify-end gap-2 sm:col-span-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setFormAberto(false)
+                    resetForm()
+                  }}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  variant="default"
+                  disabled={loading}
+                  className="h-11 w-auto font-semibold"
+                >
+                  {loading ? (
+                    <span className="flex items-center gap-1">
+                      <Spinner className="mr-1" />
+                      Salvando…
+                    </span>
+                  ) : editandoId ? "Salvar alterações" : "Salvar"}
+                </Button>
+              </div>
+            </form>
           </DialogContent>
         </Dialog>
       )}

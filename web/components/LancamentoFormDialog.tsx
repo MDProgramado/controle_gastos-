@@ -142,7 +142,15 @@ export function LancamentoFormDialog({
           <DialogTitle>
             {modo === "editar" ? "Editar lançamento" : "Novo lançamento"}
           </DialogTitle>
+          <DialogDescription>
+            {modo === "editar"
+              ? "Altere os dados e salve."
+              : "Informe a categoria, o tipo, o valor e a data."}
+          </DialogDescription>
         </DialogHeader>
+        {/* O <form> fica FORA do DialogDescription: o Radix renderiza a
+            descrição como <p> e <form>/<div> dentro de <p> quebra a
+            hidratação ("<div> cannot be a descendant of <p>"). */}
         <form
           onSubmit={handleSubmit(onFormSubmit)}
           className="flex flex-col gap-4"
@@ -184,15 +192,28 @@ export function LancamentoFormDialog({
 
           <div className="flex flex-col gap-1">
             <Label htmlFor="tipo">Tipo</Label>
-            <select
-              id="tipo"
-              {...register("tipo")}
-              disabled={isSubmitting}
-              className="h-11 w-full rounded-lg border border-input bg-transparent px-4 py-1 text-base focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
-            >
-              <option value="ENTRADA">Entrada</option>
-              <option value="SAIDA">Saída</option>
-            </select>
+            <Controller
+              control={control}
+              name="tipo"
+              render={({ field }) => (
+                <Select
+                  value={field.value ?? undefined}
+                  onValueChange={field.onChange}
+                  disabled={isSubmitting}
+                >
+                  <SelectTrigger
+                    id="tipo"
+                    className="h-11 w-full rounded-lg border border-input bg-transparent px-4 py-1 text-base focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
+                  >
+                    <SelectValue placeholder="Selecione o tipo" />
+                  </SelectTrigger>
+                  <SelectContent position="popper">
+                    <SelectItem value="ENTRADA">Entrada</SelectItem>
+                    <SelectItem value="SAIDA">Saída</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            />
             {errors.tipo && (
               <p className="text-sm text-destructive mt-1">
                 {errors.tipo.message}

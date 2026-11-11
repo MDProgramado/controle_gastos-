@@ -17,7 +17,7 @@ const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border border-background p-6 shadow-lg rounded-lg bg-card",
+        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border border-border p-6 shadow-lg rounded-lg bg-card text-card-foreground",
         className
       )}
       {...props}
@@ -57,18 +57,18 @@ const DialogDescription = React.forwardRef<
 DialogDescription.displayName = DialogPrimitive.Description.displayName
 
 const DialogFooter = React.forwardRef<
-  React.ElementRef<typeof DialogPrimitive.Description>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Description> & {
+  React.ElementRef<"div">,
+  React.ComponentPropsWithRef<"div"> & {
     className?: string
   }
 >(({ className, ...props }, ref) => (
-  <DialogPrimitive.Description
+  <div
     ref={ref}
     className={cn("flex flex-row-reverse gap-2 text-sm", className)}
     {...props}
   />
 ))
-DialogFooter.displayName = DialogPrimitive.Description.displayName
+DialogFooter.displayName = "DialogFooter"
 
 const DialogTitle = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Title>,

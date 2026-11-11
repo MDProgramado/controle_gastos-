@@ -312,7 +312,7 @@ export function LancamentosPageClient({
         className="grid grid-cols-12 gap-x-6 gap-y-6"
         data-moment="counter-rolls"
       >
-        <div className="col-span-12 border-t border-border pt-3 sm:col-span-4">
+        <div className="flex flex-col col-span-12 border-t border-border pt-3 sm:col-span-4">
           <span className="text-xs font-medium text-muted-foreground">
             Entradas
           </span>
@@ -328,7 +328,7 @@ export function LancamentosPageClient({
             Filtrar
           </button>
         </div>
-        <div className="col-span-12 border-t border-border pt-3 sm:col-span-4">
+        <div className="flex flex-col col-span-12 border-t border-border pt-3 sm:col-span-4">
           <span className="text-xs font-medium text-muted-foreground">
             Saídas
           </span>
@@ -344,7 +344,7 @@ export function LancamentosPageClient({
             Filtrar
           </button>
         </div>
-        <div className="col-span-12 border-t border-border pt-3 sm:col-span-4">
+        <div className="flex flex-col col-span-12 border-t border-border pt-3 sm:col-span-4">
           <span className="text-xs font-medium text-muted-foreground">
             Saldo
           </span>

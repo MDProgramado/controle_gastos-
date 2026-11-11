@@ -16,12 +16,12 @@ const SheetContent = React.forwardRef<
 >(({ className, side = "right", children, ...props }, ref) => (
   <SheetPrimitive.Portal>
     <SheetPrimitive.Overlay
-      className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm"
+      className="fixed inset-0 z-50 bg-black/80"
     />
     <SheetPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed z-50 flex h-full",
+        "fixed z-50 flex h-full flex-col bg-background text-foreground",
         side === "right"
           ? "right-0 border-l border-b md:shadow-md"
           : side === "left"

@@ -101,7 +101,7 @@ export function DashboardKPIs({
       {stats.map((s) => (
         <div
           key={s.label}
-          className="col-span-12 border-t border-border pt-4 sm:col-span-4"
+          className="flex flex-col col-span-12 border-t border-border pt-4 sm:col-span-4"
         >
           <div className="flex items-center justify-between gap-2">
             <span className="text-sm font-medium text-muted-foreground">

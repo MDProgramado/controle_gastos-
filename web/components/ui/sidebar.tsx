@@ -13,11 +13,11 @@ import { Home, DollarSign, Layout, LogOut, ChevronLeft, ChevronRight } from "luc
 
 const sidebarItems = [
   { href: "/", label: "Dashboard", icon: Home },
-  { href: "/lancamentos", label: "LanÃ§amentos", icon: DollarSign },
+  { href: "/lancamentos", label: "Lançamentos", icon: DollarSign },
   { href: "/categorias", label: "Categorias", icon: Layout },
 ] as const
 
-// â”€â”€ Contexto (SidebarProvider) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Contexto (SidebarProvider) ──────────────────────────────────────────
 
 interface SidebarContextType {
   collapsed: boolean
@@ -62,7 +62,7 @@ export function useSidebar() {
   return context
 }
 
-// â”€â”€ Sidebar (shell flex container) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Sidebar (shell flex container) ──────────────────────────────────────
 
 interface SidebarProps {
   children: React.ReactNode
@@ -76,7 +76,7 @@ export function Sidebar({ children }: SidebarProps) {
   )
 }
 
-// â”€â”€ Sair (botÃ£o de logout, apenas no rodapÃ© da sidebar) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Sair (botão de logout, apenas no rodapé da sidebar) ─────────────────
 
 function SairButton({ collapsed }: { collapsed?: boolean }) {
   return (
@@ -102,7 +102,7 @@ function SairButton({ collapsed }: { collapsed?: boolean }) {
   )
 }
 
-// â”€â”€ SidebarItem â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── SidebarItem ─────────────────────────────────────────────────────────
 
 function SidebarItem({
   item,
@@ -146,7 +146,7 @@ function SidebarNav({ collapsed }: { collapsed: boolean }) {
   )
 }
 
-// â”€â”€ SidebarContent (sidebar fixo Ã  esquerda / Sheet em mobile) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── SidebarContent (sidebar fixo à esquerda / Sheet em mobile) ──────────
 
 interface SidebarContentProps extends React.ComponentProps<"aside"> {
   className?: string
@@ -158,7 +158,7 @@ export function SidebarContent({
 }: SidebarContentProps) {
   const { collapsed, onCollapseChange, mobileOpen, onMobileOpenChange } = useSidebar()
 
-  // Desktop: sidebar fixo no fluxo (nÃ£o position:fixed para nÃ£o sobrepor conteÃºdo)
+  // Desktop: sidebar fixo no fluxo (não position:fixed para não sobrepor conteúdo)
   const desktop = (
     <aside
       className={cn(
@@ -196,7 +196,7 @@ export function SidebarContent({
     </aside>
   )
 
-  // Mobile: Sheet (drawer) â€” nÃ£o ocupa largura do conteÃºdo
+  // Mobile: Sheet (drawer) — não ocupa largura do conteúdo
   const mobile = (
     <Sheet open={mobileOpen} onOpenChange={onMobileOpenChange}>
       <SheetContent side="left" className="w-[256px]">
@@ -208,16 +208,21 @@ export function SidebarContent({
             </span>
           </div>
           <SheetClose asChild>
-            <button className="p-2 rounded-lg text-muted-foreground hover:bg-accent/50">
-              <ChevronLeft className="h-5 w-5" />
+            <button
+              className="p-2 rounded-lg text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              aria-label="Fechar menu"
+            >
+              <ChevronRight className="h-5 w-5" />
             </button>
           </SheetClose>
         </SheetHeader>
         <div className="flex-1 overflow-y-auto">
-          <SidebarNav collapsed={true} />
+          {/* No drawer mobile os itens mostram o rótulo: o drawer tem 256px
+              e o ícone sozinho não diz para onde vai. */}
+          <SidebarNav collapsed={false} />
         </div>
         <div className="flex flex-col gap-1 px-3 py-3 border-t border-border">
-          <SairButton collapsed={true} />
+          <SairButton collapsed={false} />
         </div>
       </SheetContent>
     </Sheet>
@@ -231,7 +236,7 @@ export function SidebarContent({
   )
 }
 
-// â”€â”€ SidebarInset (conteÃºdo principal, flex-1, sem largura fixa) â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── SidebarInset (conteúdo principal, flex-1, sem largura fixa) ─────────
 
 interface SidebarInsetProps extends React.ComponentProps<"div"> {
   className?: string

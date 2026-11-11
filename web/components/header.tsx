@@ -12,8 +12,8 @@ interface HeaderProps {
 }
 
 /**
- * Barra superior (header.nav do kit): aÃ§Ãµes Ã  direita. A marca fica na sidebar
- * e o nome da pÃ¡gina no <h1> dentro de <main> â€” a barra nÃ£o repete nenhum dos
+ * Barra superior (header.nav do kit): ações à direita. A marca fica na sidebar
+ * e o nome da página no <h1> dentro de <main> — a barra não repete nenhum dos
  * dois.
  */
 export function Header({
@@ -40,7 +40,7 @@ export function Header({
             type="button"
             onClick={onNotificationClick}
             className="rounded-lg p-2 text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            aria-label="NotificaÃ§Ãµes"
+            aria-label="Notificações"
           >
             <Bell className="h-5 w-5" />
           </button>
