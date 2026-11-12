@@ -15,6 +15,7 @@ test-chat.bat
 test-login.ps1
 test-ai.ps1
 test-ai-cenarios.ps1
+test-ai-consultas.ps1
 
 # Scripts locais de desenvolvimento (leem o .env e sobem o backend)
 start-api.ps1
