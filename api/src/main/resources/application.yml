@@ -32,3 +32,10 @@ spring:
 # Em teste a env var vem do fixture óbvio do surefire (D-04 — nunca valor real).
 jwt:
   secret: ${JWT_SECRET:}
+
+# Configuração da IA (fase 4 — OpenRouter + Gemini).
+# A chave da API deve ser definida via env var OPENROUTER_API_KEY.
+ai:
+  openrouter:
+    api-key: ${OPENROUTER_API_KEY:}
+    modelo: ${AI_OPENROUTER_MODELO:google/gemini-2.0-flash-001}
