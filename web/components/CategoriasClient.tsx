@@ -24,6 +24,7 @@ import { DialogContent } from "@/components/ui/dialog"
 import { DialogHeader } from "@/components/ui/dialog"
 import { DialogTitle } from "@/components/ui/dialog"
 import { DialogDescription } from "@/components/ui/dialog"
+import { DialogFooter } from "@/components/ui/dialog"
 import { DropdownMenu } from "@/components/ui/dropdown-menu"
 import { DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { DropdownMenuContent } from "@/components/ui/dropdown-menu"
@@ -404,7 +405,7 @@ export function CategoriasClient({
           <DialogTrigger asChild>
             <button style={{ display: "none" }} aria-hidden="true" />
           </DialogTrigger>
-          <DialogContent className="w-full max-w-[480px]">
+          <DialogContent>
             <DialogHeader>
               <DialogTitle>
                 {editandoId ? "Editar categoria" : "Nova categoria"}
@@ -420,7 +421,7 @@ export function CategoriasClient({
                 hidratação ("<div> cannot be a descendant of <p>"). */}
             <form
               onSubmit={onSubmit}
-              className="grid gap-4 sm:grid-cols-2 sm:gap-4"
+              className="grid gap-4 px-6 pb-6 sm:grid-cols-2 sm:gap-4"
               noValidate
             >
               <div className="flex flex-col gap-1 sm:col-span-2">
@@ -484,7 +485,7 @@ export function CategoriasClient({
                 </Label>
               </div>
 
-              <div className="flex items-center justify-end gap-2 sm:col-span-2">
+              <DialogFooter className="col-span-full px-0 pb-0 pt-2">
                 <Button
                   type="button"
                   variant="outline"
@@ -492,6 +493,7 @@ export function CategoriasClient({
                     setFormAberto(false)
                     resetForm()
                   }}
+                  className="w-full sm:w-auto"
                 >
                   Cancelar
                 </Button>
@@ -499,7 +501,7 @@ export function CategoriasClient({
                   type="submit"
                   variant="default"
                   disabled={loading}
-                  className="h-11 w-auto font-semibold"
+                  className="h-11 w-full font-semibold sm:w-auto"
                 >
                   {loading ? (
                     <span className="flex items-center gap-1">
@@ -508,8 +510,7 @@ export function CategoriasClient({
                     </span>
                   ) : editandoId ? "Salvar alterações" : "Salvar"}
                 </Button>
-              </div>
-            </form>
+              </DialogFooter>            </form>
           </DialogContent>
         </Dialog>
       )}

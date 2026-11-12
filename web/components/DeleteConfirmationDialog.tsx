@@ -48,13 +48,13 @@ export function DeleteConfirmationDialog({
       </DialogTrigger>
       <DialogContent
         className={cn(
-          "rounded-lg border border-border bg-card p-6 shadow-lg sm:max-w-md",
+          "fixed left-[50%] top-[50%] z-50 flex max-h-[90dvh] w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] flex-col overflow-hidden rounded-lg border border-border bg-card p-6 text-card-foreground shadow-lg md:w-full md:max-w-md",
         )}
       >
         <DialogTitle className="font-semibold">{titulo}</DialogTitle>
         <DialogDescription className="mt-2 text-sm text-foreground">{texto}</DialogDescription>
 
-        <div className="mt-6 flex flex-row-reverse gap-2">
+        <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button
             type="button"
             variant="destructive"
@@ -62,10 +62,11 @@ export function DeleteConfirmationDialog({
               onConfirm();
               onClose();
             }}
+            className="w-full sm:w-auto"
           >
             {confirmLabel}
           </Button>
-          <Button type="button" variant="ghost" onClick={onClose}>
+          <Button type="button" variant="ghost" onClick={onClose} className="w-full sm:w-auto">
             Cancelar
           </Button>
         </div>

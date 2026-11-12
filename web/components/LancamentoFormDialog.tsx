@@ -10,6 +10,7 @@ import { DialogContent } from "@/components/ui/dialog"
 import { DialogHeader } from "@/components/ui/dialog"
 import { DialogTitle } from "@/components/ui/dialog"
 import { DialogDescription } from "@/components/ui/dialog"
+import { DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -134,10 +135,7 @@ export function LancamentoFormDialog({
       <DialogTrigger asChild>
         <button style={{ display: "none" }} aria-hidden="true" />
       </DialogTrigger>
-      <DialogContent
-        key={chaveDialog}
-        className="w-full md:w-[480px] max-w-[95vw]"
-      >
+      <DialogContent key={chaveDialog}>
         <DialogHeader>
           <DialogTitle>
             {modo === "editar" ? "Editar lançamento" : "Novo lançamento"}
@@ -153,7 +151,7 @@ export function LancamentoFormDialog({
             hidratação ("<div> cannot be a descendant of <p>"). */}
         <form
           onSubmit={handleSubmit(onFormSubmit)}
-          className="flex flex-col gap-4"
+          className="flex flex-col gap-4 px-6 pb-6"
           noValidate
         >
           <div className="flex flex-col gap-1">
@@ -266,11 +264,12 @@ export function LancamentoFormDialog({
             />
           </div>
 
-          <div className="flex items-center justify-end gap-2">
+          <DialogFooter className="px-0 pb-0 pt-2">
             <Button
               type="button"
               variant="outline"
               onClick={onClose}
+              className="w-full sm:w-auto"
             >
               Cancelar
             </Button>
@@ -278,7 +277,7 @@ export function LancamentoFormDialog({
               type="submit"
               variant="default"
               disabled={isSubmitting}
-              className="h-11 w-auto font-semibold"
+              className="h-11 w-full font-semibold sm:w-auto"
             >
               {isSubmitting ? (
                 <span className="flex items-center gap-1">
@@ -288,7 +287,7 @@ export function LancamentoFormDialog({
               ) : modo === "editar" ? "Salvar alterações" : "Salvar"
               }
             </Button>
-          </div>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
