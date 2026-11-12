@@ -4,6 +4,7 @@ import * as React from "react"
 import { LancamentosTable } from "@/components/LancamentosTable"
 import { LancamentoFormDialog } from "@/components/LancamentoFormDialog"
 import { LoteSheet } from "@/components/LoteSheet"
+import { ChatPanel } from "@/components/ai/chat-panel"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/Spinner"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -435,6 +436,8 @@ export function LancamentosPageClient({
         action="excluir"
         target="lançamento"
       />
+      {/* Chat com IA */}
+      <ChatPanel />
     </div>
   )
 }

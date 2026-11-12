@@ -226,21 +226,51 @@ export async function criarLote(
   }
 }
 
-/** DELETE /api/lancamentos/{id} — exclui lançamento. Retorna true se 204. */
-export async function excluirLancamento(id: number): Promise<boolean> {
+/** Shape de entrada para chat com IA (POST /api/ai/chat). */
+export type AiChatRequest = {
+  mensagem: string;
+  historico: Array<{ role: string; content: string }>;
+  sessionId?: string;
+};
+
+/** Shape de resposta do chat com IA (POST /api/ai/chat). */
+export type AiChatResponse = {
+  intent: "consulta" | "lancamento" | "esclarecimento";
+  resposta: string;
+  dados?: Array<{ label: string; valor: number }>;
+  proposta?: {
+    tipo: "ENTRADA" | "SAIDA";
+    valor: number;
+    data: string;
+    categoriaId: string | null;
+    categoriaSugerida?: string;
+    descricao?: string;
+  };
+  opcoes?: string[];
+};
+
+/** POST /api/ai/chat — envia mensagem para a IA e obtém resposta estruturada. */
+export async function chatComIA(
+  request: AiChatRequest,
+): Promise<AiChatResponse | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get("sess")?.value;
-  if (!token) return false;
+  if (!token) return null;
 
   try {
-    const res = await fetch(`${process.env.API_URL}/api/lancamentos/${id}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` },
+    const res = await fetch(`${process.env.API_URL}/api/ai/chat`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(request),
       cache: "no-store",
     });
-    return res.status === 204;
+    if (!res.ok) return null;
+    return (await res.json()) as AiChatResponse;
   } catch {
-    return false;
+    return null;
   }
 }
 
