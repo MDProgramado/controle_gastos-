@@ -66,8 +66,9 @@ export function DonutChart({
       </CardHeader>
       <CardContent className="pt-0">
         <div className="flex flex-col items-center justify-center py-4">
-          <div className="relative w-48 h-48">
-            <Chart className="w-full h-full">
+          {/* Altura fixa: o grafico nao muda de tamanho com o conteudo. */}
+          <div className="relative h-[260px] w-full md:h-[320px]">
+            <Chart className="h-full w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -96,6 +97,19 @@ export function DonutChart({
             </span>
           </div>
         </div>
+        {/* Legenda abaixo do grafico (nunca sobreposta). */}
+        <ul className="flex w-full flex-wrap gap-x-4 gap-y-2 pt-4 text-xs text-muted-foreground">
+          {pieData.map((c, i) => (
+            <li key={`${c.name}-${i}`} className="flex items-center gap-1.5">
+              <span
+                className="h-2.5 w-2.5 shrink-0 rounded-sm"
+                style={{ backgroundColor: c.fill }}
+                aria-hidden="true"
+              />
+              <span className="truncate">{c.name}</span>
+            </li>
+          ))}
+        </ul>
       </CardContent>
     </Card>
   )

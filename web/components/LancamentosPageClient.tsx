@@ -375,27 +375,38 @@ export function LancamentosPageClient({
         </div>
       </div>
 
-      {/* Tabela de lançamentos */}
-      <LancamentosTable
-        lancamentos={lancamentosIniciais}
-        total={total}
-        categorias={categorias}
-        ano={ano}
-        mes={mes}
-        tipo={tipo}
-        categoriaId={categoriaId}
-        busca={busca}
-        onChangeFiltros={handleChangeFiltros}
-        onPageChange={handlePageChange}
-        loading={loading}
-        error={error}
-        onRetry={handleRetry}
-        onEditar={abrirEditar}
-        onExcluir={(id) => {
-          setExcluirId(id)
-          setExcluirAberto(true)
-        }}
-      />
+      {/* Tabela de lançamentos + chat. No mobile tudo empilhado (1 coluna);
+          no lg+ o chat vira coluna lateral ao lado da tabela. */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+        <div className="lg:col-span-8">
+          <LancamentosTable
+            lancamentos={lancamentosIniciais}
+            total={total}
+            categorias={categorias}
+            ano={ano}
+            mes={mes}
+            tipo={tipo}
+            categoriaId={categoriaId}
+            busca={busca}
+            onChangeFiltros={handleChangeFiltros}
+            onPageChange={handlePageChange}
+            loading={loading}
+            error={error}
+            onRetry={handleRetry}
+            onEditar={abrirEditar}
+            onExcluir={(id) => {
+              setExcluirId(id)
+              setExcluirAberto(true)
+            }}
+          />
+        </div>
+
+        {/* Chat com IA — no mobile ocupa a largura toda abaixo da tabela;
+            no lg+ vira coluna lateral ao lado dela. */}
+        <div className="lg:col-span-4">
+          <ChatPanel />
+        </div>
+      </div>
 
       {/* Dialog de criar/editar */}
       <LancamentoFormDialog
@@ -436,8 +447,6 @@ export function LancamentosPageClient({
         action="excluir"
         target="lançamento"
       />
-      {/* Chat com IA */}
-      <ChatPanel />
     </div>
   )
 }

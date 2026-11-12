@@ -7,6 +7,7 @@ import {
   Sheet,
   SheetContent,
   SheetHeader,
+  SheetTitle,
 } from "@/components/ui/sheet"
 import { Home, DollarSign, Layout, LogOut, ChevronLeft, ChevronRight } from "lucide-react"
 
@@ -91,7 +92,8 @@ function SairButton({ collapsed }: { collapsed?: boolean }) {
         window.location.replace("/login")
       }}
       className={cn(
-        "flex items-center gap-3 rounded-lg border border-transparent px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:bg-destructive/20",
+        // Neutro em repouso, destrutivo no hover. h-10: alvo de toque.
+        "flex h-10 items-center gap-3 rounded-lg border border-transparent px-3 text-sm font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:bg-destructive/20",
         collapsed ? "justify-center px-2" : ""
       )}
     >
@@ -116,7 +118,8 @@ function SidebarItem({
     <a
       href={item.href}
       className={cn(
-        "flex items-center gap-3 rounded-lg border border-transparent px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        // h-10: alvo de toque de 40px no mobile.
+        "flex h-10 items-center gap-3 rounded-lg border border-transparent px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
         isActive
           ? "bg-accent text-accent-foreground"
           : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground",
@@ -198,21 +201,20 @@ export function SidebarContent({
   // Mobile: Sheet (drawer) — não ocupa largura do conteúdo
   const mobile = (
     <Sheet open={mobileOpen} onOpenChange={onMobileOpenChange}>
-      <SheetContent side="left" className="w-[256px]">
+      <SheetContent side="left" className="w-[280px]">
         <SheetHeader className="flex items-center justify-between">
-          <div className="flex items-center gap-2 px-3 py-4">
-            <span className="font-semibold text-lg tracking-tight">Controle</span>
-            <span className="text-muted-foreground text-xs font-semibold">
-              Financeiro
-            </span>
-          </div>
+          {/* SheetTitle (e nao um span): o Radix usa este elemento como
+              rotulo acessivel do dialog. */}
+          <SheetTitle className="px-3 py-4 text-lg font-semibold tracking-tight">
+            Controle Financeiro
+          </SheetTitle>
         </SheetHeader>
         <div className="flex-1 overflow-y-auto">
-          {/* No drawer mobile os itens mostram o rótulo: o drawer tem 256px
+          {/* No drawer mobile os itens mostram o rótulo: o drawer tem 280px
               e o ícone sozinho não diz para onde vai. */}
           <SidebarNav collapsed={false} />
         </div>
-        <div className="flex flex-col gap-1 px-3 py-3 border-t border-border">
+        <div className="flex flex-col gap-1 border-t border-border px-3 py-3">
           <SairButton collapsed={false} />
         </div>
       </SheetContent>

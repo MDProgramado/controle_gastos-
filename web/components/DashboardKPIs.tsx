@@ -54,11 +54,13 @@ export function DashboardKPIs({
       classe: saldoPositivo ? "text-positive" : "text-destructive",
       badge: null as ReactNode,
       legenda: `Saldo do mês anterior: ${MONETARY.format(saldoMesAnterior)}`,
+      destaque: true,
     },
     {
       label: "Entradas",
       valor: totalEntradas,
       classe: "text-positive",
+      destaque: false,
       badge: (
         <Badge
           variant="success"
@@ -90,28 +92,40 @@ export function DashboardKPIs({
         </Badge>
       ),
       legenda: `Mês anterior: ${MONETARY.format(totalSaidasMesAnterior)}`,
+      destaque: false,
     },
   ]
 
   return (
     <div
-      className="grid w-full grid-cols-12 gap-x-6 gap-y-8"
+      className="grid w-full grid-cols-1 gap-x-6 gap-y-8 md:grid-cols-3"
       data-moment="counter-rolls"
     >
       {stats.map((s) => (
         <div
           key={s.label}
-          className="flex flex-col col-span-12 border-t border-border pt-4 sm:col-span-4"
+          className={cn(
+            "flex flex-col border-t border-border pt-4",
+            // O Saldo vem em destaque no mobile: e o numero que o usuario
+            // procura primeiro (1 coluna).
+            s.destaque && "md:order-none",
+          )}
         >
           <div className="flex items-center justify-between gap-2">
-            <span className="text-sm font-medium text-muted-foreground">
+            <span
+              className={cn(
+                "font-medium text-muted-foreground",
+                s.destaque ? "text-base text-foreground" : "text-sm",
+              )}
+            >
               {s.label}
             </span>
             {s.badge}
           </div>
           <p
             className={cn(
-              "t-stat mt-3 text-xl font-semibold tracking-tight tabular-nums",
+              "t-stat mt-3 font-semibold tracking-tight tabular-nums",
+              s.destaque ? "text-3xl" : "text-xl",
               s.classe,
             )}
           >

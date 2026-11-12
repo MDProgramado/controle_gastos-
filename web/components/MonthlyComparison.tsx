@@ -72,18 +72,8 @@ export function MonthlyComparison({ meses }: MonthlyComparisonProps) {
         </p>
       </CardHeader>
       <CardContent>
-        <div className="flex items-center gap-4 pb-4 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 bg-positive" aria-hidden="true" />
-            Entradas
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 bg-destructive" aria-hidden="true" />
-            Saídas
-          </span>
-        </div>
         <div
-          className="grid h-[260px] grid-cols-6 gap-2 sm:gap-3"
+          className="grid h-[260px] grid-cols-6 gap-2 md:h-[320px] sm:gap-3"
           role="img"
           aria-label={meses
             .map(
@@ -120,6 +110,17 @@ export function MonthlyComparison({ meses }: MonthlyComparisonProps) {
             </div>
           ))}
         </div>
+        {/* Legenda abaixo do grafico (nunca sobreposta). */}
+        <ul className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-4 text-xs text-muted-foreground">
+          <li className="flex items-center gap-1.5">
+            <span className="h-2.5 w-2.5 shrink-0 bg-positive" aria-hidden="true" />
+            Entradas
+          </li>
+          <li className="flex items-center gap-1.5">
+            <span className="h-2.5 w-2.5 shrink-0 bg-destructive" aria-hidden="true" />
+            Saídas
+          </li>
+        </ul>
       </CardContent>
     </Card>
   )

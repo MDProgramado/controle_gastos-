@@ -159,7 +159,9 @@ export default async function Home({
               </div>
             </section>
 
-            {/* Análise — gastos por categoria e comparação real dos 6 meses */}
+            {/* Análise — gastos por categoria e comparação dos 6 meses.
+                No mobile tudo empilhado (1 coluna); no lg+ os dois
+                gráficos lado a lado. O chat de IA fica em /lancamentos. */}
             <section
               className="flex flex-col justify-start py-10 md:min-h-screen md:justify-center"
               data-screen="free"
@@ -172,14 +174,14 @@ export default async function Home({
                 >
                   Análise do mês
                 </h2>
-                <div className="grid grid-cols-12 gap-6">
-                  <div className="col-span-12 lg:col-span-7">
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+                  <div className="lg:col-span-6">
                     <CategoryBreakdown
                       categorias={dados.categorias}
                       totalSaidas={dados.totalSaidas}
                     />
                   </div>
-                  <div className="col-span-12 lg:col-span-5">
+                  <div className="lg:col-span-6">
                     <MonthlyComparison meses={comparacao} />
                   </div>
                 </div>
