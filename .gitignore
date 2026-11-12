@@ -8,8 +8,16 @@
 # Credenciais/tokens de teste (contem senha e JWT do admin em texto plano)
 login.json
 token-response.json
+chat-req.json
+chat-resp.json
+resp-utf8.json
 test-chat.bat
 test-login.ps1
+test-ai.ps1
+test-ai-cenarios.ps1
+
+# Scripts locais de desenvolvimento (leem o .env e sobem o backend)
+start-api.ps1
 
 # Build artifacts
 target/
