@@ -307,62 +307,70 @@ export function LancamentosPageClient({
         )}
       </div>
 
-      {/* Resumo do mês — counter-rolls (números reais da listagem) */}
+      {/* Resumo do mês — counter-rolls (números reais da listagem).
+          1 coluna no mobile, 3 no md+. O botão de filtro fica à direita
+          do valor (não embaixo, centralizado). */}
       <div
-        className="grid grid-cols-12 gap-x-6 gap-y-6"
+        className="grid grid-cols-1 gap-x-6 gap-y-6 md:grid-cols-3"
         data-moment="counter-rolls"
       >
-        <div className="flex flex-col col-span-12 border-t border-border pt-3 sm:col-span-4">
+        <div className="flex flex-col border-t border-border pt-3">
           <span className="text-xs font-medium text-muted-foreground">
             Entradas
           </span>
-          <p className="t-stat mt-1.5 text-2xl font-semibold tabular-nums text-positive">
-            {resumoFmt.format(resumo.entradas)}
-          </p>
-          <button
-            type="button"
-            className="mt-2 text-xs text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            onClick={() => setTipo("ENTRADA")}
-            aria-label="Filtrar apenas entradas"
-          >
-            Filtrar
-          </button>
+          <div className="mt-1.5 flex items-baseline justify-between gap-3">
+            <p className="t-stat text-2xl font-semibold tabular-nums text-positive">
+              {resumoFmt.format(resumo.entradas)}
+            </p>
+            <button
+              type="button"
+              className="shrink-0 text-xs text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              onClick={() => setTipo("ENTRADA")}
+              aria-label="Filtrar apenas entradas"
+            >
+              Filtrar
+            </button>
+          </div>
         </div>
-        <div className="flex flex-col col-span-12 border-t border-border pt-3 sm:col-span-4">
+        <div className="flex flex-col border-t border-border pt-3">
           <span className="text-xs font-medium text-muted-foreground">
             Saídas
           </span>
-          <p className="t-stat mt-1.5 text-2xl font-semibold tabular-nums text-destructive">
-            {resumoFmt.format(resumo.saidas)}
-          </p>
-          <button
-            type="button"
-            className="mt-2 text-xs text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            onClick={() => setTipo("SAIDA")}
-            aria-label="Filtrar apenas saídas"
-          >
-            Filtrar
-          </button>
+          <div className="mt-1.5 flex items-baseline justify-between gap-3">
+            <p className="t-stat text-2xl font-semibold tabular-nums text-destructive">
+              {resumoFmt.format(resumo.saidas)}
+            </p>
+            <button
+              type="button"
+              className="shrink-0 text-xs text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              onClick={() => setTipo("SAIDA")}
+              aria-label="Filtrar apenas saídas"
+            >
+              Filtrar
+            </button>
+          </div>
         </div>
-        <div className="flex flex-col col-span-12 border-t border-border pt-3 sm:col-span-4">
+        <div className="flex flex-col border-t border-border pt-3">
           <span className="text-xs font-medium text-muted-foreground">
             Saldo
           </span>
-          <p
-            className={`t-stat mt-1.5 text-2xl font-semibold tabular-nums ${
-              resumo.saldo >= 0 ? "text-positive" : "text-destructive"
-            }`}
-          >
-            {resumoFmt.format(resumo.saldo)}
-          </p>
-          <button
-            type="button"
-            className="mt-2 text-xs text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            onClick={() => setTipo(null)}
-            aria-label="Mostrar todas"
-          >
-            Todas
-          </button>
+          <div className="mt-1.5 flex items-baseline justify-between gap-3">
+            <p
+              className={`t-stat text-2xl font-semibold tabular-nums ${
+                resumo.saldo >= 0 ? "text-positive" : "text-destructive"
+              }`}
+            >
+              {resumoFmt.format(resumo.saldo)}
+            </p>
+            <button
+              type="button"
+              className="shrink-0 text-xs text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              onClick={() => setTipo(null)}
+              aria-label="Mostrar todas"
+            >
+              Todas
+            </button>
+          </div>
         </div>
       </div>
 

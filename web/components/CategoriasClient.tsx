@@ -383,20 +383,22 @@ export function CategoriasClient({
         </section>
       )}
 
-      {/* Empty state */}
+      {/* Empty state — mesmo container das listas (section) */}
       {categorias.length === 0 && (
-        <div className="rounded-lg border border-input bg-card shadow-sm p-12 text-center">
-          <p className="text-sm text-muted-foreground">
-            Nenhuma categoria cadastrada
-          </p>
-          {podeEscrever && (
-            <div className="mt-4">
-              <Button type="button" variant="outline" onClick={abrirCriar}>
-                Adicionar categoria
-              </Button>
-            </div>
-          )}
-        </div>
+        <section className="rounded-lg border border-input bg-card shadow-sm">
+          <div className="p-12 text-center">
+            <p className="text-sm text-muted-foreground">
+              Nenhuma categoria cadastrada
+            </p>
+            {podeEscrever && (
+              <div className="mt-4">
+                <Button type="button" variant="outline" onClick={abrirCriar}>
+                  Adicionar categoria
+                </Button>
+              </div>
+            )}
+          </div>
+        </section>
       )}
 
       {/* Dialog criar/editar */}
@@ -649,7 +651,7 @@ export function CategoriasClient({
         )}
       >
         <td className="p-4">
-          <span className={cn("font-medium", !c.ativo && "text-muted-foreground")}>
+          <span className={cn("break-words font-medium", !c.ativo && "text-muted-foreground")}>
             {c.nome}
           </span>
         </td>
