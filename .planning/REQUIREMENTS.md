@@ -70,7 +70,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **IMP-05**: A análise devolve o resumo do mês: total recebido, total já pago, total comprometido a pagar e alertas (gastos atípicos, duplicidades, pagamento da própria fatura)
 - [ ] **IMP-06**: A IA responde JSON estrito (sem markdown); resposta inválida é rejeitada e o item vai para a lista de "rejeitados" sem derrubar o documento
 - [ ] **IMP-07**: Falhas de taxa (HTTP 429) e de cota (HTTP 402) da OpenRouter são tratadas com retry/backoff exponencial e **cascata de modelos gratuitos**
-- [ ] **IMP-08**: Nenhum modelo **pago** é usado — a cascata é composta apenas de modelos `:free` e do roteador `openrouter/free` (custo zero)
+- [ ] **IMP-08**: O caminho normal da cascata usa **apenas modelos gratuitos** (`:free` + `openrouter/free`); o modelo pago é apenas **último recurso**, acionado só quando a cota diária do `:free` acaba, e é desativável por variável de ambiente
 - [ ] **IMP-09**: A análise **NÃO grava** lançamentos; a gravação exige confirmação explícita do usuário
 - [ ] **IMP-10**: A confirmação grava em transação tudo-ou-nada e é idempotente (confirmar duas vezes não duplica)
 - [ ] **IMP-11**: `A_PAGAR` fica em tabela própria (`conta_a_pagar`) e **não altera o saldo** do dashboard
