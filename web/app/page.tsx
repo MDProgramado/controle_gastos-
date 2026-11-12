@@ -69,28 +69,32 @@ export default async function Home({
       <SidebarContent />
       <SidebarInset>
         <div className="flex h-full w-full flex-col overflow-hidden">
-          <Header />
+          <Header titulo="Visão geral" />
           <main
             id="main-content"
-            className="flex-1 overflow-y-auto bg-background"
+            className="flex-1 overflow-y-auto bg-background px-4 py-6 md:px-8 lg:px-10"
           >
+            <div className="mx-auto w-full max-w-[1280px]">
             {/* Hero — entra uma vez no carregamento (data-enter + head line do motion.md) */}
             <section
-              className="hero flex min-h-full flex-col justify-center"
+              className="hero flex flex-col justify-start md:min-h-full"
               data-enter
               data-screen="free"
               aria-labelledby="hero-h"
             >
-              <div className="wrap w-full py-4 sm:py-8">
+              <div className="w-full">
                 <div className="flex flex-col gap-4 sm:gap-8 lg:flex-row lg:items-start lg:justify-between">
                   <div className="hero-text min-w-0 flex-1">
+                    {/* No mobile o título já aparece no cabeçalho (a sidebar
+                        vira drawer): o h1 fica só para leitores de tela,
+                        evitando repetir o mesmo texto duas vezes na tela. */}
                     <h1
                       id="hero-h"
-                      className="text-2xl font-semibold tracking-tight text-foreground"
+                      className="sr-only text-2xl font-semibold tracking-tight text-foreground md:not-sr-only md:text-3xl"
                     >
                       Visão geral
                     </h1>
-                    <p className="hero__lead mt-3 max-w-[52ch] text-base leading-relaxed text-muted-foreground">
+                    <p className="hero__lead mt-2 line-clamp-2 max-w-[52ch] text-sm text-muted-foreground">
                       Entradas, saídas e saldo do mês em uma tela só —
                       lançamentos aparecem imediatamente após salvar.
                     </p>
@@ -101,7 +105,7 @@ export default async function Home({
                     <form action="/lancamentos" className="mt-4">
                       <button
                         type="submit"
-                        className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:w-auto"
                       >
                         <span>+</span> Novo lançamento
                       </button>
@@ -122,11 +126,11 @@ export default async function Home({
 
             {/* Resumo — a linha de números é o momento counter-rolls da página */}
             <section
-              className="flex min-h-screen flex-col justify-center"
+              className="flex flex-col justify-start py-10 md:min-h-screen md:justify-center"
               data-screen="free"
               aria-labelledby="resumo-h"
             >
-              <div className="wrap w-full py-10">
+              <div className="w-full">
                 <h2
                   id="resumo-h"
                   className="mb-6 text-lg font-semibold text-foreground"
@@ -157,11 +161,11 @@ export default async function Home({
 
             {/* Análise — gastos por categoria e comparação real dos 6 meses */}
             <section
-              className="flex min-h-screen flex-col justify-center"
+              className="flex flex-col justify-start py-10 md:min-h-screen md:justify-center"
               data-screen="free"
               aria-labelledby="analise-h"
             >
-              <div className="wrap w-full py-10">
+              <div className="w-full">
                 <h2
                   id="analise-h"
                   className="mb-6 text-lg font-semibold text-foreground"
@@ -189,6 +193,7 @@ export default async function Home({
                 </div>
               </div>
             </section>
+            </div>
           </main>
         </div>
       </SidebarInset>
