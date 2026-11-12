@@ -1,5 +1,6 @@
 import * as React from "react"
 import * as DialogPrimitive from "@radix-ui/react-dialog"
+import { X } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const Dialog = DialogPrimitive.Root
@@ -10,19 +11,32 @@ const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
     className?: string
+    /** Botão X no canto superior direito (padrão: visível em todo dialog). */
+    showCloseButton?: boolean
   }
->(({ className, children, ...props }, ref) => (
+>(({ className, children, showCloseButton = true, ...props }, ref) => (
   <DialogPrimitive.Portal>
     <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/80" />
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border border-background p-6 shadow-lg rounded-lg bg-card",
+        // Mobile: largura com margem de 16px, altura maxima 90dvh e scroll
+        // interno. No md+: largura maxima 480px, centralizado.
+        "fixed left-[50%] top-[50%] z-50 flex max-h-[90dvh] w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] flex-col overflow-hidden rounded-lg border border-border bg-card text-card-foreground shadow-lg md:w-full md:max-w-[480px]",
         className
       )}
       {...props}
     >
-      {children}
+      {/* O conteudo rola por dentro; o X fica fora dele e sempre visivel. */}
+      <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto">{children}</div>
+      {showCloseButton ? (
+        <DialogPrimitive.Close
+          className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          aria-label="Fechar"
+        >
+          <X className="h-5 w-5" />
+        </DialogPrimitive.Close>
+      ) : null}
     </DialogPrimitive.Content>
   </DialogPrimitive.Portal>
 ))
@@ -36,7 +50,7 @@ const DialogHeader = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("flex flex-col space-y-1 text-center sm:text-left", className)}
+    className={cn("flex flex-col space-y-1 px-6 pt-6 pr-12 text-left", className)}
     {...props}
   />
 ))
@@ -56,19 +70,40 @@ const DialogDescription = React.forwardRef<
 ))
 DialogDescription.displayName = DialogPrimitive.Description.displayName
 
+/**
+ * Rodapé de ações do dialog. No mobile os botões ficam empilhados e
+ * ocupa a largura toda; no md+ voltam para uma linha alinhada à direita.
+ */
 const DialogFooter = React.forwardRef<
-  React.ElementRef<typeof DialogPrimitive.Description>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Description> & {
+  React.ElementRef<"div">,
+  React.ComponentPropsWithRef<"div"> & {
     className?: string
   }
 >(({ className, ...props }, ref) => (
-  <DialogPrimitive.Description
+  <div
     ref={ref}
-    className={cn("flex flex-row-reverse gap-2 text-sm", className)}
+    className={cn(
+      "flex flex-col-reverse gap-2 px-6 pb-6 text-sm sm:flex-row sm:justify-end",
+      className
+    )}
     {...props}
   />
 ))
-DialogFooter.displayName = DialogPrimitive.Description.displayName
+DialogFooter.displayName = "DialogFooter"
+
+/**
+ * Corpo do dialog: o conteúdo entre o cabeçalho e o rodapé. Recebe o
+ * respiro lateral; o respiro de cima é do DialogHeader.
+ */
+const DialogBody = React.forwardRef<
+  React.ElementRef<"div">,
+  React.ComponentPropsWithRef<"div"> & {
+    className?: string
+  }
+>(({ className, ...props }, ref) => (
+  <div ref={ref} className={cn("px-6", className)} {...props} />
+))
+DialogBody.displayName = "DialogBody"
 
 const DialogTitle = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Title>,
@@ -91,5 +126,6 @@ export {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogBody,
   DialogFooter,
 }

@@ -10,6 +10,7 @@ import { DialogContent } from "@/components/ui/dialog"
 import { DialogHeader } from "@/components/ui/dialog"
 import { DialogTitle } from "@/components/ui/dialog"
 import { DialogDescription } from "@/components/ui/dialog"
+import { DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -134,18 +135,23 @@ export function LancamentoFormDialog({
       <DialogTrigger asChild>
         <button style={{ display: "none" }} aria-hidden="true" />
       </DialogTrigger>
-      <DialogContent
-        key={chaveDialog}
-        className="w-full md:w-[480px] max-w-[95vw]"
-      >
+      <DialogContent key={chaveDialog}>
         <DialogHeader>
           <DialogTitle>
             {modo === "editar" ? "Editar lançamento" : "Novo lançamento"}
           </DialogTitle>
+          <DialogDescription>
+            {modo === "editar"
+              ? "Altere os dados e salve."
+              : "Informe a categoria, o tipo, o valor e a data."}
+          </DialogDescription>
         </DialogHeader>
+        {/* O <form> fica FORA do DialogDescription: o Radix renderiza a
+            descrição como <p> e <form>/<div> dentro de <p> quebra a
+            hidratação ("<div> cannot be a descendant of <p>"). */}
         <form
           onSubmit={handleSubmit(onFormSubmit)}
-          className="flex flex-col gap-4"
+          className="flex flex-col gap-4 px-6 pb-6"
           noValidate
         >
           <div className="flex flex-col gap-1">
@@ -184,15 +190,28 @@ export function LancamentoFormDialog({
 
           <div className="flex flex-col gap-1">
             <Label htmlFor="tipo">Tipo</Label>
-            <select
-              id="tipo"
-              {...register("tipo")}
-              disabled={isSubmitting}
-              className="h-11 w-full rounded-lg border border-input bg-transparent px-4 py-1 text-base focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
-            >
-              <option value="ENTRADA">Entrada</option>
-              <option value="SAIDA">Saída</option>
-            </select>
+            <Controller
+              control={control}
+              name="tipo"
+              render={({ field }) => (
+                <Select
+                  value={field.value ?? undefined}
+                  onValueChange={field.onChange}
+                  disabled={isSubmitting}
+                >
+                  <SelectTrigger
+                    id="tipo"
+                    className="h-11 w-full rounded-lg border border-input bg-transparent px-4 py-1 text-base focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
+                  >
+                    <SelectValue placeholder="Selecione o tipo" />
+                  </SelectTrigger>
+                  <SelectContent position="popper">
+                    <SelectItem value="ENTRADA">Entrada</SelectItem>
+                    <SelectItem value="SAIDA">Saída</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            />
             {errors.tipo && (
               <p className="text-sm text-destructive mt-1">
                 {errors.tipo.message}
@@ -245,11 +264,12 @@ export function LancamentoFormDialog({
             />
           </div>
 
-          <div className="flex items-center justify-end gap-2">
+          <DialogFooter className="px-0 pb-0 pt-2">
             <Button
               type="button"
               variant="outline"
               onClick={onClose}
+              className="w-full sm:w-auto"
             >
               Cancelar
             </Button>
@@ -257,7 +277,7 @@ export function LancamentoFormDialog({
               type="submit"
               variant="default"
               disabled={isSubmitting}
-              className="h-11 w-auto font-semibold"
+              className="h-11 w-full font-semibold sm:w-auto"
             >
               {isSubmitting ? (
                 <span className="flex items-center gap-1">
@@ -267,7 +287,7 @@ export function LancamentoFormDialog({
               ) : modo === "editar" ? "Salvar alterações" : "Salvar"
               }
             </Button>
-          </div>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

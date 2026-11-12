@@ -1,30 +1,29 @@
 ﻿"use client"
 
 import * as React from "react"
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import {
   Sheet,
-  SheetTrigger,
-  SheetClose,
   SheetContent,
   SheetHeader,
-  SheetFooter,
+  SheetTitle,
 } from "@/components/ui/sheet"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Home, DollarSign, Layout, LogOut, Menu, ChevronLeft } from "lucide-react"
+import { Home, DollarSign, Layout, LogOut, ChevronLeft, ChevronRight } from "lucide-react"
 
 const sidebarItems = [
   { href: "/", label: "Dashboard", icon: Home },
-  { href: "/lancamentos", label: "LanÃ§amentos", icon: DollarSign },
+  { href: "/lancamentos", label: "Lançamentos", icon: DollarSign },
   { href: "/categorias", label: "Categorias", icon: Layout },
 ] as const
 
-// â”€â”€ Contexto (SidebarProvider) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Contexto (SidebarProvider) ──────────────────────────────────────────
 
 interface SidebarContextType {
   collapsed: boolean
   onCollapseChange: (collapsed: boolean) => void
+  mobileOpen: boolean
+  onMobileOpenChange: (open: boolean) => void
 }
 
 const SidebarContext = React.createContext<SidebarContextType | null>(null)
@@ -39,15 +38,23 @@ export function SidebarProvider({
   defaultCollapsed = false,
 }: SidebarProviderProps) {
   const [collapsed, setCollapsed] = React.useState(defaultCollapsed)
+  const [mobileOpen, setMobileOpen] = React.useState(false)
 
   return (
-    <SidebarContext.Provider value={{ collapsed, onCollapseChange: setCollapsed }}>
+    <SidebarContext.Provider
+      value={{
+        collapsed,
+        onCollapseChange: setCollapsed,
+        mobileOpen,
+        onMobileOpenChange: setMobileOpen,
+      }}
+    >
       {children}
     </SidebarContext.Provider>
   )
 }
 
-function useSidebar() {
+export function useSidebar() {
   const context = React.useContext(SidebarContext)
   if (!context) {
     throw new Error("useSidebar deve ser usado dentro de <SidebarProvider>")
@@ -55,7 +62,7 @@ function useSidebar() {
   return context
 }
 
-// â”€â”€ Sidebar (shell flex container) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Sidebar (shell flex container) ──────────────────────────────────────
 
 interface SidebarProps {
   children: React.ReactNode
@@ -69,10 +76,9 @@ export function Sidebar({ children }: SidebarProps) {
   )
 }
 
-// â”€â”€ Sair (botÃ£o de logout, apenas no rodapÃ© da sidebar) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Sair (botão de logout, apenas no rodapé da sidebar) ─────────────────
 
 function SairButton({ collapsed }: { collapsed?: boolean }) {
-  const router = useRouter()
   return (
     <button
       onClick={async () => {
@@ -86,7 +92,8 @@ function SairButton({ collapsed }: { collapsed?: boolean }) {
         window.location.replace("/login")
       }}
       className={cn(
-        "flex items-center gap-3 rounded-lg border border-transparent px-3 py-2 text-sm font-medium text-destructive hover:bg-destructive/10 hover:text-destructive transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:bg-destructive/20",
+        // Neutro em repouso, destrutivo no hover. h-10: alvo de toque.
+        "flex h-10 items-center gap-3 rounded-lg border border-transparent px-3 text-sm font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:bg-destructive/20",
         collapsed ? "justify-center px-2" : ""
       )}
     >
@@ -96,7 +103,7 @@ function SairButton({ collapsed }: { collapsed?: boolean }) {
   )
 }
 
-// â”€â”€ SidebarItem â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── SidebarItem ─────────────────────────────────────────────────────────
 
 function SidebarItem({
   item,
@@ -111,7 +118,8 @@ function SidebarItem({
     <a
       href={item.href}
       className={cn(
-        "flex items-center gap-3 rounded-lg border border-transparent px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        // h-10: alvo de toque de 40px no mobile.
+        "flex h-10 items-center gap-3 rounded-lg border border-transparent px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
         isActive
           ? "bg-accent text-accent-foreground"
           : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground",
@@ -127,7 +135,7 @@ function SidebarItem({
 function SidebarNav({ collapsed }: { collapsed: boolean }) {
   const pathname = usePathname()
   return (
-    <nav className="flex flex-col gap-1 px-2 py-3">
+    <nav className="flex-1 flex flex-col gap-1 px-2 py-3">
       {sidebarItems.map((item) => (
         <SidebarItem
           key={item.href}
@@ -140,7 +148,7 @@ function SidebarNav({ collapsed }: { collapsed: boolean }) {
   )
 }
 
-// â”€â”€ SidebarContent (sidebar fixo Ã  esquerda / Sheet em mobile) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── SidebarContent (sidebar fixo à esquerda / Sheet em mobile) ──────────
 
 interface SidebarContentProps extends React.ComponentProps<"aside"> {
   className?: string
@@ -150,13 +158,13 @@ export function SidebarContent({
   className,
   ...props
 }: SidebarContentProps) {
-  const { collapsed } = useSidebar()
+  const { collapsed, onCollapseChange, mobileOpen, onMobileOpenChange } = useSidebar()
 
-  // Desktop: sidebar fixo no fluxo (nÃ£o position:fixed para nÃ£o sobrepor conteÃºdo)
+  // Desktop: sidebar fixo no fluxo (não position:fixed para não sobrepor conteúdo)
   const desktop = (
     <aside
       className={cn(
-        "hidden md:flex flex-col border-r h-screen",
+        "hidden md:flex flex-col h-full border-r",
         collapsed ? "w-16" : "w-64",
         className
       )}
@@ -169,54 +177,45 @@ export function SidebarContent({
             Financeiro
           </span>
         </div>
-        {!collapsed && (
-          <button
-            className="p-2 rounded-lg text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
-            aria-label="Reduzir menu"
-          >
+        <button
+          onClick={() => onCollapseChange(!collapsed)}
+          className="p-2 rounded-lg text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+          aria-label={collapsed ? "Expandir menu" : "Reduzir menu"}
+        >
+          {collapsed ? (
+            <ChevronRight className="h-4 w-4" />
+          ) : (
             <ChevronLeft className="h-4 w-4" />
-          </button>
-        )}
+          )}
+        </button>
       </div>
-      <ScrollArea className="h-full">
+      <div className="flex-1 overflow-y-auto">
         <SidebarNav collapsed={collapsed} />
-      </ScrollArea>
+      </div>
       <div className="flex flex-col gap-1 px-3 py-3 border-t border-border">
         <SairButton collapsed={collapsed} />
       </div>
     </aside>
   )
 
-  // Mobile: Sheet (drawer) â€” nÃ£o ocupa largura do conteÃºdo
+  // Mobile: Sheet (drawer) — não ocupa largura do conteúdo
   const mobile = (
-    <Sheet>
-      <SheetTrigger asChild>
-        <button
-          className="md:hidden p-2 rounded-lg text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
-          aria-label="Abrir menu"
-        >
-          <Menu className="h-5 w-5" />
-        </button>
-      </SheetTrigger>
-      <SheetContent side="left" className="w-[256px]">
+    <Sheet open={mobileOpen} onOpenChange={onMobileOpenChange}>
+      <SheetContent side="left" className="w-[280px]">
         <SheetHeader className="flex items-center justify-between">
-          <div className="flex items-center gap-2 px-3 py-4">
-            <span className="font-semibold text-lg tracking-tight">Controle</span>
-            <span className="text-muted-foreground text-xs font-semibold">
-              Financeiro
-            </span>
-          </div>
-          <SheetClose asChild>
-            <button className="p-2 rounded-lg text-muted-foreground hover:bg-accent/50">
-              <ChevronLeft className="h-5 w-5" />
-            </button>
-          </SheetClose>
+          {/* SheetTitle (e nao um span): o Radix usa este elemento como
+              rotulo acessivel do dialog. */}
+          <SheetTitle className="px-3 py-4 text-lg font-semibold tracking-tight">
+            Controle Financeiro
+          </SheetTitle>
         </SheetHeader>
-        <ScrollArea className="h-full">
-          <SidebarNav collapsed={true} />
-        </ScrollArea>
-        <div className="flex flex-col gap-1 px-3 py-3 border-t border-border">
-          <SairButton collapsed={true} />
+        <div className="flex-1 overflow-y-auto">
+          {/* No drawer mobile os itens mostram o rótulo: o drawer tem 280px
+              e o ícone sozinho não diz para onde vai. */}
+          <SidebarNav collapsed={false} />
+        </div>
+        <div className="flex flex-col gap-1 border-t border-border px-3 py-3">
+          <SairButton collapsed={false} />
         </div>
       </SheetContent>
     </Sheet>
@@ -230,7 +229,7 @@ export function SidebarContent({
   )
 }
 
-// â”€â”€ SidebarInset (conteÃºdo principal, flex-1, sem largura fixa) â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── SidebarInset (conteúdo principal, flex-1, sem largura fixa) ─────────
 
 interface SidebarInsetProps extends React.ComponentProps<"div"> {
   className?: string

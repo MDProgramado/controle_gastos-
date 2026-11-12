@@ -13,12 +13,18 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Spinner } from "@/components/Spinner"
 import { Switch } from "@/components/ui/switch"
+import { Select } from "@/components/ui/select"
+import { SelectTrigger } from "@/components/ui/select"
+import { SelectValue } from "@/components/ui/select"
+import { SelectContent } from "@/components/ui/select"
+import { SelectItem } from "@/components/ui/select"
 import { Dialog } from "@/components/ui/dialog"
 import { DialogTrigger } from "@/components/ui/dialog"
 import { DialogContent } from "@/components/ui/dialog"
 import { DialogHeader } from "@/components/ui/dialog"
 import { DialogTitle } from "@/components/ui/dialog"
 import { DialogDescription } from "@/components/ui/dialog"
+import { DialogFooter } from "@/components/ui/dialog"
 import { DropdownMenu } from "@/components/ui/dropdown-menu"
 import { DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { DropdownMenuContent } from "@/components/ui/dropdown-menu"
@@ -77,9 +83,15 @@ export function CategoriasClient({
   const [pessoal, setPessoal] = useState(false)
   const [errosForm, setErrosForm] = useState<{ nome?: string; tipo?: string }>({})
 
-  // AlertDialog de exclusão
+  // AlertDialog de desativação
   const [excluirId, setExcluirId] = useState<number | null>(null)
   const [excluirAberto, setExcluirAberto] = useState(false)
+
+  // Nome da categoria em foco no AlertDialog ("desativar a categoria X?")
+  const categoriaParaDesativar = useMemo(
+    () => categorias.find((c) => c.id === excluirId) ?? null,
+    [categorias, excluirId],
+  )
 
   const podeEscrever = userRole === "ADMIN"
 
@@ -242,7 +254,7 @@ export function CategoriasClient({
           className="grid w-full max-w-xl grid-cols-3 gap-x-6"
           data-moment="counter-rolls"
         >
-          <div className="border-t border-border pt-3">
+          <div className="flex flex-col border-t border-border pt-3">
             <span className="text-xs font-medium text-muted-foreground">
               Total
             </span>
@@ -250,7 +262,7 @@ export function CategoriasClient({
               {categorias.length}
             </p>
           </div>
-          <div className="border-t border-border pt-3">
+          <div className="flex flex-col border-t border-border pt-3">
             <span className="text-xs font-medium text-muted-foreground">
               Entradas
             </span>
@@ -258,7 +270,7 @@ export function CategoriasClient({
               {entradas.length}
             </p>
           </div>
-          <div className="border-t border-border pt-3">
+          <div className="flex flex-col border-t border-border pt-3">
             <span className="text-xs font-medium text-muted-foreground">
               Saídas
             </span>
@@ -312,21 +324,28 @@ export function CategoriasClient({
               {SAIDAS_LABEL} ({saidas.length})
             </h2>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead>
-                <tr className="border-b bg-muted text-muted-foreground">
-                  <th className="p-4">Nome</th>
-                  <th className="p-4">Tipo</th>
-                  <th className="p-4">Pessoal</th>
-                  <th className="p-4">Status</th>
-                  <th className="p-4 text-right">Ações</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {saidas.map((c) => renderCategoriaRow(c))}
-              </tbody>
-            </table>
+          <div className="hidden md:block">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead>
+                  <tr className="border-b bg-muted text-muted-foreground">
+                    <th className="p-4">Nome</th>
+                    <th className="p-4">Tipo</th>
+                    <th className="p-4">Pessoal</th>
+                    <th className="p-4">Status</th>
+                    <th className="p-4 text-right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {saidas.map((c) => renderCategoriaRow(c))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          {/* Mobile: a tabela vira lista de cards — a coluna Ações não cabe
+              ao lado de Nome/Tipo/Status em 360px e era cortada. */}
+          <div className="divide-y divide-border md:hidden">
+            {saidas.map((c) => renderCategoriaCard(c))}
           </div>
         </section>
       )}
@@ -339,39 +358,47 @@ export function CategoriasClient({
               {ENTRADAS_LABEL} ({entradas.length})
             </h2>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead>
-                <tr className="border-b bg-muted text-muted-foreground">
-                  <th className="p-4">Nome</th>
-                  <th className="p-4">Tipo</th>
-                  <th className="p-4">Pessoal</th>
-                  <th className="p-4">Status</th>
-                  <th className="p-4 text-right">Ações</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {entradas.map((c) => renderCategoriaRow(c))}
-              </tbody>
-            </table>
+          <div className="hidden md:block">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead>
+                  <tr className="border-b bg-muted text-muted-foreground">
+                    <th className="p-4">Nome</th>
+                    <th className="p-4">Tipo</th>
+                    <th className="p-4">Pessoal</th>
+                    <th className="p-4">Status</th>
+                    <th className="p-4 text-right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {entradas.map((c) => renderCategoriaRow(c))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          {/* Mobile: lista de cards (mesma estrutura das Saídas) */}
+          <div className="divide-y divide-border md:hidden">
+            {entradas.map((c) => renderCategoriaCard(c))}
           </div>
         </section>
       )}
 
-      {/* Empty state */}
+      {/* Empty state — mesmo container das listas (section) */}
       {categorias.length === 0 && (
-        <div className="rounded-lg border border-input bg-card shadow-sm p-12 text-center">
-          <p className="text-sm text-muted-foreground">
-            Nenhuma categoria cadastrada
-          </p>
-          {podeEscrever && (
-            <div className="mt-4">
-              <Button type="button" variant="outline" onClick={abrirCriar}>
-                Adicionar categoria
-              </Button>
-            </div>
-          )}
-        </div>
+        <section className="rounded-lg border border-input bg-card shadow-sm">
+          <div className="p-12 text-center">
+            <p className="text-sm text-muted-foreground">
+              Nenhuma categoria cadastrada
+            </p>
+            {podeEscrever && (
+              <div className="mt-4">
+                <Button type="button" variant="outline" onClick={abrirCriar}>
+                  Adicionar categoria
+                </Button>
+              </div>
+            )}
+          </div>
+        </section>
       )}
 
       {/* Dialog criar/editar */}
@@ -380,110 +407,128 @@ export function CategoriasClient({
           <DialogTrigger asChild>
             <button style={{ display: "none" }} aria-hidden="true" />
           </DialogTrigger>
-          <DialogContent className="w-full max-w-[480px]">
+          <DialogContent>
             <DialogHeader>
               <DialogTitle>
                 {editandoId ? "Editar categoria" : "Nova categoria"}
               </DialogTitle>
+              <DialogDescription>
+                {editandoId
+                  ? "Altere o nome ou o tipo da categoria."
+                  : "Crie uma categoria de entrada ou de saída."}
+              </DialogDescription>
             </DialogHeader>
-            <DialogDescription>
-              <form onSubmit={onSubmit} className="grid gap-4 sm:grid-cols-2 sm:gap-4" noValidate>
-                <div className="flex flex-col gap-1 sm:col-span-2">
-                  <Label htmlFor="nome">Nome</Label>
-                  <Input
-                    id="nome"
-                    name="nome"
-                    type="text"
-                    placeholder="Nome da categoria"
-                    value={nome}
-                    onChange={(e) => {
-                      setNome(e.target.value)
-                      if (errosForm.nome)
-                        setErrosForm((atual) => ({ ...atual, nome: undefined }))
-                    }}
-                    disabled={loading}
-                    className="h-11"
-                    aria-invalid={errosForm.nome ? true : undefined}
-                  />
-                  {errosForm.nome && (
-                    <p className="text-sm text-destructive">{errosForm.nome}</p>
-                  )}
-                </div>
+            {/* O <form> fica FORA do DialogDescription: o Radix renderiza a
+                descrição como <p> e <form>/<div> dentro de <p> quebra a
+                hidratação ("<div> cannot be a descendant of <p>"). */}
+            <form
+              onSubmit={onSubmit}
+              className="grid gap-4 px-6 pb-6 sm:grid-cols-2 sm:gap-4"
+              noValidate
+            >
+              <div className="flex flex-col gap-1 sm:col-span-2">
+                <Label htmlFor="nome">Nome</Label>
+                <Input
+                  id="nome"
+                  name="nome"
+                  type="text"
+                  placeholder="Nome da categoria"
+                  value={nome}
+                  onChange={(e) => {
+                    setNome(e.target.value)
+                    if (errosForm.nome)
+                      setErrosForm((atual) => ({ ...atual, nome: undefined }))
+                  }}
+                  disabled={loading}
+                  className="h-11"
+                  aria-invalid={errosForm.nome ? true : undefined}
+                />
+                {errosForm.nome && (
+                  <p className="text-sm text-destructive">{errosForm.nome}</p>
+                )}
+              </div>
 
-                <div className="flex flex-col gap-1">
-                  <Label htmlFor="tipo">Tipo</Label>
-                  <select
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="tipo">Tipo</Label>
+                <Select
+                  value={tipo}
+                  onValueChange={setTipo}
+                  disabled={loading}
+                >
+                  <SelectTrigger
                     id="tipo"
-                    name="tipo"
-                    value={tipo}
-                    onChange={(e) => setTipo(e.target.value)}
-                    disabled={loading}
                     className="h-11 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-base focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
                     aria-invalid={errosForm.tipo ? true : undefined}
                   >
-                    <option value="ENTRADA">Entrada</option>
-                    <option value="SAIDA">Saída</option>
-                  </select>
-                  {errosForm.tipo && (
-                    <p className="text-sm text-destructive">{errosForm.tipo}</p>
-                  )}
-                </div>
+                    <SelectValue placeholder="Selecione o tipo" />
+                  </SelectTrigger>
+                  <SelectContent position="popper">
+                    <SelectItem value="ENTRADA">Entrada</SelectItem>
+                    <SelectItem value="SAIDA">Saída</SelectItem>
+                  </SelectContent>
+                </Select>
+                {errosForm.tipo && (
+                  <p className="text-sm text-destructive">{errosForm.tipo}</p>
+                )}
+              </div>
 
-                <div className="flex items-center gap-2 sm:col-span-2">
-                  <input
-                    id="pessoal"
-                    name="pessoal"
-                    type="checkbox"
-                    checked={pessoal}
-                    onChange={(e) => setPessoal(e.target.checked)}
-                    disabled={loading}
-                    className="h-4 w-4 rounded border-input text-primary focus:ring-primary"
-                  />
-                  <Label htmlFor="pessoal" className="text-sm text-foreground">
-                    Pessoal
-                  </Label>
-                </div>
+              <div className="flex items-center gap-2 sm:col-span-2">
+                <input
+                  id="pessoal"
+                  name="pessoal"
+                  type="checkbox"
+                  checked={pessoal}
+                  onChange={(e) => setPessoal(e.target.checked)}
+                  disabled={loading}
+                  className="h-4 w-4 rounded border-input text-primary focus:ring-primary"
+                />
+                <Label htmlFor="pessoal" className="text-sm text-foreground">
+                  Pessoal
+                </Label>
+              </div>
 
-                <div className="flex items-center justify-end gap-2 sm:col-span-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setFormAberto(false)
-                      resetForm()
-                    }}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button
-                    type="submit"
-                    variant="default"
-                    disabled={loading}
-                    className="h-11 w-auto font-semibold"
-                  >
-                    {loading ? (
-                      <span className="flex items-center gap-1">
-                        <Spinner className="mr-1" />
-                        Salvando…
-                      </span>
-                    ) : editandoId ? "Salvar alterações" : "Salvar"}
-                  </Button>
-                </div>
-              </form>
-            </DialogDescription>
+              <DialogFooter className="col-span-full px-0 pb-0 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setFormAberto(false)
+                    resetForm()
+                  }}
+                  className="w-full sm:w-auto"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  variant="default"
+                  disabled={loading}
+                  className="h-11 w-full font-semibold sm:w-auto"
+                >
+                  {loading ? (
+                    <span className="flex items-center gap-1">
+                      <Spinner className="mr-1" />
+                      Salvando…
+                    </span>
+                  ) : editandoId ? "Salvar alterações" : "Salvar"}
+                </Button>
+              </DialogFooter>            </form>
           </DialogContent>
         </Dialog>
       )}
 
-      {/* AlertDialog de exclusão */}
+      {/* AlertDialog de desativação — a API faz soft delete (DELETE /api/categorias/{id}
+          marca ativo=false), então a ação é DESATIVAR, não excluir. */}
       <AlertDialog open={excluirAberto} onOpenChange={setExcluirAberto}>
         <AlertDialogTriggerPrimitive asChild>
           <button style={{ display: "none" }} aria-hidden="true" />
         </AlertDialogTriggerPrimitive>
         <AlertDialogContent>
-          <AlertDialogTitle>Excluir categoria</AlertDialogTitle>
+          <AlertDialogTitle>Desativar categoria</AlertDialogTitle>
           <AlertDialogDescription>
-            Tem certeza que deseja excluir esta categoria? Esta ação não pode ser desfeita.
+            Tem certeza que deseja desativar a categoria{" "}
+            {categoriaParaDesativar?.nome ?? ""}? Ela deixa de aparecer nas
+            telas de lançamento, mas continua no cadastro.
           </AlertDialogDescription>
           <AlertDialogCancel onClick={() => setExcluirAberto(false)}>
             Cancelar
@@ -492,12 +537,106 @@ export function CategoriasClient({
             onClick={confirmarExcluir}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            Excluir
+            Desativar
           </AlertDialogAction>
         </AlertDialogContent>
       </AlertDialog>
     </div>
   )
+
+  /**
+   * Card da categoria no mobile: Nome em destaque, Tipo e Status na mesma
+   * linha e as ações (Editar / Desativar) no rodapé, com alvos de 40px.
+   */
+  function renderCategoriaCard(c: CategoriaData) {
+    const tipoBadge = badgeVariants[c.tipo as keyof typeof badgeVariants]
+
+    return (
+      <div
+        key={c.id}
+        data-categoria-card
+        className={cn(
+          "flex flex-col gap-3 p-4",
+          !c.ativo && "opacity-50",
+        )}
+      >
+        <div className="min-w-0">
+          <p
+            className={cn(
+              "break-words font-medium text-foreground",
+              !c.ativo && "text-muted-foreground",
+            )}
+          >
+            {c.nome}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-4">
+          <span
+            className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs font-semibold ${tipoBadge}`}
+          >
+            {c.tipo === "ENTRADA" ? "Entrada" : "Saída"}
+          </span>
+          <span className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">Status</span>
+            <Switch
+              checked={c.ativo}
+              onCheckedChange={() => toggleStatus(c)}
+              disabled={loading || !podeEscrever}
+              aria-label={`Alternar status da categoria ${c.nome}`}
+            />
+          </span>
+        </div>
+
+        <div className="flex items-center justify-end gap-2">
+          {podeEscrever && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => abrirEditar(c)}
+                  disabled={loading}
+                  className="h-10 w-10 p-0"
+                  aria-label="Editar categoria"
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Editar</TooltipContent>
+            </Tooltip>
+          )}
+          {podeEscrever && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-10 w-10 p-0"
+                  aria-label="Mais ações"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={() => {
+                    setExcluirId(c.id)
+                    setExcluirAberto(true)
+                  }}
+                  disabled={loading}
+                >
+                  Desativar
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
+      </div>
+    )
+  }
 
   function renderCategoriaRow(c: CategoriaData) {
     const tipoBadge = badgeVariants[c.tipo as keyof typeof badgeVariants]
@@ -512,7 +651,7 @@ export function CategoriasClient({
         )}
       >
         <td className="p-4">
-          <span className={cn("font-medium", !c.ativo && "text-muted-foreground")}>
+          <span className={cn("break-words font-medium", !c.ativo && "text-muted-foreground")}>
             {c.nome}
           </span>
         </td>
@@ -523,7 +662,7 @@ export function CategoriasClient({
             {c.tipo === "ENTRADA" ? "Entrada" : "Saída"}
           </span>
         </td>
-        <td className="p-3">
+        <td className="hidden p-3 md:table-cell">
           <span className={cn("text-xs", !c.ativo && "text-muted-foreground")}>
             {c.pessoal ? <span className="flex items-center gap-1"><Check className="h-3 w-3" /> Sim</span> : <span className="flex items-center gap-1"><X className="h-3 w-3" /> Não</span>}
           </span>
@@ -533,7 +672,6 @@ export function CategoriasClient({
             checked={c.ativo}
             onCheckedChange={() => toggleStatus(c)}
             disabled={loading || !podeEscreverLocal}
-            className="h-4 w-8"
             aria-label={`Alternar status da categoria ${c.nome}`}
           />
         </td>
@@ -578,7 +716,7 @@ export function CategoriasClient({
                     }}
                     disabled={loading}
                   >
-                    Excluir
+                    Desativar
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

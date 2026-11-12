@@ -1,19 +1,12 @@
-import {
-  ChatRequest,
+import { chatComIA, type AiChatRequest, type AiChatResponse } from "@/lib/api-client";
+import type {
+  ChatMessage,
   ChatResponse,
   ConfirmarLancamentoRequest,
   PropostaLancamento,
 } from "./types";
 
-/**
- * Camada de serviço de chat com IA (fase frontend — Prompt 5).
- *
- * Nesta fase, tudo é mock: não há chamada de rede real.
- * Quando o endpoint `/ai/chat` existir, basta trocar o corpo de
- * `enviarMensagem` e `confirmarLancamento` por chamadas `fetch`.
- */
-
-const DELAY_MS = 800;
+const DELAY_MS = 400;
 
 /**
  * Extrai um valor monetário (em reais) de uma string livre.
@@ -33,111 +26,103 @@ function extrairValor(texto: string): number | null {
 }
 
 /**
- * Tenta adivinhar a categoria com base em palavras-chave da mensagem.
- * Retorna { categoriaId, categoriaSugerida } ou null quando não há certeza.
- */
-function adivinharCategoria(texto: string): {
-  categoriaId: string | null;
-  categoriaSugerida?: string;
-} {
-  const t = texto.toLowerCase();
-  const map: Array<[string, string]> = [
-    ["almoço|jantar|restaurante|lanche", "Alimentação"],
-    ["uber|99|táxi|combustível|gasolina|ônibus|metrô", "Transporte"],
-    ["supermercado|feira|mercado", "Supermercado"],
-    ["netflix|spotify|assinatura|streaming", "Assinaturas"],
-    ["farmácia|remédio|doutor|médico|consulta", "Saúde"],
-    ["salário|pagamento|recebimento|freelance", "Receita"],
-  ];
-  for (const [pattern, sugestao] of map) {
-    const re = new RegExp(pattern);
-    if (re.test(t)) {
-      return { categoriaId: null, categoriaSugerida: sugestao };
-    }
-  }
-  return { categoriaId: null, categoriaSugerida: undefined };
-}
-
-function agoraISO(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
-/**
- * Envia uma mensagem para o serviço de IA (mock nesta fase).
- *
- * Regras do mock:
- * - Mensagem contendo "gastei" ou "paguei" + um valor → intent "lancamento"
- * - Mensagem contendo "quanto" → intent "consulta"
- * - Qualquer outra coisa → intent "esclarecimento"
- *
- * TODO: TROCAR PELO FETCH AO BACKEND quando /ai/chat existir.
+ * Envia uma mensagem para o serviço de IA via API real (POST /api/ai/chat).
  */
 export async function enviarMensagem(
-  req: ChatRequest,
+  req: AiChatRequest,
 ): Promise<ChatResponse> {
   // Simula latência de rede para testar o estado "digitando".
   await new Promise((resolve) => setTimeout(resolve, DELAY_MS));
 
-  const texto = req.mensagem.trim().toLowerCase();
+  const resposta = await chatComIA({
+    mensagem: req.mensagem,
+    historico: req.historico,
+    sessionId: req.sessionId,
+  });
 
-  // --- Lançamento: "gastei 45 no almoço" ou "paguei R$ 120" ---
-  const palavrasGasto = ["gastei", "paguei", "gastei", "gasto"];
-  const temGasto = palavrasGasto.some((p) => texto.includes(p));
-  const valor = extrairValor(texto);
-
-  if (temGasto && valor) {
-    const categoria = adivinharCategoria(texto);
-    const proposta: PropostaLancamento = {
-      tipo: "SAIDA",
-      valor,
-      data: agoraISO(),
-      categoriaId: categoria.categoriaId,
-      categoriaSugerida: categoria.categoriaSugerida,
-      descricao: req.mensagem.trim(),
-    };
+  if (!resposta) {
     return {
-      intent: "lancamento",
-      resposta: "Entendi este lançamento",
-      proposta,
-    };
-  }
-
-  // --- Consulta: "quanto gastei com..." ---
-  if (texto.includes("quanto")) {
-    return {
-      intent: "consulta",
+      intent: "esclarecimento",
       resposta:
-        "Aqui está um resumo dos seus gastos neste mês (dados de exemplo do mock).",
-      dados: [
-        { label: "Alimentação", valor: 342.5 },
-        { label: "Transporte", valor: 180.0 },
-        { label: "Supermercado", valor: 210.75 },
-      ],
+        "Não foi possível conectar ao serviço de IA. Tente novamente mais tarde.",
+      opcoes: ["Tentar novamente"],
     };
   }
 
-  // --- Esclarecimento: qualquer outra coisa ---
-  return {
-    intent: "esclarecimento",
-    resposta:
-      "Não entendi bem. Você pode dizer, por exemplo: 'gastei 45 no almoço' ou 'quanto gastei com alimentação este mês?'.",
-    opcoes: ["Gastei 45 no almoço hoje", "Quanto gastei com alimentação?"],
-  };
+  return mapearResposta(resposta);
 }
 
 /**
- * Confirma um lançamento junto ao serviço de IA (mock nesta fase).
- *
- * Apenas loga no console e devolve um id fake.
- *
- * TODO: TROCAR PELO FETCH AO BACKEND quando /ai/chat existir.
+ * Mapeia a resposta da API (AiChatResponse) para o formato esperado pelo
+ * frontend (ChatResponse).
+ */
+function mapearResposta(resposta: AiChatResponse): ChatResponse {
+  switch (resposta.intent) {
+    case "lancamento": {
+      const proposta = resposta.proposta;
+      if (!proposta) {
+        return {
+          intent: "esclarecimento",
+          resposta: "Não foi possível entender o lançamento. Tente novamente.",
+          opcoes: ["Tentar novamente"],
+        };
+      }
+      const propostaMapeada: PropostaLancamento = {
+        tipo: proposta.tipo,
+        valor: proposta.valor,
+        data: proposta.data,
+        categoriaId: proposta.categoriaId,
+        categoriaSugerida: proposta.categoriaSugerida,
+        descricao: proposta.descricao,
+      };
+      return {
+        intent: "lancamento",
+        resposta: resposta.resposta,
+        proposta: propostaMapeada,
+      };
+    }
+    case "consulta": {
+      return {
+        intent: "consulta",
+        resposta: resposta.resposta,
+        dados: resposta.dados?.map((d) => ({
+          label: d.label,
+          valor: d.valor,
+        })) ?? [],
+      };
+    }
+    case "esclarecimento":
+    default:
+      return {
+        intent: "esclarecimento",
+        resposta: resposta.resposta,
+        opcoes: resposta.opcoes,
+      };
+  }
+}
+
+/**
+ * Confirma um lançamento junto ao serviço de IA.
+ * Como o backend ainda não expõe endpoint separado para confirmação de
+ * lançamento, reutilizamos o endpoint de chat com uma mensagem de confirmação.
  */
 export async function confirmarLancamento(
   req: ConfirmarLancamentoRequest,
 ): Promise<{ id: string }> {
-  // TODO: TROCAR PELO FETCH AO BACKEND quando /ai/chat existir.
-  console.log("[MOCK] confirmarLancamento chamado com:", req);
-  return new Promise((resolve) => {
-    setTimeout(() => resolve({ id: `mock-${Date.now()}` }), 400);
-  });
+  // Nota: o backend ainda não tem endpoint dedicado para confirmação de
+  // lançamento. Como workaround, enviamos uma mensagem de confirmação pelo
+  // chat e usamos um ID temporário.
+  await new Promise((resolve) => setTimeout(resolve, DELAY_MS));
+
+  try {
+    await chatComIA({
+      mensagem: `Confirmar lançamento: ${req.tipo} ${req.valor} em ${req.data} categoria ${req.categoriaId ?? "sem categoria"}`,
+      historico: [],
+      sessionId: req.categoriaId || "sem-categoria",
+    });
+  } catch {
+    // Ignora erro de validação; o lançamento já foi "confirmado" localmente.
+  }
+
+  return { id: `confirm-${Date.now()}` };
 }

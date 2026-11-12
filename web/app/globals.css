@@ -84,6 +84,48 @@ body {
   --radius: 0.75rem;
 }
 
+/* ===== Tailwind v4: mapa dos tokens de cor =====
+   O Tailwind v4 só gera utilitários de cor (.bg-card, .text-foreground,
+   .border-border...) a partir de variáveis `--color-*` declaradas em
+   `@theme`. Sem este mapa, os utilitários de cor nao sao gerados no CSS
+   compilado e todo componente com `bg-card`/`bg-popover` fica TRANSPARENTE
+   (dialog, popover do select, switch, bordas). Os valores apontam para as
+   variáveis de :root acima — trocar a paleta é mexer só lá.
+*/
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-positive: var(--positive);
+  --color-positive-foreground: var(--positive-foreground);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
 /* Base font 16px (UI-SPEC Typography: override do default 14px do shadcn) */
 html {
   font-size: 16px;

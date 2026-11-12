@@ -10,6 +10,7 @@ import { SelectItem } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Label } from "@/components/ui/label"
+import { Pencil, Trash2 } from "lucide-react"
 import { MONETARY } from "@/components/DashboardKPIs"
 
 type LancamentoData = {
@@ -97,10 +98,12 @@ export function LancamentosTable({
 
   if (lancamentos.length === 0) {
     return (
-      <div className="rounded-lg border border-input bg-card shadow-sm p-12 text-center">
-        <p className="text-sm text-muted-foreground">
-          Nenhum lançamento neste período
-        </p>
+      <div className="rounded-lg border border-input bg-card shadow-sm">
+        <div className="p-12 text-center">
+          <p className="text-sm text-muted-foreground">
+            Nenhum lançamento neste período
+          </p>
+        </div>
       </div>
     )
   }
@@ -184,35 +187,123 @@ export function LancamentosTable({
       </div>
 
       <div className="rounded-lg border border-input bg-card shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
-            <thead>
-              <tr className="border-b bg-muted text-muted-foreground">
-                <th className="p-4">Data</th>
-                <th className="p-4">Descrição</th>
-                <th className="p-4">Categoria</th>
-                <th className="p-4">Tipo</th>
-                <th className="p-4 text-right">Valor</th>
-                <th className="p-4 text-right">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {paginados.map((l) => renderRow(l, onEditar, onExcluir, loading))}
-            </tbody>
-          </table>
+        {/* Mobile: a tabela vira lista de cards (a coluna Ações era cortada).
+            No md+ a tabela de verdade, com scroll horizontal se precisar. */}
+        <div className="divide-y divide-border md:hidden">
+          {paginados.map((l) => renderCard(l, onEditar, onExcluir, loading))}
+        </div>
+
+        <div className="hidden md:block">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead>
+                <tr className="border-b bg-muted text-muted-foreground">
+                  <th className="p-4">Data</th>
+                  <th className="p-4">Descrição</th>
+                  <th className="p-4">Categoria</th>
+                  <th className="p-4">Tipo</th>
+                  <th className="p-4 text-right">Valor</th>
+                  <th className="p-4 text-right">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {paginados.map((l) => renderRow(l, onEditar, onExcluir, loading))}
+              </tbody>
+            </table>
+          </div>
         </div>
         <div className="border-t border-border px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex-1 text-sm text-muted-foreground">
             Exibindo {Math.min(total, PAGE_SIZE)} de {total} lançamentos
           </div>
           <div className="flex flex-col sm:flex-row gap-2">
-            <Button variant="outline" size="sm" disabled={paginaAtual <= 1 || loading} onClick={() => onPageChange(paginaAtual - 1)}>
+            <Button variant="outline" size="sm" disabled={paginaAtual <= 1 || loading} onClick={() => onPageChange(paginaAtual - 1)} className="h-10">
               Anterior
             </Button>
-            <Button variant="outline" size="sm" disabled={paginaAtual >= totalPaginas || loading} onClick={() => onPageChange(paginaAtual + 1)}>
+            <Button variant="outline" size="sm" disabled={paginaAtual >= totalPaginas || loading} onClick={() => onPageChange(paginaAtual + 1)} className="h-10">
               Próximo
             </Button>
           </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/** Badge de tipo (Entrada/Saída) — compartilhado pela linha e pelo card. */
+function TipoBadge({ tipo }: { tipo: string }) {
+  const ehEntrada = tipo === "ENTRADA"
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs font-semibold ${
+        ehEntrada
+          ? "border-positive text-positive bg-positive/10"
+          : "border-destructive text-destructive bg-destructive/10"
+      }`}
+    >
+      {tipo}
+    </span>
+  )
+}
+
+/**
+ * Card do lançamento no mobile: Descrição em destaque, Categoria e Tipo
+ * numa linha e as ações (Editar / Excluir) com alvos de 40px.
+ */
+function renderCard(
+  l: LancamentoData,
+  onEditar: (l: LancamentoData) => void,
+  onExcluir: (id: number) => void,
+  loading: boolean,
+) {
+  const ehEntrada = l.tipo === "ENTRADA"
+  const categoriaNome = l.categoriaNome || "—"
+  return (
+    <div key={l.id} data-lancamento-card className="flex flex-col gap-3 p-4">
+      <div className="min-w-0">
+        <p className="break-words font-medium text-foreground">
+          {l.descricao || "—"}
+        </p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          {l.data} · {categoriaNome}
+        </p>
+      </div>
+
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <TipoBadge tipo={l.tipo} />
+          <span
+            className={`font-semibold tabular-nums ${
+              ehEntrada ? "text-positive" : "text-destructive"
+            }`}
+          >
+            {ehEntrada ? "+" : "-"}
+            {MONETARY.format(Math.abs(l.valor))}
+          </span>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => onEditar(l)}
+            disabled={loading}
+            className="h-10 w-10 p-0"
+            aria-label="Editar lançamento"
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="destructive"
+            size="sm"
+            onClick={() => onExcluir(l.id)}
+            disabled={loading}
+            className="h-10 w-10 p-0"
+            aria-label="Excluir lançamento"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
         </div>
       </div>
     </div>
@@ -230,12 +321,10 @@ function renderRow(
   return (
     <tr key={l.id} className="hover:bg-muted/50 transition-colors">
       <td className="p-4">{l.data}</td>
-      <td className="p-4">{l.descricao || "—"}</td>
-      <td className="p-4">{categoriaNome}</td>
+      <td className="p-4 break-words">{l.descricao || "—"}</td>
+      <td className="p-4 break-words">{categoriaNome}</td>
       <td className="p-4">
-        <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs font-semibold ${ehEntrada ? "border-positive text-positive bg-positive/10" : "border-destructive text-destructive bg-destructive/10"}`}>
-          {l.tipo}
-        </span>
+        <TipoBadge tipo={l.tipo} />
       </td>
       <td className="p-4 text-right font-semibold">
         <span className={ehEntrada ? "text-positive" : "text-destructive"}>
@@ -245,10 +334,10 @@ function renderRow(
       </td>
       <td className="p-4 text-right">
         <div className="flex items-center justify-end gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={() => onEditar(l)} disabled={loading} className="h-8 px-2 text-xs">
+          <Button type="button" variant="outline" size="sm" onClick={() => onEditar(l)} disabled={loading} className="h-10 px-2 text-xs">
             Editar
           </Button>
-          <Button type="button" variant="destructive" size="sm" onClick={() => onExcluir(l.id)} disabled={loading} className="h-8 px-2 text-xs">
+          <Button type="button" variant="destructive" size="sm" onClick={() => onExcluir(l.id)} disabled={loading} className="h-10 px-2 text-xs">
             Excluir
           </Button>
         </div>
