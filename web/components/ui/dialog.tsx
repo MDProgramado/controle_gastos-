@@ -1,5 +1,6 @@
 import * as React from "react"
 import * as DialogPrimitive from "@radix-ui/react-dialog"
+import { X } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const Dialog = DialogPrimitive.Root
@@ -10,8 +11,10 @@ const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
     className?: string
+    /** Botão X no canto superior direito (padrão: visível em todo dialog). */
+    showCloseButton?: boolean
   }
->(({ className, children, ...props }, ref) => (
+>(({ className, children, showCloseButton = true, ...props }, ref) => (
   <DialogPrimitive.Portal>
     <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/80" />
     <DialogPrimitive.Content
@@ -23,6 +26,14 @@ const DialogContent = React.forwardRef<
       {...props}
     >
       {children}
+      {showCloseButton ? (
+        <DialogPrimitive.Close
+          className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          aria-label="Fechar"
+        >
+          <X className="h-5 w-5" />
+        </DialogPrimitive.Close>
+      ) : null}
     </DialogPrimitive.Content>
   </DialogPrimitive.Portal>
 ))
@@ -36,7 +47,7 @@ const DialogHeader = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("flex flex-col space-y-1 text-center sm:text-left", className)}
+    className={cn("flex flex-col space-y-1 pr-12 text-center sm:text-left", className)}
     {...props}
   />
 ))
