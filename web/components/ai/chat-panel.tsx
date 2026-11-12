@@ -23,6 +23,7 @@ import type {
   PropostaLancamento,
 } from "@/lib/ai/types"
 import { useCategorias } from "./use-categorias"
+import { Markdown } from "./markdown"
 import { ArrowRight, Loader2 } from "lucide-react"
 
 const MENSAGENS_EXEMPLO = [
@@ -264,8 +265,10 @@ export function ChatPanel() {
                 ) : ehLancamento && propostaSelecionada ? (
                   renderCardConfirmacao(m, propostaSelecionada)
                 ) : (
-                  <div className="bg-muted rounded-lg p-3 text-sm text-foreground max-w-[80%]">
-                    {m.content}
+                  <div className="max-w-[80%] rounded-lg bg-muted p-3 text-sm text-foreground">
+                    {/* A resposta da IA vem em Markdown (tabelas, listas,
+                        negrito) — por isso o Markdown. */}
+                    <Markdown>{m.content}</Markdown>
                     {m.consultaDados && m.consultaDados.length > 0 && (
                       <div className="mt-3 p-3 rounded-md bg-card/50 border border-border/50">
                         <div className="grid gap-2 text-sm">
