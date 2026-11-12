@@ -6,7 +6,6 @@ import { SheetTrigger } from "@/components/ui/sheet"
 import { SheetContent } from "@/components/ui/sheet"
 import { SheetHeader } from "@/components/ui/sheet"
 import { SheetTitle } from "@/components/ui/sheet"
-import { SheetFooter } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Select } from "@/components/ui/select"
@@ -15,27 +14,46 @@ import { SelectValue } from "@/components/ui/select"
 import { SelectContent } from "@/components/ui/select"
 import { SelectItem } from "@/components/ui/select"
 import { Spinner } from "@/components/Spinner"
-import type { LinhaLote } from "@/components/LoteLinha"
 import { LinhaLote as LinhaLoteRow } from "@/components/LoteLinha"
+import type {
+  CampoLote,
+  CategoriaOption,
+  ErroLinha,
+  LinhaLote,
+} from "@/components/lote-tipos"
 
-type TipoLancamento = "ENTRADA" | "SAIDA"
-
-type CategoriaOption = {
-  id: number
-  nome: string
-  tipo: string
-  pessoal: boolean
-  ativo: boolean
+/** Valida um campo isolado de uma linha (usado no onBlur). */
+export function validarCampo(
+  linha: Pick<LinhaLote, "categoriaId" | "tipo" | "valor" | "data">,
+  campo: CampoLote,
+): string | null {
+  switch (campo) {
+    case "categoria":
+      return linha.categoriaId ? null : "Selecione uma categoria"
+    case "tipo":
+      return linha.tipo ? null : "Selecione o tipo"
+    case "valor": {
+      if (!linha.valor.trim()) return "Informe um valor maior que zero"
+      if (!/^-?\d+(\.\d{1,2})?$/.test(linha.valor.trim()))
+        return "Valor inválido"
+      if (parseFloat(linha.valor) <= 0) return "Informe um valor maior que zero"
+      return null
+    }
+    case "data":
+      return linha.data ? null : "Informe a data"
+  }
 }
 
-type LinhaLote = {
-  id: string
-  categoriaId: number | null
-  tipo: TipoLancamento
-  valor: string
-  data: string
-  descricao: string
-  erro?: string
+/** Valida a linha inteira (usado ao clicar em Salvar lote). */
+export function validarLinha(
+  linha: Pick<LinhaLote, "categoriaId" | "tipo" | "valor" | "data">,
+): ErroLinha | null {
+  const campos: CampoLote[] = ["categoria", "valor", "data", "tipo"]
+  for (const campo of campos) {
+    const mensagem = validarCampo(linha, campo)
+    if (mensagem) return { campo, mensagem }
+  }
+  return null
 }
 
 interface LoteSheetProps {
@@ -69,8 +87,20 @@ export function LoteSheet({
   ])
   const [loading, setLoading] = React.useState(false)
 
+  /**
+   * Erro por linha e campo. Vive fora da linha para que a validacao
+   * (onBlur e Salvar lote) escreva num unico lugar e o campo sozinho
+   * exiba a mensagem.
+   */
+  const [erros, setErros] = React.useState<Record<string, ErroLinha>>({})
+
   const removerLinha = (id: string) => {
     setLinhas(linhas.filter((l) => l.id !== id))
+    setErros((atuais) => {
+      const copia = { ...atuais }
+      delete copia[id]
+      return copia
+    })
   }
 
   const atualizarLinha = (
@@ -80,9 +110,41 @@ export function LoteSheet({
     setLinhas(linhas.map((l) => (l.id === id ? { ...l, ...atualizacoes } : l)))
   }
 
-  const podeSalvar = linhas.some(
-    (l) => l.categoriaId !== null && l.valor && l.tipo && l.data,
-  )
+  /**
+   * Erro de uma linha: o primeiro campo invalido. Cada linha precisa de
+   * categoria e valor preenchidos para o lote ser salvo.
+   */
+  const linhaInvalida = (l: LinhaLote) =>
+    l.categoriaId === null || !l.valor.trim()
+
+  const podeSalvar =
+    linhas.length > 0 && linhas.every((l) => !linhaInvalida(l))
+
+  /** Marca o erro de um campo quando ele perde o foco. */
+  const validarNoBlur = (id: string, campo: CampoLote) => {
+    const linha = linhas.find((l) => l.id === id)
+    if (!linha) return
+    const mensagem = validarCampo(linha, campo)
+    setErros((atuais) => {
+      const copia = { ...atuais }
+      if (mensagem) {
+        copia[id] = { campo, mensagem }
+      } else if (atuais[id]?.campo === campo) {
+        delete copia[id]
+      }
+      return copia
+    })
+  }
+
+  /** Limpa o erro do campo quando o usuario o corrige. */
+  const limparErroDoCampo = (id: string, campo: CampoLote) => {
+    setErros((atuais) => {
+      if (atuais[id]?.campo !== campo) return atuais
+      const copia = { ...atuais }
+      delete copia[id]
+      return copia
+    })
+  }
 
   const adicionarLinha = () => {
     setLinhas([
@@ -99,18 +161,14 @@ export function LoteSheet({
   }
 
   async function handleSubmit() {
-    const novasLinhas = linhas.map((l) => {
-      let erro: string | undefined
-      if (!l.categoriaId) erro = "Selecione uma categoria"
-      else if (!l.valor || !/^-?\d+(\.\d{1,2})?$/.test(l.valor))
-        erro = "Valor inválido"
-      else if (parseFloat(l.valor) <= 0) erro = "Valor deve ser maior que zero"
-      else if (!l.data) erro = "Informe a data"
-      else if (!l.tipo) erro = "Selecione o tipo"
-      return { ...l, erro }
-    })
-    setLinhas(novasLinhas)
-    if (novasLinhas.some((l) => l.erro)) return
+    // Valida todas as linhas e mostra o erro no campo que falhou.
+    const novosErros: Record<string, ErroLinha> = {}
+    for (const l of linhas) {
+      const erro = validarLinha(l)
+      if (erro) novosErros[l.id] = erro
+    }
+    setErros(novosErros)
+    if (Object.keys(novosErros).length > 0) return
 
     setLoading(true)
     try {
@@ -138,13 +196,13 @@ export function LoteSheet({
           Lançar em lote
         </button>
       </SheetTrigger>
-      <SheetContent side="right" className="w-[600px] max-w-[95vw]">
+      <SheetContent side="right" className="w-full md:max-w-[600px]">
         <SheetHeader>
           <SheetTitle>Lançar em lote</SheetTitle>
           {/* O X de fechar (canto superior direito) é o do SheetContent
               genérico (components/ui/sheet.tsx) — aqui só o título. */}
         </SheetHeader>
-        <SheetFooter className="p-6">
+        <div className="flex-1 overflow-y-auto px-6 pb-6">
           <div className="flex flex-col gap-4">
             <div className="flex-1">
               <Label htmlFor="categoria-filtro">Filtrar categorias por tipo</Label>
@@ -173,16 +231,18 @@ export function LoteSheet({
                 <Button
                   type="button"
                   variant="outline"
-                  size="sm"
                   onClick={adicionarLinha}
                   disabled={loading}
+                  className="h-10"
                 >
                   Adicionar linha
                 </Button>
               </div>
-              <div className="mt-1 flex flex-col gap-2 max-h-[400px] overflow-y-auto border border-input rounded-lg p-3 bg-muted/50">
+              {/* Cada linha e um card unico (a borda dupla do wrapper +
+                  a borda da linha sairam). */}
+              <div className="mt-3 flex flex-col gap-3">
                 {linhas.length === 0 ? (
-                  <div className="p-3 text-sm text-muted-foreground text-center">
+                  <div className="rounded-lg border border-input p-4 text-center text-sm text-muted-foreground">
                     Nenhuma linha no lote. Adicione pelo menos uma.
                   </div>
                 ) : (
@@ -193,30 +253,47 @@ export function LoteSheet({
                       categorias={categorias}
                       onChange={atualizarLinha}
                       onRemove={removerLinha}
+                      onBlurCampo={validarNoBlur}
+                      onCorrigirCampo={limparErroDoCampo}
+                      erro={erros[linha.id]}
                       loading={loading}
                     />
                   ))
                 )}
               </div>
-              {loading ? (
-                <div className="flex items-center gap-2">
-                  <Spinner className="mr-2" />
-                  <span>Processando lote...</span>
-                </div>
-              ) : (
-                <Button
-                  type="button"
-                  variant="default"
-                  onClick={handleSubmit}
-                  disabled={loading || !podeSalvar}
-                  className="w-full"
-                >
-                  Salvar lote ({linhas.length} linha{linhas.length !== 1 ? "s" : ""})
-                </Button>
-              )}
             </div>
           </div>
-        </SheetFooter>
+        </div>
+
+        {/* Rodape fixo no fim do conteudo */}
+        <div className="border-t border-border px-6 py-4">
+          {!podeSalvar && !loading ? (
+            <p className="mb-2 text-sm text-muted-foreground">
+              Preencha categoria e valor em todas as linhas.
+            </p>
+          ) : null}
+          {loading ? (
+            <div className="flex items-center gap-2">
+              <Spinner className="mr-2" />
+              <span>Processando lote...</span>
+            </div>
+          ) : (
+            // aria-disabled (e nao disabled) para o botao continuar
+            // clicavel: o clique dispara a validacao e mostra o erro no
+            // campo, que e o que o requisito pede. Visualmente continua
+            // desabilitado.
+            <Button
+              type="button"
+              variant="default"
+              onClick={handleSubmit}
+              disabled={loading}
+              aria-disabled={!podeSalvar}
+              className="h-11 w-full md:w-auto aria-disabled:opacity-50 aria-disabled:cursor-not-allowed"
+            >
+              Salvar lote ({linhas.length} linha{linhas.length !== 1 ? "s" : ""})
+            </Button>
+          )}
+        </div>
       </SheetContent>
     </Sheet>
   )
