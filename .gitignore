@@ -5,6 +5,12 @@
 .env*
 !.env.example
 
+# Credenciais/tokens de teste (contem senha e JWT do admin em texto plano)
+login.json
+token-response.json
+test-chat.bat
+test-login.ps1
+
 # Build artifacts
 target/
 node_modules/
