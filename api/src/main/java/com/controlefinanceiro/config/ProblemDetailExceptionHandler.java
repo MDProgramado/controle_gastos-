@@ -8,6 +8,7 @@ import com.controlefinanceiro.common.LinhaInvalidaException;
 import com.controlefinanceiro.common.LoteDemasiadoGrandeException;
 import com.controlefinanceiro.common.MonetarioException;
 import com.controlefinanceiro.common.NaoAutorizadoException;
+import com.controlefinanceiro.common.ServicoIaIndisponivelException;
 import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -90,5 +91,14 @@ public class ProblemDetailExceptionHandler {
   @ExceptionHandler(LoteDemasiadoGrandeException.class)
   public ProblemDetail loteDemasiadoGrande(LoteDemasiadoGrandeException ex) {
     return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+  }
+
+  /**
+   * Serviço de IA (OpenRouter) indisponível ou sobrecarregado → 503 com mensagem que o usuário pode
+   * entender (fase 4).
+   */
+  @ExceptionHandler(ServicoIaIndisponivelException.class)
+  public ProblemDetail servicoIaIndisponivel(ServicoIaIndisponivelException ex) {
+    return ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage());
   }
 }

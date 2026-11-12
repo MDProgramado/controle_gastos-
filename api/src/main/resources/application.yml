@@ -38,4 +38,7 @@ jwt:
 ai:
   openrouter:
     api-key: ${OPENROUTER_API_KEY:}
-    modelo: ${AI_OPENROUTER_MODELO:google/gemini-2.0-flash-001}
+    modelo: ${AI_OPENROUTER_MODELO:google/gemini-2.5-flash-lite}
+    # Lista de fallback (separada por vírgula): se o provedor do modelo principal estiver
+    # sobrecarregado (HTTP 429), a OpenRouter tenta o próximo da lista. Vazio = usa só o modelo.
+    modelos: ${AI_OPENROUTER_MODELOS:google/gemini-2.5-flash-lite,google/gemini-2.5-flash}
