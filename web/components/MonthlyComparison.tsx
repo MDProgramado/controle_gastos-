@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card"
 import { CardContent } from "@/components/ui/card"
 import { CardHeader } from "@/components/ui/card"
 import { CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 
 export type MonthlyData = {
   mes: string
@@ -32,6 +33,35 @@ export function MonthlyComparison({ meses }: MonthlyComparisonProps) {
     () => Math.max(1, ...meses.flatMap((m) => [m.entradas, m.saidas])),
     [meses],
   )
+
+  /**
+   * Sem movimento no período: as barras ficariam com 2% de altura (o mínimo
+   * do estilo inline) e o gráfico mostraria 6 tracinhos que não comunicam
+   * nada. Nesse caso o card mostra o estado vazio — como o "Gastos por
+   * categoria" faz quando não há saídas no mês.
+   */
+  const semMovimento = meses.every((m) => m.entradas === 0 && m.saidas === 0)
+
+  if (semMovimento) {
+    return (
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle>Comparação mensal</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Entradas e saídas dos últimos 6 meses
+          </p>
+        </CardHeader>
+        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+          <p className="text-sm text-muted-foreground mb-4">
+            Sem movimento nos últimos 6 meses
+          </p>
+          <Button variant="outline" asChild>
+            <a href="/lancamentos">Adicionar lançamento</a>
+          </Button>
+        </CardContent>
+      </Card>
+    )
+  }
 
   return (
     <Card className="w-full">
