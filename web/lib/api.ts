@@ -274,6 +274,24 @@ export async function chatComIA(
   }
 }
 
+/** DELETE /api/lancamentos/{id} — exclui lançamento. Retorna true se 204. */
+export async function excluirLancamento(id: number): Promise<boolean> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("sess")?.value;
+  if (!token) return false;
+
+  try {
+    const res = await fetch(`${process.env.API_URL}/api/lancamentos/${id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+    return res.status === 204;
+  } catch {
+    return false;
+  }
+}
+
 /** Shape de `GET /api/categorias` (contrato da API — plano 03-04). */
 export type CategoriaData = {
   id: number;
