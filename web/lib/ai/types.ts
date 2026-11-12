@@ -15,6 +15,11 @@ export type ChatMessage = {
   criadoEm: Date;
   /** Preenchido apenas quando role === "assistant" e intent === "lancamento" */
   lancamentoProposta?: PropostaLancamento;
+  /**
+   * Preenchido quando role === "assistant" e intent === "lancamento".
+   * Uma mensagem pode conter VÁRIOS lançamentos (ex.: "salário 2400, aluguel 900, luz 100...").
+   */
+  lancamentoPropostas?: PropostaLancamento[];
   /** Preenchido apenas quando role === "assistant" e intent === "consulta" */
   consultaDados?: ConsultaResultado[];
   /** Preenchido apenas quando role === "assistant" e intent === "esclarecimento" */
@@ -51,7 +56,10 @@ export type ChatResponse =
   | {
       intent: "lancamento";
       resposta: string;
+      /** Primeiro lançamento (compatibilidade com o fluxo de lançamento único). */
       proposta: PropostaLancamento;
+      /** Todos os lançamentos da mensagem (pode ter mais de um). */
+      propostas?: PropostaLancamento[];
     }
   | {
       intent: "esclarecimento";
