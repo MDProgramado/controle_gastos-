@@ -146,6 +146,37 @@ Implementação completa dos Prompts 4 e 5 do projeto Controle Financeiro.
 - **IA**: Spring AI 2.0.2, OpenRouter (Gemma 4 31B Instruct — `google/gemma-4-31b-it:free`)
 - **Deploy**: API no Render (Postgres pago com backup), web na Vercel
 
+### Estratégia de Modelos (fallback em cascata)
+
+A OpenRouter é chamada com a lista de modelos + `route=fallback`: quando o modelo atual falha
+(provedor sobrecarregado, modelo fora do ar), ela tenta o próximo da lista **sem nova chamada da
+aplicação**.
+
+| Etapa | Modelos | Quando é usada |
+|-------|---------|----------------|
+| 1 — Cascata (grátis) | `google/gemma-4-31b-it:free` → `google/gemma-4-26b-a4b-it:free` → `openrouter/free` | Sempre, primeiro |
+| 2 — Último recurso | `google/gemma-4-31b-it` (pago) | Só quando a cascata inteira falha |
+
+**Por que existe a etapa 2:** o limite de modelos `:free` é **por conta e por dia** (50 req/dia na
+conta free — `free-models-per-day`). Quando estoura, *todos* os modelos gratuitos caem juntos e
+nenhuma cascata de gratuitos resolve. Sem a etapa 2, o chat cairia todo dia depois das 50
+primeiras mensagens. Para desativá-la (somente modelos gratuitos), defina
+`AI_OPENROUTER_MODELOS_RESERVA=none`.
+
+**Erro de cota da OpenRouter:** adicionando **US$ 10 de créditos** o limite sobe de 50 para
+**1000 requisições/dia** de modelos gratuitos — bem mais barato do que pagar por token.
+
+Variáveis de ambiente:
+
+| Variável | Padrão | Papel |
+|----------|--------|-------|
+| `OPENROUTER_API_KEY` | — | Chave da OpenRouter (obrigatória) |
+| `AI_OPENROUTER_MODELOS` | `google/gemma-4-31b-it:free,google/gemma-4-26b-a4b-it:free,openrouter/free` | Cascata de modelos gratuitos |
+| `AI_OPENROUTER_MODELOS_RESERVA` | `google/gemma-4-31b-it` | Último recurso (`none` desliga) |
+
+O log registra o modelo e a etapa de cada resposta:
+`Resposta da IA servida pelo modelo google/gemma-4-31b-it (etapa: reserva)`.
+
 ### Critério de Aceite Global
 - **Saldo, entradas e saídas corretos ao centavo** — números confiáveis por mês
 - **Dinheiro**: Valores em `BigDecimal` com `NUMERIC(14,2)` no banco, `scale = 2`, `RoundingMode.HALF_EVEN` no service

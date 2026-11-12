@@ -39,7 +39,14 @@ ai:
   openrouter:
     api-key: ${OPENROUTER_API_KEY:}
     modelo: ${AI_OPENROUTER_MODELO:google/gemma-4-31b-it:free}
-    # Lista de fallback (separada por vírgula): se o provedor do modelo principal estiver
-    # sobrecarregado (HTTP 429) ou o quota diário de modelos :free acabar, a OpenRouter tenta o
-    # próximo da lista. Vazio = usa só o modelo.
-    modelos: ${AI_OPENROUTER_MODELOS:google/gemma-4-31b-it:free,google/gemma-4-31b-it,google/gemini-2.5-flash-lite}
+    # Cascata de modelos gratuitos (separados por vírgula), usada com route=fallback:
+    #   primário   -> google/gemma-4-31b-it:free
+    #   secundário -> google/gemma-4-26b-a4b-it:free
+    #   terciário  -> openrouter/free (roteador de modelos gratuitos)
+    modelos: ${AI_OPENROUTER_MODELOS:google/gemma-4-31b-it:free,google/gemma-4-26b-a4b-it:free,openrouter/free}
+    # Último recurso: entra em campo só quando a cascata inteira falha. Necessário porque o
+    # limite de modelos :free é por conta e por dia (50 req/dia): quando estoura, TODOS os
+    # modelos gratuitos caem juntos e nenhuma cascata de gratuitos resolve.
+    # Para desativar (somente modelos gratuitos), defina AI_OPENROUTER_MODELOS_RESERVA=none
+    # (o valor "none" desliga a lista — em Windows uma env var vazia é removida pelo sistema).
+    modelos-reserva: ${AI_OPENROUTER_MODELOS_RESERVA:google/gemma-4-31b-it}
