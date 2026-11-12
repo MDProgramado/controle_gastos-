@@ -35,7 +35,7 @@ export function MonthlyComparison({ meses }: MonthlyComparisonProps) {
   )
 
   /**
-   * Sem movimento no período: as barras ficariam com 2% de altura (o mínimo
+   * Sem lançamentos no período: as barras ficariam com 2% de altura (o mínimo
    * do estilo inline) e o gráfico mostraria 6 tracinhos que não comunicam
    * nada. Nesse caso o card mostra o estado vazio — como o "Gastos por
    * categoria" faz quando não há saídas no mês.
@@ -53,7 +53,7 @@ export function MonthlyComparison({ meses }: MonthlyComparisonProps) {
         </CardHeader>
         <CardContent className="flex flex-col items-center justify-center py-12 text-center">
           <p className="text-sm text-muted-foreground mb-4">
-            Sem movimento nos últimos 6 meses
+            Nenhum lançamento nos últimos 6 meses
           </p>
           <Button variant="outline" asChild>
             <a href="/lancamentos">Adicionar lançamento</a>
@@ -99,14 +99,20 @@ export function MonthlyComparison({ meses }: MonthlyComparisonProps) {
               title={`${m.mes} — entradas ${MONETARY.format(m.entradas)} / saídas ${MONETARY.format(m.saidas)}`}
             >
               <div className="flex h-full items-end justify-center gap-1">
-                <div
-                  className="w-1/2 max-w-[18px] bg-positive transition-[height] duration-500"
-                  style={{ height: `${Math.max(2, (m.entradas / max) * 100)}%` }}
-                />
-                <div
-                  className="w-1/2 max-w-[18px] bg-destructive transition-[height] duration-500"
-                  style={{ height: `${Math.max(2, (m.saidas / max) * 100)}%` }}
-                />
+                {/* Mês sem valor não desenha barra: um traço de 2% seria lido
+                    como "teve movimento". Zero é zero. */}
+                {m.entradas > 0 && (
+                  <div
+                    className="w-1/2 max-w-[18px] bg-positive transition-[height] duration-500"
+                    style={{ height: `${(m.entradas / max) * 100}%` }}
+                  />
+                )}
+                {m.saidas > 0 && (
+                  <div
+                    className="w-1/2 max-w-[18px] bg-destructive transition-[height] duration-500"
+                    style={{ height: `${(m.saidas / max) * 100}%` }}
+                  />
+                )}
               </div>
               <span className="text-center text-[11px] font-medium text-muted-foreground">
                 {m.mes}

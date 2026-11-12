@@ -82,9 +82,15 @@ export function CategoriasClient({
   const [pessoal, setPessoal] = useState(false)
   const [errosForm, setErrosForm] = useState<{ nome?: string; tipo?: string }>({})
 
-  // AlertDialog de exclusão
+  // AlertDialog de desativação
   const [excluirId, setExcluirId] = useState<number | null>(null)
   const [excluirAberto, setExcluirAberto] = useState(false)
+
+  // Nome da categoria em foco no AlertDialog ("desativar a categoria X?")
+  const categoriaParaDesativar = useMemo(
+    () => categorias.find((c) => c.id === excluirId) ?? null,
+    [categorias, excluirId],
+  )
 
   const podeEscrever = userRole === "ADMIN"
 
@@ -323,7 +329,9 @@ export function CategoriasClient({
                 <tr className="border-b bg-muted text-muted-foreground">
                   <th className="p-4">Nome</th>
                   <th className="p-4">Tipo</th>
-                  <th className="p-4">Pessoal</th>
+                  {/* Abaixo de md a coluna "Pessoal" some: Nome, Tipo, Status e
+                      Ações cabem na tela, e a tabela ainda rola se precisar. */}
+                  <th className="hidden p-4 md:table-cell">Pessoal</th>
                   <th className="p-4">Status</th>
                   <th className="p-4 text-right">Ações</th>
                 </tr>
@@ -350,7 +358,9 @@ export function CategoriasClient({
                 <tr className="border-b bg-muted text-muted-foreground">
                   <th className="p-4">Nome</th>
                   <th className="p-4">Tipo</th>
-                  <th className="p-4">Pessoal</th>
+                  {/* Abaixo de md a coluna "Pessoal" some: Nome, Tipo, Status e
+                      Ações cabem na tela, e a tabela ainda rola se precisar. */}
+                  <th className="hidden p-4 md:table-cell">Pessoal</th>
                   <th className="p-4">Status</th>
                   <th className="p-4 text-right">Ações</th>
                 </tr>
@@ -495,15 +505,18 @@ export function CategoriasClient({
         </Dialog>
       )}
 
-      {/* AlertDialog de exclusão */}
+      {/* AlertDialog de desativação — a API faz soft delete (DELETE /api/categorias/{id}
+          marca ativo=false), então a ação é DESATIVAR, não excluir. */}
       <AlertDialog open={excluirAberto} onOpenChange={setExcluirAberto}>
         <AlertDialogTriggerPrimitive asChild>
           <button style={{ display: "none" }} aria-hidden="true" />
         </AlertDialogTriggerPrimitive>
         <AlertDialogContent>
-          <AlertDialogTitle>Excluir categoria</AlertDialogTitle>
+          <AlertDialogTitle>Desativar categoria</AlertDialogTitle>
           <AlertDialogDescription>
-            Tem certeza que deseja excluir esta categoria? Esta ação não pode ser desfeita.
+            Tem certeza que deseja desativar a categoria{" "}
+            {categoriaParaDesativar?.nome ?? ""}? Ela deixa de aparecer nas
+            telas de lançamento, mas continua no cadastro.
           </AlertDialogDescription>
           <AlertDialogCancel onClick={() => setExcluirAberto(false)}>
             Cancelar
@@ -512,7 +525,7 @@ export function CategoriasClient({
             onClick={confirmarExcluir}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            Excluir
+            Desativar
           </AlertDialogAction>
         </AlertDialogContent>
       </AlertDialog>
@@ -543,7 +556,7 @@ export function CategoriasClient({
             {c.tipo === "ENTRADA" ? "Entrada" : "Saída"}
           </span>
         </td>
-        <td className="p-3">
+        <td className="hidden p-3 md:table-cell">
           <span className={cn("text-xs", !c.ativo && "text-muted-foreground")}>
             {c.pessoal ? <span className="flex items-center gap-1"><Check className="h-3 w-3" /> Sim</span> : <span className="flex items-center gap-1"><X className="h-3 w-3" /> Não</span>}
           </span>
@@ -598,7 +611,7 @@ export function CategoriasClient({
                     }}
                     disabled={loading}
                   >
-                    Excluir
+                    Desativar
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

@@ -87,10 +87,10 @@ body {
 /* ===== Tailwind v4: mapa dos tokens de cor =====
    O Tailwind v4 só gera utilitários de cor (.bg-card, .text-foreground,
    .border-border...) a partir de variáveis `--color-*` declaradas em
-   `@theme`. Sem este mapa, os utilitários NÃO EXISTEM no CSS compilado e
-   todo componente com `bg-card`/`bg-popover` fica TRANSPARENTE (dialog,
-   popover do select, switch, bordas). Os valores apontam para as variáveis
-   de :root acima — trocar a paleta é mexer só lá.
+   `@theme`. Sem este mapa, os utilitários de cor nao sao gerados no CSS
+   compilado e todo componente com `bg-card`/`bg-popover` fica TRANSPARENTE
+   (dialog, popover do select, switch, bordas). Os valores apontam para as
+   variáveis de :root acima — trocar a paleta é mexer só lá.
 */
 @theme inline {
   --color-background: var(--background);
