@@ -3,7 +3,6 @@
 import * as React from "react"
 import { Sheet } from "@/components/ui/sheet"
 import { SheetTrigger } from "@/components/ui/sheet"
-import { SheetClose } from "@/components/ui/sheet"
 import { SheetContent } from "@/components/ui/sheet"
 import { SheetHeader } from "@/components/ui/sheet"
 import { SheetTitle } from "@/components/ui/sheet"
@@ -142,11 +141,8 @@ export function LoteSheet({
       <SheetContent side="right" className="w-[600px] max-w-[95vw]">
         <SheetHeader>
           <SheetTitle>Lançar em lote</SheetTitle>
-          <SheetClose asChild>
-            <button className="p-2 rounded-lg text-muted-foreground hover:bg-accent/50">
-              <span className="sr-only">Fechar</span>
-            </button>
-          </SheetClose>
+          {/* O X de fechar (canto superior direito) é o do SheetContent
+              genérico (components/ui/sheet.tsx) — aqui só o título. */}
         </SheetHeader>
         <SheetFooter className="p-6">
           <div className="flex flex-col gap-4">

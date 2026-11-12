@@ -323,23 +323,28 @@ export function CategoriasClient({
               {SAIDAS_LABEL} ({saidas.length})
             </h2>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead>
-                <tr className="border-b bg-muted text-muted-foreground">
-                  <th className="p-4">Nome</th>
-                  <th className="p-4">Tipo</th>
-                  {/* Abaixo de md a coluna "Pessoal" some: Nome, Tipo, Status e
-                      Ações cabem na tela, e a tabela ainda rola se precisar. */}
-                  <th className="hidden p-4 md:table-cell">Pessoal</th>
-                  <th className="p-4">Status</th>
-                  <th className="p-4 text-right">Ações</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {saidas.map((c) => renderCategoriaRow(c))}
-              </tbody>
-            </table>
+          <div className="hidden md:block">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead>
+                  <tr className="border-b bg-muted text-muted-foreground">
+                    <th className="p-4">Nome</th>
+                    <th className="p-4">Tipo</th>
+                    <th className="p-4">Pessoal</th>
+                    <th className="p-4">Status</th>
+                    <th className="p-4 text-right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {saidas.map((c) => renderCategoriaRow(c))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          {/* Mobile: a tabela vira lista de cards — a coluna Ações não cabe
+              ao lado de Nome/Tipo/Status em 360px e era cortada. */}
+          <div className="divide-y divide-border md:hidden">
+            {saidas.map((c) => renderCategoriaCard(c))}
           </div>
         </section>
       )}
@@ -352,23 +357,27 @@ export function CategoriasClient({
               {ENTRADAS_LABEL} ({entradas.length})
             </h2>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead>
-                <tr className="border-b bg-muted text-muted-foreground">
-                  <th className="p-4">Nome</th>
-                  <th className="p-4">Tipo</th>
-                  {/* Abaixo de md a coluna "Pessoal" some: Nome, Tipo, Status e
-                      Ações cabem na tela, e a tabela ainda rola se precisar. */}
-                  <th className="hidden p-4 md:table-cell">Pessoal</th>
-                  <th className="p-4">Status</th>
-                  <th className="p-4 text-right">Ações</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {entradas.map((c) => renderCategoriaRow(c))}
-              </tbody>
-            </table>
+          <div className="hidden md:block">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead>
+                  <tr className="border-b bg-muted text-muted-foreground">
+                    <th className="p-4">Nome</th>
+                    <th className="p-4">Tipo</th>
+                    <th className="p-4">Pessoal</th>
+                    <th className="p-4">Status</th>
+                    <th className="p-4 text-right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {entradas.map((c) => renderCategoriaRow(c))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          {/* Mobile: lista de cards (mesma estrutura das Saídas) */}
+          <div className="divide-y divide-border md:hidden">
+            {entradas.map((c) => renderCategoriaCard(c))}
           </div>
         </section>
       )}
@@ -532,6 +541,100 @@ export function CategoriasClient({
     </div>
   )
 
+  /**
+   * Card da categoria no mobile: Nome em destaque, Tipo e Status na mesma
+   * linha e as ações (Editar / Desativar) no rodapé, com alvos de 40px.
+   */
+  function renderCategoriaCard(c: CategoriaData) {
+    const tipoBadge = badgeVariants[c.tipo as keyof typeof badgeVariants]
+
+    return (
+      <div
+        key={c.id}
+        data-categoria-card
+        className={cn(
+          "flex flex-col gap-3 p-4",
+          !c.ativo && "opacity-50",
+        )}
+      >
+        <div className="min-w-0">
+          <p
+            className={cn(
+              "break-words font-medium text-foreground",
+              !c.ativo && "text-muted-foreground",
+            )}
+          >
+            {c.nome}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-4">
+          <span
+            className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs font-semibold ${tipoBadge}`}
+          >
+            {c.tipo === "ENTRADA" ? "Entrada" : "Saída"}
+          </span>
+          <span className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">Status</span>
+            <Switch
+              checked={c.ativo}
+              onCheckedChange={() => toggleStatus(c)}
+              disabled={loading || !podeEscrever}
+              aria-label={`Alternar status da categoria ${c.nome}`}
+            />
+          </span>
+        </div>
+
+        <div className="flex items-center justify-end gap-2">
+          {podeEscrever && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => abrirEditar(c)}
+                  disabled={loading}
+                  className="h-10 w-10 p-0"
+                  aria-label="Editar categoria"
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Editar</TooltipContent>
+            </Tooltip>
+          )}
+          {podeEscrever && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-10 w-10 p-0"
+                  aria-label="Mais ações"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={() => {
+                    setExcluirId(c.id)
+                    setExcluirAberto(true)
+                  }}
+                  disabled={loading}
+                >
+                  Desativar
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   function renderCategoriaRow(c: CategoriaData) {
     const tipoBadge = badgeVariants[c.tipo as keyof typeof badgeVariants]
     const podeEscreverLocal = podeEscrever
@@ -566,7 +669,6 @@ export function CategoriasClient({
             checked={c.ativo}
             onCheckedChange={() => toggleStatus(c)}
             disabled={loading || !podeEscreverLocal}
-            className="h-4 w-8"
             aria-label={`Alternar status da categoria ${c.nome}`}
           />
         </td>

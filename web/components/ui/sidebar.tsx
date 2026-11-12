@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import {
   Sheet,
-  SheetClose,
   SheetContent,
   SheetHeader,
 } from "@/components/ui/sheet"
@@ -207,14 +206,6 @@ export function SidebarContent({
               Financeiro
             </span>
           </div>
-          <SheetClose asChild>
-            <button
-              className="p-2 rounded-lg text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              aria-label="Fechar menu"
-            >
-              <ChevronRight className="h-5 w-5" />
-            </button>
-          </SheetClose>
         </SheetHeader>
         <div className="flex-1 overflow-y-auto">
           {/* No drawer mobile os itens mostram o rótulo: o drawer tem 256px
