@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -12,7 +14,7 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
 /**
- * Cliente HTTP para a OpenRouter (modelo Gemini via OpenRouter API). Compatível com a API de chat
+ * Cliente HTTP para a OpenRouter (modelo Gemma 4 via OpenRouter API). Compatível com a API de chat
  * completions da OpenAI.
  *
  * <p>O parse da resposta usa Jackson ({@link ObjectMapper}) em vez de manipulação de string: o
@@ -22,6 +24,7 @@ import org.springframework.web.client.RestClientResponseException;
 @Component
 public class AiClient {
 
+  private static final Logger LOG = LoggerFactory.getLogger(AiClient.class);
   private static final ObjectMapper MAPPER = new ObjectMapper();
   private static final long PAUSA_ENTRE_TENTATIVAS_MS = 1500L;
 
@@ -32,7 +35,7 @@ public class AiClient {
 
   public AiClient(
       @Value("${ai.openrouter.api-key:}") String apiKey,
-      @Value("${ai.openrouter.modelo:google/gemini-2.5-flash-lite}") String modelo,
+      @Value("${ai.openrouter.modelo:google/gemma-4-31b-it:free}") String modelo,
       @Value("${ai.openrouter.modelos:}") String modelosConfig) {
     this.modelo = modelo;
     this.configurado = apiKey != null && !apiKey.isBlank();
@@ -62,8 +65,9 @@ public class AiClient {
   /**
    * Envia uma lista de mensagens para a OpenRouter e retorna o conteúdo da resposta.
    *
-   * <p>Em 429 (provedor sobrecarregado) tenta uma segunda vez após uma pausa curta. Qualquer outra
-   * falha vira {@link ServicoIaIndisponivelException} com mensagem legível.
+   * <p>Em 429 (provedor sobrecarregado ou quota diário de modelos :free esgotado) tenta uma segunda
+   * vez após uma pausa curta. Qualquer outra falha vira {@link ServicoIaIndisponivelException} com
+   * mensagem legível.
    */
   public String completar(List<Map<String, Object>> mensagens) {
     if (!configurado) {
@@ -128,7 +132,8 @@ public class AiClient {
 
   /**
    * Extrai o campo {@code choices[0].message.content} da resposta JSON da OpenRouter. Se o corpo
-   * trouxer um objeto {@code error}, lança IllegalStateException com a mensagem do provedor.
+   * trouxer um objeto {@code error}, lança {@link ServicoIaIndisponivelException} com a mensagem do
+   * provedor.
    */
   private String extrairConteudo(String json) {
     if (json == null || json.isBlank()) {
@@ -153,6 +158,11 @@ public class AiClient {
     if (content.isMissingNode() || content.isNull()) {
       throw new ServicoIaIndisponivelException("O serviço de IA devolveu uma resposta inesperada.");
     }
+
+    // Log do modelo que atendeu: com lista de fallback é essencial saber qual foi usado
+    // (o :free esgota o quota diário e a OpenRouter cai para o próximo da lista).
+    LOG.info("Resposta da IA servida pelo modelo {}", raiz.path("model").asText("desconhecido"));
+
     return content.asText("");
   }
 }

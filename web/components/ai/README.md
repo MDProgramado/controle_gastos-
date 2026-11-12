@@ -34,7 +34,7 @@ Implementação completa dos Prompts 4 e 5 do projeto Controle Financeiro.
 
 #### Arquitetura
 - **Frontend**: Next.js App Router + TypeScript + Tailwind + shadcn/ui
-- **Backend**: Spring Boot 3 + Java 21 + OpenRouter (Gemini)
+- **Backend**: Spring Boot 3 + Java 21 + OpenRouter (Gemma 4 31B Instruct)
 - **Tenant**: `empresa_id` exclusivamente do token JWT
 
 #### Componentes
@@ -143,7 +143,7 @@ Implementação completa dos Prompts 4 e 5 do projeto Controle Financeiro.
 ### Stack
 - **Frontend**: Next.js 16.4.3, Tailwind CSS 4.3.4, TypeScript, shadcn/ui
 - **Backend**: Spring Boot 3, Java 21, Spring Security + JWT, Spring Data JPA, PostgreSQL, Flyway, Testcontainers
-- **IA**: Spring AI 2.0.2, OpenRouter (Gemini 2.0 Flash)
+- **IA**: Spring AI 2.0.2, OpenRouter (Gemma 4 31B Instruct — `google/gemma-4-31b-it:free`)
 - **Deploy**: API no Render (Postgres pago com backup), web na Vercel
 
 ### Critério de Aceite Global

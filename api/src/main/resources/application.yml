@@ -33,12 +33,13 @@ spring:
 jwt:
   secret: ${JWT_SECRET:}
 
-# Configuração da IA (fase 4 — OpenRouter + Gemini).
+# Configuração da IA (fase 4 — OpenRouter + Gemma 4 31B Instruct).
 # A chave da API deve ser definida via env var OPENROUTER_API_KEY.
 ai:
   openrouter:
     api-key: ${OPENROUTER_API_KEY:}
-    modelo: ${AI_OPENROUTER_MODELO:google/gemini-2.5-flash-lite}
+    modelo: ${AI_OPENROUTER_MODELO:google/gemma-4-31b-it:free}
     # Lista de fallback (separada por vírgula): se o provedor do modelo principal estiver
-    # sobrecarregado (HTTP 429), a OpenRouter tenta o próximo da lista. Vazio = usa só o modelo.
-    modelos: ${AI_OPENROUTER_MODELOS:google/gemini-2.5-flash-lite,google/gemini-2.5-flash}
+    # sobrecarregado (HTTP 429) ou o quota diário de modelos :free acabar, a OpenRouter tenta o
+    # próximo da lista. Vazio = usa só o modelo.
+    modelos: ${AI_OPENROUTER_MODELOS:google/gemma-4-31b-it:free,google/gemma-4-31b-it,google/gemini-2.5-flash-lite}

@@ -10,7 +10,7 @@ import java.util.Map;
 import org.springframework.stereotype.Service;
 
 /**
- * Serviço de IA (fase 4 — OpenRouter + Gemini).
+ * Serviço de IA (fase 4 — OpenRouter + Gemma 4).
  *
  * <p>Responsabilidades: 1. Montar o contexto da conversa: system prompt + conhecimento + histórico
  * da sessão + mensagem do usuário. 2. Chamar a OpenRouter e obter a resposta. 3. Interpretar a

@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 /**
- * Resposta da IA (fase 4 — OpenRouter + Gemini). O contrato espelha o que o frontend consome
+ * Resposta da IA (fase 4 — OpenRouter + Gemma 4). O contrato espelha o que o frontend consome
  * (lib/ai/types.ts).
  *
  * <p>Valores monetários usam {@link BigDecimal} (R1: nunca {@code double}/{@code float} no código).
