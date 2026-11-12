@@ -139,6 +139,23 @@ Plans:
 
 ---
 
+### Phase 5: Importação de PDFs e Análise por IA
+
+**Goal:** Importar faturas de cartão e extratos bancários em PDF, extrair e classificar os lançamentos via IA (custo zero) e revisar antes de gravar no banco
+**Mode:** mvp
+**Success Criteria**:
+
+1. Upload de N PDFs numa única requisição retorna itens classificados (`RECEITA` / `DESPESA_PAGA` / `A_PAGAR`) com o resumo do mês (total recebido, total pago, total comprometido)
+2. Nenhum lançamento é gravado antes da confirmação explícita; a confirmação grava em transação tudo-ou-nada e é idempotente
+3. O texto enviado à OpenRouter tem CPF/CNPJ/cartão mascarados e nenhuma chamada usa modelo pago (custo zero)
+4. Reenvio do mesmo arquivo não duplica lançamentos; PDF sem texto extraível é avisado sem derrubar o lote
+5. O saldo do dashboard permanece idêntico ao SQL de conferência — `A_PAGAR` fica em tabela própria e não entra no saldo
+
+**Requirements:** IMP-01, IMP-02, IMP-03, IMP-04, IMP-05, IMP-06, IMP-07, IMP-08, IMP-09, IMP-10, IMP-11, IMP-12, IMP-13, IMP-14, IMP-15
+**UI hint**: yes
+
+---
+
 ## Timeline
 
 | Weeks | Phase(s) | Milestone |
@@ -146,12 +163,14 @@ Plans:
 | 1–2 | Phase 1 + Phase 2 | Login em produção com health check OK · lote com erro não grava nada |
 | 3–4 | Phase 3 | Números batem com SQL de conferência |
 | 5 | Phase 4 | Consultas da IA = números do dashboard |
+| 6 | Phase 5 | Importação de PDFs: análise com IA + revisão antes de gravar |
 
 ## Coverage
 
-- v1 requirements: 33 total
-- Mapped to phases: 33
+- v1 requirements: 48 total
+- Mapped to phases: 48
 - Unmapped: 0 ✓
 
 ---
 *Roadmap created: 2026-10-30*
+*Last updated: 2026-11-12 — fase 5 (importação de PDFs com IA) adicionada*
