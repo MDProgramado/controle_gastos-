@@ -66,4 +66,14 @@ public interface LancamentoRepository extends JpaRepository<Lancamento, Long> {
       @Param("tipo") String tipo,
       @Param("categoriaId") Long categoriaId,
       Pageable pageable);
+
+  /**
+   * Chaves de dedupe já gravadas na empresa (fase 5, D-09): a importação compara a chave de cada
+   * item extraído contra estas para marcar lançamento repetido.
+   *
+   * @param empresaId tenant do token (via TenantContext, nunca do body)
+   */
+  @Query(
+      "select l.chaveDedupe from Lancamento l where l.empresa.id = :empresaId and l.chaveDedupe is not null")
+  List<String> findChavesDedupeByEmpresaId(@Param("empresaId") Long empresaId);
 }
