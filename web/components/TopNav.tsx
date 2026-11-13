@@ -13,6 +13,7 @@ const ROTAS: RouteItem[] = [
   { href: "/", label: "Dashboard" },
   { href: "/lancamentos", label: "Lançamentos" },
   { href: "/categorias", label: "Categorias" },
+  { href: "/importacoes", label: "Importar PDF" },
 ];
 
 interface TopNavProps {

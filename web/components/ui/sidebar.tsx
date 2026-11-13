@@ -9,12 +9,13 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
-import { Home, DollarSign, Layout, LogOut, ChevronLeft, ChevronRight } from "lucide-react"
+import { Home, DollarSign, Layout, LogOut, ChevronLeft, ChevronRight, FileUp } from "lucide-react"
 
 const sidebarItems = [
   { href: "/", label: "Dashboard", icon: Home },
   { href: "/lancamentos", label: "Lançamentos", icon: DollarSign },
   { href: "/categorias", label: "Categorias", icon: Layout },
+  { href: "/importacoes", label: "Importar PDF", icon: FileUp },
 ] as const
 
 // ── Contexto (SidebarProvider) ──────────────────────────────────────────

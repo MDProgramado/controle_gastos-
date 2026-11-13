@@ -11,7 +11,7 @@ import {
 } from "@radix-ui/react-dialog";
 import { Button } from "@/components/ui/button";
 
-type Action = "excluir" | "desativar";
+type Action = "excluir" | "desativar" | "descartar";
 
 interface DeleteConfirmationDialogProps {
   isOpen: boolean;
@@ -19,11 +19,18 @@ interface DeleteConfirmationDialogProps {
   onClose: () => void;
   action: Action;
   target: string;
+  /**
+   * Texto do diálogo — quando presente substitui o padrão gerado de
+   * `Tem certeza que deseja ${action} este ${target}?`. Usado pelo descarte
+   * de importação (05-UI-SPEC §6.5).
+   */
+  descricao?: string;
 }
 
 /**
  * Diálogo reutilizável de confirmação destrutiva (excluir lançamento /
- * desativar categoria). Nunca usa `window.confirm` (D-24).
+ * desativar categoria / descartar importação pendente). Nunca usa
+ * `window.confirm` (D-24).
  *
  * Controlado externamente via `isOpen`/`onClose`. O chamador dispara
  * `onConfirm` após o usuário clicar no botão de confirmação.
@@ -34,10 +41,16 @@ export function DeleteConfirmationDialog({
   onClose,
   action,
   target,
+  descricao,
 }: DeleteConfirmationDialogProps) {
-  const confirmLabel = action === "excluir" ? "Excluir" : "Desativar";
-  const titulo = `Confirmar ${action}`;
-  const texto = `Tem certeza que deseja ${action} este ${target}?`;
+  const confirmLabel =
+    action === "excluir" ? "Excluir" : action === "descartar" ? "Descartar" : "Desativar";
+  const titulo = action === "descartar" ? "Confirmar descarte" : `Confirmar ${action}`;
+  const textoPadrao =
+    action === "descartar"
+      ? "Tem certeza que deseja descartar esta importação pendente? Os itens revisados serão perdidos e o arquivo poderá ser enviado de novo."
+      : `Tem certeza que deseja ${action} este ${target}?`;
+  const texto = descricao ?? textoPadrao;
 
   return (
     <Dialog open={isOpen} onOpenChange={(aberto: boolean) => {

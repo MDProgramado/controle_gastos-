@@ -9,6 +9,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -17,8 +18,8 @@ import java.time.OffsetDateTime;
 /**
  * Entidade da tabela importacao_item (fase 5).
  *
- * <p>Item de staging extraído por IA, ainda não gravado em lancamento/conta_a_pagar. R3: empresa
- * via {@link Empresa}, nunca de body. Valores monetários em {@link BigDecimal} com NUMERIC(14,2),
+ * <p>Item de staging extraÃ­do por IA, ainda nÃ£o gravado em lancamento/conta_a_pagar. R3: empresa
+ * via {@link Empresa}, nunca de body. Valores monetÃ¡rios em {@link BigDecimal} com NUMERIC(14,2),
  * scale=2, nenhum double/float.
  */
 @Entity
@@ -76,6 +77,17 @@ public class ImportacaoItem {
 
   @Column(name = "criado_em", nullable = false, updatable = false)
   private OffsetDateTime criadoEm;
+
+  /**
+   * R3: timestamp preenchido pela aplicaÃ§Ã£o (o DEFAULT now() do banco nÃ£o Ã© visto pelo INSERT
+   * do Hibernate).
+   */
+  @PrePersist
+  void aoPersistir() {
+    if (criadoEm == null) {
+      criadoEm = OffsetDateTime.now();
+    }
+  }
 
   public Long getId() {
     return id;

@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.function.Predicate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -85,6 +86,7 @@ public class AiClient {
   public record RespostaCompletar(
       String conteudo, String modeloUsado, boolean degradado, int chamadas) {}
 
+  @Autowired
   public AiClient(
       @Value("${ai.openrouter.api-key:}") String apiKey,
       @Value("${ai.openrouter.modelo:google/gemma-4-31b-it:free}") String modelo,

@@ -33,7 +33,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -694,6 +693,8 @@ public class ImportacaoService {
                       "ANALISADO");
               vincularESalvarItens(doc, itens, extracao);
               if (fatura != null) {
+                // Tenant vem do documento (mesmo padrão dos itens: empresa via entidade, R3).
+                fatura.setEmpresa(doc.getEmpresa());
                 fatura.setDocumento(doc);
                 faturaRepository.save(fatura);
               }
@@ -888,9 +889,10 @@ public class ImportacaoService {
   }
 
   private Usuario usuarioDoToken() {
+    // O filtro JWT produz UsuarioAuthAuthenticationToken com principal
+    // UsuarioAuth (SecurityConfig) — mesmo padrão de TenantContext/AuthMeController.
     Authentication autenticacao = SecurityContextHolder.getContext().getAuthentication();
-    if (autenticacao instanceof UsernamePasswordAuthenticationToken token
-        && token.getPrincipal() instanceof UsuarioAuth auth) {
+    if (autenticacao != null && autenticacao.getPrincipal() instanceof UsuarioAuth auth) {
       return usuarioRepository
           .findByEmail(auth.subject())
           .orElseThrow(() -> new IllegalStateException("Usuário do token não encontrado."));

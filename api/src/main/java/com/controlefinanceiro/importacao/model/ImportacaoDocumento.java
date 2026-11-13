@@ -10,14 +10,15 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
 
 /**
  * Entidade da tabela importacao_documento (fase 5).
  *
- * <p>R3: empresa via {@link Empresa}, nunca de body. O texto bruto do PDF nunca é persistido (LGPD)
- * — ficam apenas hash, metadados e o resultado estruturado.
+ * <p>R3: empresa via {@link Empresa}, nunca de body. O texto bruto do PDF nunca Ã© persistido
+ * (LGPD) â€” ficam apenas hash, metadados e o resultado estruturado.
  */
 @Entity
 @Table(name = "importacao_documento")
@@ -54,6 +55,17 @@ public class ImportacaoDocumento {
 
   @Column(name = "criado_em", nullable = false, updatable = false)
   private OffsetDateTime criadoEm;
+
+  /**
+   * R3: timestamp preenchido pela aplicaÃ§Ã£o (o DEFAULT now() do banco nÃ£o Ã© visto pelo INSERT
+   * do Hibernate).
+   */
+  @PrePersist
+  void aoPersistir() {
+    if (criadoEm == null) {
+      criadoEm = OffsetDateTime.now();
+    }
+  }
 
   public Long getId() {
     return id;
