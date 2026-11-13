@@ -1,6 +1,7 @@
 package com.controlefinanceiro.importacao;
 
 import com.controlefinanceiro.common.TenantContext;
+import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
@@ -8,6 +9,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -56,6 +58,19 @@ public class ImportacaoController {
   @GetMapping("/{id}")
   public ResponseEntity<ImportacaoService.DocumentoDetalhe> detalhar(@PathVariable Long id) {
     return ResponseEntity.ok(importacaoService.detalhar(id));
+  }
+
+  /**
+   * POST /api/importacoes/{id}/confirmar — grava os itens selecionados em lancamento /
+   * conta_a_pagar (transação tudo-ou-nada). Idempotente: itens já IMPORTADO são pulados.
+   *
+   * <p>Erros: 400 (linha inválida — ProblemDetail com {@code indiceLinha}), 404 (outra empresa),
+   * 409 (documento DESCARTADO/SEM_TEXTO).
+   */
+  @PostMapping("/{id}/confirmar")
+  public ResponseEntity<ImportacaoService.ResultadoConfirmacao> confirmar(
+      @PathVariable Long id, @Valid @RequestBody ConfirmarRequest request) {
+    return ResponseEntity.ok(importacaoService.confirmar(id, request));
   }
 
   /**

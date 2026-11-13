@@ -9,6 +9,7 @@ import com.controlefinanceiro.ai.AiClient;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.List;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
@@ -63,6 +64,20 @@ class ImportacaoPdfIntegrationTest {
       "{\"itens\":[{\"data\":\"2026-11-03\",\"descricao\":\"Almoco no restaurante\","
           + "\"valor\":\"45.00\",\"tipo\":\"DESPESA_PAGA\",\"categoria\":\"Alimentacao\","
           + "\"origem\":\"CARTAO\"}]}";
+
+  /** Resposta para o teste de confirmação: 3 tipos de item + cabeçalho de fatura. */
+  private static final String JSON_IA_CONFIRMACAO =
+      "{\"itens\":["
+          + "{\"data\":\"2026-11-03\",\"descricao\":\"Salario\",\"valor\":\"1000.00\","
+          + "\"tipo\":\"RECEITA\",\"categoria\":\"Rendimentos e reembolsos\",\"origem\":\"EXTRATO\"},"
+          + "{\"data\":\"2026-11-03\",\"descricao\":\"Almoco\",\"valor\":\"45.00\","
+          + "\"tipo\":\"DESPESA_PAGA\",\"categoria\":\"Alimentacao\",\"origem\":\"EXTRATO\"},"
+          + "{\"data\":\"2026-11-05\",\"descricao\":\"Notebook em 3x\",\"valor\":\"500.00\","
+          + "\"tipo\":\"A_PAGAR\",\"categoria\":\"Alimentacao\",\"origem\":\"CARTAO\","
+          + "\"parcelaAtual\":1,\"parcelaTotal\":3}"
+          + "],"
+          + "\"fatura\":{\"total\":\"500.00\",\"vencimento\":\"2026-12-10\","
+          + "\"mesReferencia\":\"2026-11-01\"}}";
 
   @Autowired private TestRestTemplate rest;
 
@@ -200,6 +215,90 @@ class ImportacaoPdfIntegrationTest {
         jdbc.queryForObject(
             "SELECT status FROM importacao_documento WHERE id = ?", String.class, id);
     assertThat(status).isEqualTo("DESCARTADO");
+  }
+
+  @Test
+  @DisplayName("confirmação grava lancamento (ENTRADA/SAIDA) + conta_a_pagar; 2ª vez idempotente")
+  void confirmacaoTudoOuNadaEIdempotente() throws Exception {
+    stubIa(JSON_IA_CONFIRMACAO);
+    upload("fatura.pdf", pdfComTexto("fatura do cartao vencimento limite parcela fechamento"));
+    List<Long> itemIds =
+        jdbc.queryForList("SELECT id FROM importacao_item ORDER BY id", Long.class);
+    assertThat(itemIds).hasSize(3);
+
+    HttpHeaders headers = new HttpHeaders();
+    headers.setBearerAuth(token);
+    headers.setContentType(MediaType.APPLICATION_JSON);
+    String corpo =
+        "{\"itens\":[%s]}"
+            .formatted(
+                itemIds.stream()
+                    .map(id -> "{\"itemId\":%d,\"incluir\":true}".formatted(id))
+                    .reduce((a, b) -> a + "," + b)
+                    .orElse(""));
+
+    ResponseEntity<String> primeira =
+        rest.postForEntity(
+            "/api/importacoes/{id}/confirmar",
+            new HttpEntity<>(corpo, headers),
+            String.class,
+            jdbc.queryForObject("SELECT id FROM importacao_documento LIMIT 1", Long.class));
+    assertThat(primeira.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(primeira.getBody()).contains("\"importados\":3");
+
+    // definitivos: 2 lancamentos (ENTRADA/SAIDA) com rastreio completo + 1 conta a pagar
+    assertThat(contar("lancamento")).isEqualTo(2);
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT COUNT(*) FROM lancamento WHERE tipo = 'ENTRADA'", Long.class))
+        .isEqualTo(1);
+    assertThat(
+            jdbc.queryForObject("SELECT COUNT(*) FROM lancamento WHERE tipo = 'SAIDA'", Long.class))
+        .isEqualTo(1);
+    // D-08/D-05: chave_dedupe, origem e documento_id preenchidos; NENHUM tipo A_PAGAR
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT COUNT(*) FROM lancamento WHERE chave_dedupe IS NOT NULL", Long.class))
+        .isEqualTo(2);
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT COUNT(*) FROM lancamento WHERE origem IS NULL OR documento_id IS NULL",
+                Long.class))
+        .isZero();
+    assertThat(contar("conta_a_pagar")).isEqualTo(1);
+    assertThat(contar("fatura_cartao")).isEqualTo(1);
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT COUNT(*) FROM conta_a_pagar WHERE fatura_id IS NOT NULL", Long.class))
+        .isEqualTo(1);
+
+    // idempotência: segunda confirmação não duplica nada (D-07)
+    ResponseEntity<String> segunda =
+        rest.postForEntity(
+            "/api/importacoes/{id}/confirmar",
+            new HttpEntity<>(corpo, headers),
+            String.class,
+            jdbc.queryForObject("SELECT id FROM importacao_documento LIMIT 1", Long.class));
+    assertThat(segunda.getBody()).contains("\"importados\":0").contains("\"duplicados\":3");
+    assertThat(contar("lancamento")).isEqualTo(2);
+    assertThat(contar("conta_a_pagar")).isEqualTo(1);
+    assertThat(jdbc.queryForObject("SELECT status FROM importacao_documento", String.class))
+        .isEqualTo("CONFIRMADO");
+  }
+
+  @Test
+  @DisplayName("confirmação de documento inexistente → 404 (R3)")
+  void confirmarInexistenteRetorna404() {
+    HttpHeaders headers = new HttpHeaders();
+    headers.setBearerAuth(token);
+    headers.setContentType(MediaType.APPLICATION_JSON);
+    ResponseEntity<String> resposta =
+        rest.postForEntity(
+            "/api/importacoes/999999/confirmar",
+            new HttpEntity<>("{\"itens\":[]}", headers),
+            String.class);
+
+    assertThat(resposta.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
   }
 
   /* ============================ helpers ============================ */

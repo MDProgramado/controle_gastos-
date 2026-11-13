@@ -14,6 +14,8 @@ import static org.mockito.Mockito.when;
 import com.controlefinanceiro.categoria.CategoriaRepository;
 import com.controlefinanceiro.common.ServicoIaIndisponivelException;
 import com.controlefinanceiro.common.UsuarioAuth;
+import com.controlefinanceiro.conta.ContaAPagarRepository;
+import com.controlefinanceiro.conta.FaturaCartaoRepository;
 import com.controlefinanceiro.empresa.Empresa;
 import com.controlefinanceiro.importacao.model.ImportacaoDocumento;
 import com.controlefinanceiro.importacao.model.ImportacaoFatura;
@@ -73,6 +75,8 @@ class ImportacaoServiceTest {
     documentoRepository = mock(ImportacaoDocumentoRepository.class);
     itemRepository = mock(ImportacaoItemRepository.class);
     faturaRepository = mock(ImportacaoFaturaRepository.class);
+    FaturaCartaoRepository faturaCartaoRepository = mock(FaturaCartaoRepository.class);
+    ContaAPagarRepository contaAPagarRepository = mock(ContaAPagarRepository.class);
     CategoriaRepository categoriaRepository = mock(CategoriaRepository.class);
     lancamentoRepository = mock(LancamentoRepository.class);
     usuarioRepository = mock(UsuarioRepository.class);
@@ -86,6 +90,8 @@ class ImportacaoServiceTest {
             documentoRepository,
             itemRepository,
             faturaRepository,
+            faturaCartaoRepository,
+            contaAPagarRepository,
             categoriaRepository,
             lancamentoRepository,
             usuarioRepository,

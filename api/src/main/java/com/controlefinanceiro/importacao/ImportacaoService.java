@@ -2,12 +2,18 @@ package com.controlefinanceiro.importacao;
 
 import com.controlefinanceiro.categoria.Categoria;
 import com.controlefinanceiro.categoria.CategoriaRepository;
+import com.controlefinanceiro.common.LinhaInvalidaException;
 import com.controlefinanceiro.common.ServicoIaIndisponivelException;
 import com.controlefinanceiro.common.TenantContext;
 import com.controlefinanceiro.common.UsuarioAuth;
+import com.controlefinanceiro.conta.ContaAPagar;
+import com.controlefinanceiro.conta.ContaAPagarRepository;
+import com.controlefinanceiro.conta.FaturaCartao;
+import com.controlefinanceiro.conta.FaturaCartaoRepository;
 import com.controlefinanceiro.importacao.model.ImportacaoDocumento;
 import com.controlefinanceiro.importacao.model.ImportacaoFatura;
 import com.controlefinanceiro.importacao.model.ImportacaoItem;
+import com.controlefinanceiro.lancamento.Lancamento;
 import com.controlefinanceiro.lancamento.LancamentoRepository;
 import com.controlefinanceiro.usuario.Usuario;
 import com.controlefinanceiro.usuario.UsuarioRepository;
@@ -18,8 +24,10 @@ import java.security.NoSuchAlgorithmException;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -70,6 +78,8 @@ public class ImportacaoService {
   private final ImportacaoDocumentoRepository documentoRepository;
   private final ImportacaoItemRepository itemRepository;
   private final ImportacaoFaturaRepository faturaRepository;
+  private final FaturaCartaoRepository faturaCartaoRepository;
+  private final ContaAPagarRepository contaAPagarRepository;
   private final CategoriaRepository categoriaRepository;
   private final LancamentoRepository lancamentoRepository;
   private final UsuarioRepository usuarioRepository;
@@ -83,6 +93,8 @@ public class ImportacaoService {
       ImportacaoDocumentoRepository documentoRepository,
       ImportacaoItemRepository itemRepository,
       ImportacaoFaturaRepository faturaRepository,
+      FaturaCartaoRepository faturaCartaoRepository,
+      ContaAPagarRepository contaAPagarRepository,
       CategoriaRepository categoriaRepository,
       LancamentoRepository lancamentoRepository,
       UsuarioRepository usuarioRepository,
@@ -94,6 +106,8 @@ public class ImportacaoService {
     this.documentoRepository = documentoRepository;
     this.itemRepository = itemRepository;
     this.faturaRepository = faturaRepository;
+    this.faturaCartaoRepository = faturaCartaoRepository;
+    this.contaAPagarRepository = contaAPagarRepository;
     this.categoriaRepository = categoriaRepository;
     this.lancamentoRepository = lancamentoRepository;
     this.usuarioRepository = usuarioRepository;
@@ -322,6 +336,283 @@ public class ImportacaoService {
         documento.getStatus(),
         documento.getTamanhoBytes(),
         documento.getCriadoEm());
+  }
+
+  /* ============================ confirmação (05-05) ============================ */
+
+  /** Resultado da confirmação (D-07): contagens e ids gravados. */
+  public record ResultadoConfirmacao(
+      int importados,
+      int ignorados,
+      int duplicados,
+      List<Long> lancamentoIds,
+      List<Long> contaAPagarIds) {}
+
+  /**
+   * Confirma a gravação dos itens selecionados — transação tudo-ou-nada (D-07).
+   *
+   * <p>Receita → {@code lancamento} tipo ENTRADA; DESPESA_PAGA → {@code lancamento} tipo SAIDA;
+   * A_PAGAR → {@code conta_a_pagar} (categoria SAIDA, NÃO entra no saldo do dashboard, D-11) +
+   * {@code fatura_cartao} uma única vez quando o documento tem cabeçalho de fatura. Itens já
+   * IMPORTADO são pulados (idempotência) e itens com chave de dedupe já existente contam como
+   * duplicados (D-08). Falha em qualquer linha → {@link LinhaInvalidaException} com o índice da
+   * linha e rollback completo.
+   *
+   * @param importacaoId documento a confirmar (do tenant do token, R3)
+   * @param request seleção do usuário (itens a incluir, overrides de categoria)
+   */
+  public ResultadoConfirmacao confirmar(Long importacaoId, ConfirmarRequest request) {
+    Long empresaId = TenantContext.getEmpresaId();
+
+    return transactionTemplate.execute(
+        status -> {
+          ImportacaoDocumento documento =
+              documentoRepository
+                  .findByIdAndEmpresaId(importacaoId, empresaId)
+                  .orElseThrow(
+                      () ->
+                          new ImportacaoNaoEncontradaException(
+                              "Importação %d não encontrada.".formatted(importacaoId)));
+          if ("DESCARTADO".equals(documento.getStatus())
+              || "SEM_TEXTO".equals(documento.getStatus())) {
+            throw new ImportacaoEstadoInvalidoException(
+                "Importação %d está %s — não há itens a confirmar."
+                    .formatted(importacaoId, documento.getStatus()));
+          }
+
+          List<ImportacaoItem> itensStaging = itemRepository.findByDocumentoId(documento.getId());
+          Map<Long, ConfirmarRequest.ConfirmarItem> selecao =
+              selecaoPorItem(request == null ? null : request.itens());
+
+          List<Long> lancamentoIds = new ArrayList<>();
+          List<Long> contaAPagarIds = new ArrayList<>();
+          int importados = 0;
+          int ignorados = 0;
+          int duplicados = 0;
+
+          // D-08: chaves de dedupe já gravadas; chaves novas entram aqui dentro para pegar
+          // duplicidade dentro do próprio lote.
+          Set<String> chavesGravadas =
+              new HashSet<>(lancamentoRepository.findChavesDedupeByEmpresaId(empresaId));
+
+          Usuario usuario = usuarioDoToken();
+          FaturaCartao faturaCartao = null;
+          ImportacaoFatura faturaStaging = faturaRepository.findByDocumentoId(documento.getId());
+
+          for (int i = 0; i < itensStaging.size(); i++) {
+            ImportacaoItem item = itensStaging.get(i);
+            ConfirmarRequest.ConfirmarItem confirmarItem = selecao.get(item.getId());
+
+            if (item.getStatus() != null
+                && ("IMPORTADO".equals(item.getStatus()) || "IGNORADO".equals(item.getStatus()))) {
+              // Idempotência: segunda confirmação não regrava (D-07).
+              duplicados++;
+              continue;
+            }
+            if (confirmarItem == null || Boolean.FALSE.equals(confirmarItem.incluir())) {
+              // Item desmarcado: usuário decide não gravar; registra a decisão.
+              item.setStatus("IGNORADO");
+              itemRepository.save(item);
+              ignorados++;
+              continue;
+            }
+
+            try {
+              Gravado gravado =
+                  gravarItem(
+                      documento, usuario, item, confirmarItem, chavesGravadas, faturaStaging);
+              if (gravado.duplicado()) {
+                duplicados++;
+                continue;
+              }
+              if (gravado.lancamentoId() != null) {
+                lancamentoIds.add(gravado.lancamentoId());
+              } else {
+                contaAPagarIds.add(gravado.contaAPagarId());
+                if (gravado.faturaId() != null && faturaCartao == null) {
+                  faturaCartao = faturaCartaoRepository.findById(gravado.faturaId()).orElse(null);
+                }
+              }
+              importados++;
+            } catch (RuntimeException ex) {
+              // LOT-02: índice base 0 da linha que falhou + rollback total da transação.
+              throw new LinhaInvalidaException(i, ex.getMessage());
+            }
+          }
+
+          documento.setStatus("CONFIRMADO");
+          documentoRepository.save(documento);
+
+          return new ResultadoConfirmacao(
+              importados, ignorados, duplicados, lancamentoIds, contaAPagarIds);
+        });
+  }
+
+  /** Item gravado: id do lançamento ou da conta a pagar (e da fatura quando criada). */
+  private record Gravado(Long lancamentoId, Long contaAPagarId, Long faturaId, boolean duplicado) {}
+
+  /**
+   * Grava um item de staging como lançamento (ENTRADA/SAIDA) ou conta a pagar (A_PAGAR). Valida
+   * categoria×tipo (CAT-04), valor (LAN-04/07) e dedupe (D-08).
+   */
+  private Gravado gravarItem(
+      ImportacaoDocumento documento,
+      Usuario usuario,
+      ImportacaoItem item,
+      ConfirmarRequest.ConfirmarItem confirmarItem,
+      Set<String> chavesGravadas,
+      ImportacaoFatura faturaStaging) {
+
+    if (item.getValor() == null || item.getValor().signum() <= 0) {
+      throw new IllegalArgumentException("valor do item deve ser positivo");
+    }
+    if (item.getData() == null) {
+      throw new IllegalArgumentException("data do item é obrigatória");
+    }
+
+    String tipoCategoria = mapeadorCategoria.tipoCategoria(item.getTipo());
+
+    // Categoria: override do usuário > mapeada na análise > re-mapeamento por nome (fallback).
+    Long categoriaId =
+        confirmarItem.categoriaIdOverride() != null
+            ? confirmarItem.categoriaIdOverride()
+            : item.getCategoriaId();
+    if (categoriaId == null && item.getCategoriaNome() != null) {
+      MapeadorCategoria.ResultadoMapeamento remapeado =
+          mapeadorCategoria.mapear(
+              item.getCategoriaNome(), item.getTipo(), documento.getEmpresa().getId());
+      categoriaId = remapeado.categoriaId();
+    }
+    if (categoriaId == null) {
+      throw new IllegalArgumentException(
+          "categoria não resolvida para '%s' — escolha uma categoria na confirmação"
+              .formatted(item.getCategoriaNome()));
+    }
+
+    final Long categoriaIdResolvida = categoriaId;
+    Categoria categoria =
+        categoriaRepository
+            .findByIdAndEmpresaId(categoriaIdResolvida, documento.getEmpresa().getId())
+            .orElseThrow(
+                () ->
+                    new IllegalArgumentException(
+                        "categoria %d não encontrada na empresa".formatted(categoriaIdResolvida)));
+    if (!tipoCategoria.equals(categoria.getTipo())) {
+      throw new IllegalArgumentException(
+          "categoria '%s' é do tipo %s, incompatível com item do tipo %s"
+              .formatted(categoria.getNome(), categoria.getTipo(), tipoCategoria));
+    }
+
+    String chaveDedupe =
+        Deduplicador.gerarChaveDedupe(
+            tipoCategoria, item.getData(), item.getValor(), categoria.getNome());
+    if (chavesGravadas.contains(chaveDedupe)) {
+      // D-08: mesmo tipo+data+valor+categoria já gravado — não duplica, conta como duplicado.
+      item.setStatus("IMPORTADO"); // marca para não reaparecer na próxima confirmação
+      itemRepository.save(item);
+      return new Gravado(null, null, null, true);
+    }
+    chavesGravadas.add(chaveDedupe);
+
+    if ("A_PAGAR".equals(item.getTipo())) {
+      Long contaAPagarId =
+          gravarContaAPagar(documento, usuario, item, categoria, chaveDedupe, faturaStaging);
+      return new Gravado(null, contaAPagarId, null, false);
+    }
+
+    Long lancamentoId =
+        gravarLancamento(documento, usuario, item, categoria, tipoCategoria, chaveDedupe);
+    return new Gravado(lancamentoId, null, null, false);
+  }
+
+  /** Receita/Despesa paga → lancamento (tipo ENTRADA|SAIDA; nunca muda o contrato D-05/D-11). */
+  private Long gravarLancamento(
+      ImportacaoDocumento documento,
+      Usuario usuario,
+      ImportacaoItem item,
+      Categoria categoria,
+      String tipoCategoria,
+      String chaveDedupe) {
+    Lancamento lancamento = new Lancamento();
+    lancamento.setEmpresa(documento.getEmpresa());
+    lancamento.setUsuario(usuario);
+    lancamento.setCategoria(categoria);
+    lancamento.setTipo(tipoCategoria);
+    lancamento.setValor(item.getValor());
+    lancamento.setData(item.getData());
+    lancamento.setDescricao(item.getDescricao());
+    lancamento.setOrigem(item.getOrigem());
+    lancamento.setDocumentoId(documento.getId());
+    lancamento.setChaveDedupe(chaveDedupe);
+
+    Lancamento salvo = lancamentoRepository.save(lancamento);
+    item.setStatus("IMPORTADO");
+    item.setLancamentoId(salvo.getId());
+    itemRepository.save(item);
+    return salvo.getId();
+  }
+
+  /**
+   * A_PAGAR → conta_a_pagar (categoria SAIDA) + fatura_cartao uma única vez por documento. Não
+   * grava lancamento: compromisso futuro não entra no saldo (D-11).
+   */
+  private Long gravarContaAPagar(
+      ImportacaoDocumento documento,
+      Usuario usuario,
+      ImportacaoItem item,
+      Categoria categoria,
+      String chaveDedupe,
+      ImportacaoFatura faturaStaging) {
+    Long faturaId = null;
+    if (faturaStaging != null) {
+      FaturaCartao faturaCartao =
+          faturaCartaoRepository
+              .findByDocumentoId(documento.getId())
+              .orElseGet(
+                  () -> {
+                    FaturaCartao nova = new FaturaCartao();
+                    nova.setEmpresa(documento.getEmpresa());
+                    nova.setDocumento(documento);
+                    nova.setTotal(faturaStaging.getTotal());
+                    nova.setDataVencimento(faturaStaging.getDataVencimento());
+                    nova.setMesReferencia(faturaStaging.getMesReferencia());
+                    nova.setDataFechamento(faturaStaging.getDataFechamento());
+                    return faturaCartaoRepository.save(nova);
+                  });
+      faturaId = faturaCartao.getId();
+    }
+
+    ContaAPagar conta = new ContaAPagar();
+    conta.setEmpresa(documento.getEmpresa());
+    conta.setFaturaId(faturaId);
+    conta.setCategoria(categoria);
+    conta.setDescricao(item.getDescricao());
+    conta.setValor(item.getValor());
+    conta.setData(item.getData());
+    conta.setParcelaAtual(item.getParcelaAtual());
+    conta.setParcelaTotal(item.getParcelaTotal());
+    conta.setVencimento(faturaStaging != null ? faturaStaging.getDataVencimento() : item.getData());
+    conta.setOrigem(item.getOrigem());
+
+    ContaAPagar salvo = contaAPagarRepository.save(conta);
+    item.setStatus("IMPORTADO");
+    item.setContaAPagarId(salvo.getId());
+    itemRepository.save(item);
+    return salvo.getId();
+  }
+
+  /** Índice itemId → confirmação (nulos defensivos). */
+  private Map<Long, ConfirmarRequest.ConfirmarItem> selecaoPorItem(
+      List<ConfirmarRequest.ConfirmarItem> itens) {
+    Map<Long, ConfirmarRequest.ConfirmarItem> mapa = new HashMap<>();
+    if (itens != null) {
+      for (ConfirmarRequest.ConfirmarItem item : itens) {
+        if (item != null && item.itemId() != null) {
+          mapa.put(item.itemId(), item);
+        }
+      }
+    }
+    return mapa;
   }
 
   /* ============================ fluxo por arquivo ============================ */
