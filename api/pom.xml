@@ -81,6 +81,13 @@
       <scope>runtime</scope>
     </dependency>
 
+    <!-- Apache PDFBox: extração de texto de PDF no backend, sem OCR (custo zero, fase 5) -->
+    <dependency>
+      <groupId>org.apache.pdfbox</groupId>
+      <artifactId>pdfbox</artifactId>
+      <version>3.0.5</version>
+    </dependency>
+
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-test</artifactId>

@@ -28,6 +28,10 @@ node_modules/
 
 # Playwright
 test-results/
+.playwright-mcp/
+
+# Capturas de validação visual (design-taste checker gate)
+shots/
 playwright-report/
 blob-report/
 
