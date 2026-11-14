@@ -137,7 +137,7 @@ test.describe("Lançar em lote — Sheet", () => {
     const sheets = page.locator('[role="dialog"]').filter({ visible: true });
     await expect(sheets.last()).toBeVisible({ timeout: 5000 });
 
-    await clicarPorCoordenadas(page, 'button:has-text("Fechar")');
+    await clicarPorCoordenadas(page, 'button[aria-label="Fechar"]');
     await page.waitForTimeout(1000);
 
     const visiveis2 = page.locator('[role="dialog"]').filter({ visible: true });
