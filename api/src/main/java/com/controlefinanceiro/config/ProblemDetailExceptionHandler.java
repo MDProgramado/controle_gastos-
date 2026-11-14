@@ -8,6 +8,10 @@ import com.controlefinanceiro.common.LinhaInvalidaException;
 import com.controlefinanceiro.common.LoteDemasiadoGrandeException;
 import com.controlefinanceiro.common.MonetarioException;
 import com.controlefinanceiro.common.NaoAutorizadoException;
+import com.controlefinanceiro.common.ServicoIaIndisponivelException;
+import com.controlefinanceiro.importacao.ArquivoInvalidoException;
+import com.controlefinanceiro.importacao.ImportacaoEstadoInvalidoException;
+import com.controlefinanceiro.importacao.ImportacaoNaoEncontradaException;
 import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -15,6 +19,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 /**
  * Padrão P7 — RFC 7807 ProblemDetail (PLAN §3.3). Nunca logar header {@code Authorization}, cookie
@@ -90,5 +95,43 @@ public class ProblemDetailExceptionHandler {
   @ExceptionHandler(LoteDemasiadoGrandeException.class)
   public ProblemDetail loteDemasiadoGrande(LoteDemasiadoGrandeException ex) {
     return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+  }
+
+  /**
+   * Serviço de IA (OpenRouter) indisponível ou sobrecarregado → 503 com mensagem que o usuário pode
+   * entender (fase 4).
+   */
+  @ExceptionHandler(ServicoIaIndisponivelException.class)
+  public ProblemDetail servicoIaIndisponivel(ServicoIaIndisponivelException ex) {
+    return ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage());
+  }
+
+  /** Arquivo rejeitado na importação (não é PDF, vazio, ou acima de 8 MB) → 400 (fase 5). */
+  @ExceptionHandler(ArquivoInvalidoException.class)
+  public ProblemDetail arquivoInvalido(ArquivoInvalidoException ex) {
+    return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+  }
+
+  /**
+   * Lote de upload acima do limite do servidor (spring.servlet.multipart.max-request-size) → 413.
+   * Erros por arquivo (≤ 8 MB) viram 400 com status ERRO na resposta, não chegam aqui.
+   */
+  @ExceptionHandler(MaxUploadSizeExceededException.class)
+  public ProblemDetail uploadDemasiadoGrande(MaxUploadSizeExceededException ex) {
+    return ProblemDetail.forStatusAndDetail(
+        HttpStatus.PAYLOAD_TOO_LARGE,
+        "Lote de arquivos excede o limite de 40 MB. Envie menos arquivos de uma vez.");
+  }
+
+  /** Importação não encontrada para a empresa do token → 404 (fase 5, R3). */
+  @ExceptionHandler(ImportacaoNaoEncontradaException.class)
+  public ProblemDetail importacaoNaoEncontrada(ImportacaoNaoEncontradaException ex) {
+    return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+  }
+
+  /** Operação inválida para o estado da importação (ex.: descartar já confirmada) → 409. */
+  @ExceptionHandler(ImportacaoEstadoInvalidoException.class)
+  public ProblemDetail importacaoEstadoInvalido(ImportacaoEstadoInvalidoException ex) {
+    return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
   }
 }

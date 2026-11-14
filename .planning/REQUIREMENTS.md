@@ -61,6 +61,24 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **AI-02**: Categorização sugerida para novo lançamento exige **confirmação explícita** do usuário antes de gravar
 - [ ] **AI-03**: Chave da OpenRouter vive somente no servidor (nunca no client)
 
+### Importação de PDFs com IA (IMP) — Fase 5
+
+- [ ] **IMP-01**: Usuário envia múltiplos PDFs (faturas de cartão e extratos bancários) em uma única requisição multipart
+- [ ] **IMP-02**: O texto é extraído do PDF no backend (PDFBox) — sem OCR e sem custo de API de OCR
+- [ ] **IMP-03**: CPF, CNPJ e números de cartão são **mascarados antes** de o texto sair do servidor para a OpenRouter
+- [ ] **IMP-04**: A extração classifica cada item como `RECEITA`, `DESPESA_PAGA` ou `A_PAGAR`, com data, descrição, valor, categoria e origem (Cartão/Extrato)
+- [ ] **IMP-05**: A análise devolve o resumo do mês: total recebido, total já pago, total comprometido a pagar e alertas (gastos atípicos, duplicidades, pagamento da própria fatura)
+- [ ] **IMP-06**: A IA responde JSON estrito (sem markdown); resposta inválida é rejeitada e o item vai para a lista de "rejeitados" sem derrubar o documento
+- [ ] **IMP-07**: Falhas de taxa (HTTP 429) e de cota (HTTP 402) da OpenRouter são tratadas com retry/backoff exponencial e **cascata de modelos gratuitos**
+- [ ] **IMP-08**: O caminho normal da cascata usa **apenas modelos gratuitos** (`:free` + `openrouter/free`); o modelo pago é apenas **último recurso**, acionado só quando a cota diária do `:free` acaba, e é desativável por variável de ambiente
+- [ ] **IMP-09**: A análise **NÃO grava** lançamentos; a gravação exige confirmação explícita do usuário
+- [ ] **IMP-10**: A confirmação grava em transação tudo-ou-nada e é idempotente (confirmar duas vezes não duplica)
+- [ ] **IMP-11**: `A_PAGAR` fica em tabela própria (`conta_a_pagar`) e **não altera o saldo** do dashboard
+- [ ] **IMP-12**: O mesmo arquivo reenviado é detectado por hash SHA-256 e não duplica lançamentos
+- [ ] **IMP-13**: `empresa_id` vem exclusivamente do token JWT — nenhum campo do multipart define tenant
+- [ ] **IMP-14**: PDF sem texto extraível (digitalizado) é reportado como aviso e não derruba o lote
+- [ ] **IMP-15**: A web tem página `/importacamentos` com upload múltiplo, revisão item a item (categoria editável) e confirmação
+
 ## v2 Requirements
 
 Deferred to future release. Tracked but not in current roadmap.
@@ -140,12 +158,27 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AI-01 | Phase 4 | Pending |
 | AI-02 | Phase 4 | Pending |
 | AI-03 | Phase 4 | Pending |
+| IMP-01 | Phase 5 | Pending |
+| IMP-02 | Phase 5 | Pending |
+| IMP-03 | Phase 5 | Pending |
+| IMP-04 | Phase 5 | Pending |
+| IMP-05 | Phase 5 | Pending |
+| IMP-06 | Phase 5 | Pending |
+| IMP-07 | Phase 5 | Pending |
+| IMP-08 | Phase 5 | Pending |
+| IMP-09 | Phase 5 | Pending |
+| IMP-10 | Phase 5 | Pending |
+| IMP-11 | Phase 5 | Pending |
+| IMP-12 | Phase 5 | Pending |
+| IMP-13 | Phase 5 | Pending |
+| IMP-14 | Phase 5 | Pending |
+| IMP-15 | Phase 5 | Pending |
 
 **Coverage:**
-- v1 requirements: 33 total
-- Mapped to phases: 33
+- v1 requirements: 48 total
+- Mapped to phases: 48
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-10-30*
-*Last updated: 2026-10-30 after initial definition*
+*Last updated: 2026-11-12 — fase 5 (importação de PDFs com IA) adicionada*

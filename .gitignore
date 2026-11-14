@@ -15,6 +15,8 @@ test-chat.bat
 test-login.ps1
 test-ai.ps1
 test-ai-cenarios.ps1
+test-ai-consultas.ps1
+test-ai-modelos.ps1
 
 # Scripts locais de desenvolvimento (leem o .env e sobem o backend)
 start-api.ps1
@@ -26,6 +28,10 @@ node_modules/
 
 # Playwright
 test-results/
+.playwright-mcp/
+
+# Capturas de validação visual (design-taste checker gate)
+shots/
 playwright-report/
 blob-report/
 

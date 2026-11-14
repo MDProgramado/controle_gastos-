@@ -66,7 +66,8 @@ class AiIntegrationTest {
     assertThat(dto.intent()).isEqualTo("lancamento");
     assertThat(dto.proposta()).isNotNull();
     assertThat(dto.proposta().tipo()).isEqualTo("SAIDA");
-    assertThat(dto.proposta().valor()).isEqualTo(45.0);
+    assertThat(dto.proposta().valor()).isEqualByComparingTo("45.00");
+    assertThat(dto.propostas()).hasSize(1);
     assertThat(dto.proposta().data()).isEqualTo("2026-11-10");
     assertThat(dto.proposta().categoriaSugerida()).isEqualTo("Almoço");
   }

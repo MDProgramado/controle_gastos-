@@ -2,17 +2,17 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_plan: 4
-status: verifying
-stopped_at: Completed 03-dashboard-04 plan + 3 gap plans executed (CR-01, CR-02, WR-03 fixed)
-last_updated: "2026-11-09T17:05:00Z"
-last_activity: 2026-11-09
+current_plan: 5
+status: complete
+stopped_at: Fase 5 completa (waves 05-01 a 05-07) — verificação aprovada
+last_updated: "2026-11-14T00:00:00Z"
+last_activity: 2026-11-14
 progress:
-  total_phases: 4
-  completed_phases: 2
-  total_plans: 15
-  completed_plans: 15
-  percent: 87
+  total_phases: 5
+  completed_phases: 5
+  total_plans: 22
+  completed_plans: 22
+  percent: 100
 ---
 
 # STATE.md — Controle Financeiro
@@ -22,19 +22,26 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-30)
 
 **Core value:** Saldo, entradas e saídas corretos ao centavo — números confiáveis por mês, conferidos contra SQL direto.
-**Current focus:** Phase 3 — dashboard
+**Current focus:** Fase 5 completa — importação de PDFs e análise por IA (pronta para produção)
 
 ## Current Position
 
-Phase: 3
-Plan: 4 of 4
-Next: Phase 4 — IA via OpenRouter
-Status: Phase complete — ready for verification
-Current Plan: 4
-Total Plans in Phase: 4
-**Progress:** [█████████░] 87%
-Last activity: 2026-11-09
-Last Activity Description: Phase 3 gap planning complete — 4/4 execution plans executed + 3 gap plans created (03-gap-01 CR-01 SAÍDA/SAIDA, 03-gap-02 CR-02 division-by-zero guard, 03-gap-03 WR-03 truncation count). Gap verification passed via gsd-plan-checker. Awaiting gap execution via /gsd-execute-phase 3 --gaps-only.
+Phase: 5 (completa)
+Plan: 7 of 7 (05-01 a 05-07)
+Status: Fase completa — verificação aprovada (VERIFICATION.md: passed)
+Current Plan: 5
+Total Plans in Phase: 7
+**Progress:** [██████████] 100%
+Last activity: 2026-11-14
+Last Activity Description: Wave 7 concluída — testes unitários (57, 0 falhas), IT escrito e compilado (execução pendente sem Docker), security-audit aprovado (SECURITY.md), build+lint da web verdes, cobertura IMP-01..15/D-01..32 preenchida (05-COVERAGE.md). Fase 5 marcada como Complete.
+
+## Phase Status (resumo executivo)
+
+- **Phase 1 · Fundação e Auth em Produção** — complete (4/4)
+- **Phase 2 · Categorias e Lançamentos** — complete (4/4)
+- **Phase 3 · Dashboard** — complete (4/4 + 3 gaps fechados)
+- **Phase 4 · IA via OpenRouter** — complete (1/1)
+- **Phase 5 · Importação de PDFs e Análise por IA** — complete (7/7: 05-01 planejamento, 05-02 extração/sanitização, 05-03 IA/migração, 05-04 staging/dedupe, 05-05 confirmação/idempotência, 05-06 web+BFF+e2e, 05-07 testes/security-audit/verificação)
 
 ## Phase Status
 
@@ -42,8 +49,9 @@ Last Activity Description: Phase 3 gap planning complete — 4/4 execution plans
 |-------|--------|-------|----------|
 | 1 · Fundação e Auth em Produção | ✓ | 4/4 | 100% |
 | 2 · Categorias e Lançamentos | ✓ | 4/4 | 100% |
-| 3 · Dashboard | ◐ | 4/4 + 3 gaps | 100% exec, gaps pending |
-| 4 · IA via OpenRouter | ○ | 0/1 | 0% |
+| 3 · Dashboard | ✓ | 4/4 + 3 gaps | 100% |
+| 4 · IA via OpenRouter | ✓ | 1/1 | 100% |
+| 5 · Importação de PDFs e Análise por IA | ✓ | 7/7 (05-01..05-07) | 100% |
 
 ## Current Phase
 
@@ -113,35 +121,7 @@ Last Activity Description: Phase 3 gap planning complete — 4/4 execution plans
 
 - (none)
 
-## Performance Metrics
-
-| Phase Plan | Duration | Tasks | Files |
-|------------|----------|-------|-------|
-
-| Phase 03-dashboard P01 | 15min | 2 tasks | 8 files |
-| Phase 03-dashboard P02 | 7min | 2 tasks | 4 files |
-| Phase 03-dashboard P03 | 12min | 1 task | 2 files |
-| Phase 03-dashboard P04 | 24min | 2 tasks | 11 files |
-
-## Decisions
-
-- [Phase 03-dashboard]: GET /api/dashboard backend aggregation endpoint implemented — DSH-01 DSH-02 DSH-03 DSH-05 TDD RED to GREEN
-- [Phase ?]: Percentuais como String para suporte a traco quando base do mes anterior e zero
-- [Phase ?]: Cor do Saldo varia pelo sinal verde vermelho muted; Entradas verde Saidas vermelho
-- [Phase ?]: getDashboard segue padrao exato de getMe() cookie sess Bearer no-store
-- [Phase ?]: Sem atributos min/max no input type=month meses futuros e passados permitidos
-- [Phase 03-dashboard]: CategoryBreakdown integrado ao dashboard — tabela ordenada por valor decrescente + grafico de barras horizontais Recharts (DSH-02, DSH-05)
-- [Phase 03-dashboard]: Server Actions para mutacoes CRUD com acesso ao cookie sess + Bearer token
-- [Phase 03-dashboard]: DeleteConfirmationDialog usa @radix-ui/react-dialog sem window.confirm (D-24)
-- [Phase 03-dashboard]: LancamentosClient e CategoriasClient como componentes cliente separados para interatividade em paginas Server Component
-
 ## Next Action
 
-Phase 3 execução completa (4/4 plans) com 3 gaps verificados. Execute gap plans: `/gsd-execute-phase 3 --gaps-only`, depois re-verify: `/gsd-verify-work 3`. Após gaps fechados, prossiga para `/gsd-plan-phase 4` (IA via OpenRouter).
+Todas as fases entregues. Projeto pronto para deploy (Render API + PostgreSQL, Vercel web). Recomendado: rodar ITs Testcontainers em ambiente com Docker para validar `ImportacaoPdfIntegrationTest` e regressão completa antes do deploy.
 
-Last session: 2026-11-09T15:01:46.596Z
-Stopped At: Completed 03-dashboard-04 plan
-Resume File: None
-
----
-*Last updated: 2026-11-09 — Phase 3 planejada (4/4 plans, verificação aprovada via gsd-plan-checker)*

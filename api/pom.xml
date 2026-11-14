@@ -22,7 +22,7 @@
     <java.version>21</java.version>
     <maven.compiler.release>21</maven.compiler.release>
     <spotless.version>2.46.1</spotless.version>
-    <!-- Spring AI 2.0.2 (fase 4 OpenRouter + Gemini) -->
+    <!-- Spring AI 2.0.2 (fase 4 OpenRouter + Gemma 4) -->
     <spring-ai.version>2.0.2</spring-ai.version>
   </properties>
 
@@ -79,6 +79,13 @@
       <groupId>org.postgresql</groupId>
       <artifactId>postgresql</artifactId>
       <scope>runtime</scope>
+    </dependency>
+
+    <!-- Apache PDFBox: extração de texto de PDF no backend, sem OCR (custo zero, fase 5) -->
+    <dependency>
+      <groupId>org.apache.pdfbox</groupId>
+      <artifactId>pdfbox</artifactId>
+      <version>3.0.5</version>
     </dependency>
 
     <dependency>

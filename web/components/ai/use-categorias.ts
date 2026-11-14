@@ -1,30 +1,30 @@
-import { useCallback } from "react"
-import { CategoriaData } from "@/lib/api"
+import { useCallback, useEffect, useState } from "react";
+import { listarCategorias, type CategoriaDisponivel } from "@/lib/api-client";
 
 /**
- * Hook que fornece a lista de categorias do sistema para uso no chat.
+ * Hook que fornece as categorias REAIS do tenant para o chat.
  *
- * Nesta fase, usa dados mock tipados. Quando o backend expor o endpoint
- * de categorias, basta trocar o corpo de `categoriasMock` por uma chamada
- * ao `getCategorias()` de `@/lib/api`.
- *
- * TODO: TROCAR PELA CHAMADA REAL À API quando o endpoint existir.
+ * A lista vem do backend (GET /api/categorias via BFF do Next). IDs são os do banco — usar
+ * mock aqui gravaria o lançamento na categoria errada.
  */
 export function useCategorias() {
-  const categoriasMock: CategoriaData[] = [
-    { id: 1, nome: "Alimentação", tipo: "SAIDA", pessoal: false, ativo: true },
-    { id: 2, nome: "Transporte", tipo: "SAIDA", pessoal: false, ativo: true },
-    { id: 3, nome: "Supermercado", tipo: "SAIDA", pessoal: false, ativo: true },
-    { id: 4, nome: "Saúde", tipo: "SAIDA", pessoal: false, ativo: true },
-    { id: 5, nome: "Assinaturas", tipo: "SAIDA", pessoal: false, ativo: true },
-    { id: 6, nome: "Salário", tipo: "ENTRADA", pessoal: false, ativo: true },
-    { id: 7, nome: "Receita Extra", tipo: "ENTRADA", pessoal: false, ativo: true },
-    { id: 8, nome: "Pessoal", tipo: "SAIDA", pessoal: true, ativo: true },
-  ]
+  const [categorias, setCategorias] = useState<CategoriaDisponivel[]>([]);
 
-  const carregar = useCallback(() => {
-    // TODO: substituir por getCategorias() quando a API estiver pronta
-  }, [])
+  const carregar = useCallback(async () => {
+    const lista = await listarCategorias();
+    setCategorias(lista.filter((c) => c.ativo !== false));
+  }, []);
 
-  return { categorias: categoriasMock, carregar, recarregar: carregar }
+  useEffect(() => {
+    let ativo = true;
+    listarCategorias().then((lista) => {
+      if (!ativo) return;
+      setCategorias(lista.filter((c) => c.ativo !== false));
+    });
+    return () => {
+      ativo = false;
+    };
+  }, []);
+
+  return { categorias, carregar, recarregar: carregar };
 }

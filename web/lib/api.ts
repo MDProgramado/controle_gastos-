@@ -398,3 +398,174 @@ export async function desativarCategoria(id: number): Promise<boolean> {
     return false;
   }
 }
+
+/* ============================ Importação de PDFs (fase 5) ============================ */
+
+/**
+ * Alerta do resumo analítico (D-26). `tipo` é estável para o frontend; valores
+ * conhecidos hoje: DUPLICIDADE, DIVERGENCIA_FATURA, FATURA_NO_EXTRATO,
+ * CATEGORIA_REVISAR, GASTO_ATIPICO.
+ */
+export type AlertaImportacao = {
+  tipo: string;
+  severidade: string; // ALTA | MEDIA
+  mensagem: string;
+};
+
+/** Gasto bem acima da mediana da própria categoria (D-27). */
+export type GastoAtipicoImportacao = {
+  categoria: string;
+  valor: number;
+  media: number;
+  descricao: string;
+  /** ISO yyyy-MM-dd. */
+  data: string;
+};
+
+/** Resumo do mês devolvido pela análise e pelo detalhe (D-26). */
+export type ResumoAnalitico = {
+  totalRecebido: number;
+  totalPago: number;
+  totalComprometido: number;
+  saldoPrevisto: number;
+  /** Nulo quando o lote não tem fatura de cartão. */
+  totalFatura: number | null;
+  /** ISO yyyy-MM-dd — nulo sem fatura. */
+  dataVencimento: string | null;
+  alertas: AlertaImportacao[];
+  gastosAtipicos: GastoAtipicoImportacao[];
+};
+
+/**
+ * Item de staging devolvido para a tela de revisão (contrato do 05-04).
+ * `valor` é número JSON: a API serializa BigDecimal plain
+ * (write-bigdecimal-as-plain, scale 2 preservado no texto do JSON).
+ */
+export type ImportacaoItemRevisao = {
+  id: number;
+  /** ISO yyyy-MM-dd. */
+  data: string | null;
+  descricao: string | null;
+  valor: number;
+  /** RECEITA | DESPESA_PAGA | A_PAGAR */
+  tipo: string;
+  categoriaNome: string | null;
+  categoriaId: number | null;
+  /** CARTAO | EXTRATO */
+  origem: string;
+  parcelaAtual: number | null;
+  parcelaTotal: number | null;
+  /** Marcações do item (ex.: "REVISAR_CATEGORIA: …"), concatenadas. */
+  alerta: string | null;
+};
+
+/** Um documento do lote (fatura/extrato) com o resultado da análise. */
+export type ImportacaoDocumentoAnalise = {
+  nomeArquivo: string;
+  /** ANALISADO | DUPLICADO | SEM_TEXTO | ERRO */
+  status: string;
+  mensagem: string | null;
+  documentoId: number | null;
+  /** CARTAO | EXTRATO — nulo nos estados de erro. */
+  tipoDocumento: string | null;
+  modeloUsado: string | null;
+  degradado: boolean | null;
+  itens: ImportacaoItemRevisao[];
+  rejeitados: Array<{ motivo: string; conteudoBruto: string | null }>;
+};
+
+/** Shape de `POST /api/importacoes/pdf` (contrato do 05-04). */
+export type ImportacaoAnaliseResponse = {
+  documentos: ImportacaoDocumentoAnalise[];
+  resumo: ResumoAnalitico;
+};
+
+/** Item da seleção do usuário (body do confirmar — contrato do 05-05). */
+export type ConfirmarItemRequest = {
+  itemId: number;
+  incluir: boolean;
+  categoriaIdOverride?: number | null;
+};
+
+/** Body do `POST /api/importacoes/{id}/confirmar`. */
+export type ConfirmarRequest = {
+  itens: ConfirmarItemRequest[];
+};
+
+/** Shape de `POST /api/importacoes/{id}/confirmar` (contrato do 05-05). */
+export type ConfirmarResponse = {
+  importados: number;
+  ignorados: number;
+  duplicados: number;
+  lancamentoIds: number[];
+  contaAPagarIds: number[];
+};
+
+/** Linha do histórico de importações (Spring Page de DocumentoResumo). */
+export type ImportacaoHistoricoResumo = {
+  id: number;
+  nomeArquivo: string;
+  /** CARTAO | EXTRATO */
+  tipoDocumento: string;
+  /** ANALISADO | CONFIRMADO | DESCARTADO | DUPLICADO | SEM_TEXTO | ERRO */
+  status: string;
+  tamanhoBytes: number;
+  /** ISO-8601. */
+  criadoEm: string;
+};
+
+/** Shape paginado devolvido por `GET /api/importacoes` (Spring Page). */
+export type ImportacaoHistorico = {
+  content: ImportacaoHistoricoResumo[];
+  totalElements: number;
+};
+
+/** Cabeçalho de fatura devolvido no detalhe de uma importação. */
+export type ImportacaoFaturaView = {
+  total: number;
+  /** ISO yyyy-MM-dd. */
+  dataVencimento: string;
+  /** ISO yyyy-MM-dd (1º dia do mês de referência). */
+  mesReferencia: string;
+};
+
+/** Shape de `GET /api/importacoes/{id}` (contrato do 05-04). */
+export type ImportacaoDetalhe = {
+  id: number;
+  nomeArquivo: string;
+  tipoDocumento: string;
+  status: string;
+  criadoEm: string;
+  itens: ImportacaoItemRevisao[];
+  fatura: ImportacaoFaturaView | null;
+  resumo: ResumoAnalitico;
+};
+
+/**
+ * Server-side: histórico de importações do tenant (GET /api/importacoes?pagina=&tamanho=).
+ * Segue o padrão de `getLancamentos()`: lê cookie "sess", envia Bearer, cache
+ * no-store. Retorna null quando não há cookie ou a API não responde OK.
+ */
+export async function getImportacoes(
+  pagina: number,
+  tamanho: number,
+): Promise<ImportacaoHistorico | null> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("sess")?.value;
+  if (!token) return null;
+
+  try {
+    const res = await fetch(
+      `${process.env.API_URL}/api/importacoes?pagina=${pagina}&tamanho=${tamanho}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
+      },
+    );
+    if (!res.ok) return null;
+    const resJson = (await res.json()) as ImportacaoHistorico;
+    return { content: resJson.content, totalElements: resJson.totalElements };
+  } catch {
+    return null;
+  }
+}

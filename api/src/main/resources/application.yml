@@ -27,15 +27,45 @@ spring:
       # sem perda de casas decimais (DSH-05, LAN-05)
       write-bigdecimal-as-plain: true
 
+  servlet:
+    multipart:
+      # API mais permissiva que o BFF da Vercel (4 MB/arquivo): 8 MB/arquivo, 40 MB por requisição.
+      max-file-size: 8MB
+      max-request-size: 40MB
+
+# Configuração da importação de PDFs (fase 5 — custo zero, sem OCR).
+importacao:
+  max-paginas: ${IMPORTACAO_MAX_PAGINAS:200}
+  max-caracteres: ${IMPORTACAO_MAX_CARACTERES:200000}
+
 # Segredo HS256 do JWT (Pitfall 6): por ambiente via env var JWT_SECRET (>= 32 bytes;
 # gere com `openssl rand -base64 48`). JwtService falha rápido se ausente/fraco.
 # Em teste a env var vem do fixture óbvio do surefire (D-04 — nunca valor real).
 jwt:
   secret: ${JWT_SECRET:}
 
-# Configuração da IA (fase 4 — OpenRouter + Gemini).
+# Configuração da IA (fase 4 — OpenRouter + Gemma 4 31B Instruct).
 # A chave da API deve ser definida via env var OPENROUTER_API_KEY.
 ai:
   openrouter:
     api-key: ${OPENROUTER_API_KEY:}
-    modelo: ${AI_OPENROUTER_MODELO:google/gemini-2.0-flash-001}
+    modelo: ${AI_OPENROUTER_MODELO:google/gemma-4-31b-it:free}
+    # Cascata de modelos gratuitos (separados por vírgula), usada com route=fallback:
+    #   primário   -> google/gemma-4-31b-it:free
+    #   secundário -> google/gemma-4-26b-a4b-it:free
+    #   terciário  -> openrouter/free (roteador de modelos gratuitos)
+    modelos: ${AI_OPENROUTER_MODELOS:google/gemma-4-31b-it:free,google/gemma-4-26b-a4b-it:free,openrouter/free}
+    # Último recurso: entra em campo só quando a cascata inteira falha. Necessário porque o
+    # limite de modelos :free é por conta e por dia (50 req/dia): quando estoura, TODOS os
+    # modelos gratuitos caem juntos e nenhuma cascata de gratuitos resolve.
+    # Para desativar (somente modelos gratuitos), defina AI_OPENROUTER_MODELOS_RESERVA=none
+    # (o valor "none" desliga a lista — em Windows uma env var vazia é removida pelo sistema).
+    modelos-reserva: ${AI_OPENROUTER_MODELOS_RESERVA:google/gemma-4-31b-it}
+
+    # Cascata específica da extração de PDFs (fase 5). Mesmo ordem da cascata do chat,
+    # configurável à parte. TODOS gratuitos — nunca mistura modelo pago.
+    modelos-extracao: ${AI_OPENROUTER_MODELOS_EXTRACAO:google/gemma-4-31b-it:free,google/gemma-4-26b-a4b-it:free,openrouter/free}
+    temperature-extracao: ${AI_OPENROUTER_TEMPERATURA_EXTRACAO:0.0}
+    max-tokens-extracao: ${AI_OPENROUTER_MAX_TOKENS_EXTRACAO:8000}
+    tentativas-extracao: ${AI_OPENROUTER_TENTATIVAS_EXTRACAO:3}
+    espera-inicial-ms-extracao: ${AI_OPENROUTER_ESPERA_INICIAL_MS_EXTRACAO:1500}

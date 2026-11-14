@@ -56,6 +56,15 @@ public class Lancamento {
   @Column(length = 200)
   private String descricao;
 
+  @Column(length = 16)
+  private String origem; // CARTAO | EXTRATO | MANUAL
+
+  @Column(name = "documento_id")
+  private Long documentoId;
+
+  @Column(length = 64)
+  private String chaveDedupe;
+
   @Column(name = "criado_em", nullable = false, updatable = false)
   private OffsetDateTime criadoEm;
 
@@ -136,6 +145,30 @@ public class Lancamento {
 
   public void setDescricao(String descricao) {
     this.descricao = descricao;
+  }
+
+  public String getOrigem() {
+    return origem;
+  }
+
+  public void setOrigem(String origem) {
+    this.origem = origem;
+  }
+
+  public Long getDocumentoId() {
+    return documentoId;
+  }
+
+  public void setDocumentoId(Long documentoId) {
+    this.documentoId = documentoId;
+  }
+
+  public String getChaveDedupe() {
+    return chaveDedupe;
+  }
+
+  public void setChaveDedupe(String chaveDedupe) {
+    this.chaveDedupe = chaveDedupe;
   }
 
   public OffsetDateTime getCriadoEm() {

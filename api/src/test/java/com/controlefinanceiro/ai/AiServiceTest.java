@@ -3,12 +3,15 @@ package com.controlefinanceiro.ai;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 /**
  * Testes de unidade do AiService (fase 4 — IA). Testam a interpretação de intents e a persistência
@@ -19,6 +22,7 @@ class AiServiceTest {
   private AiClient aiClient;
   private AiMemoryStore memoryStore;
   private AiKnowledgeStore knowledgeStore;
+  private AiContextoService contextoService;
   private AiService aiService;
 
   @BeforeEach
@@ -26,7 +30,9 @@ class AiServiceTest {
     aiClient = mock(AiClient.class);
     memoryStore = new AiMemoryStore();
     knowledgeStore = new AiKnowledgeStore();
-    aiService = new AiService(aiClient, memoryStore, knowledgeStore);
+    contextoService = mock(AiContextoService.class);
+    when(contextoService.montarContexto(any())).thenReturn("");
+    aiService = new AiService(aiClient, memoryStore, knowledgeStore, contextoService);
   }
 
   @Test
@@ -39,9 +45,75 @@ class AiServiceTest {
     assertThat(resposta.intent()).isEqualTo("lancamento");
     assertThat(resposta.proposta()).isNotNull();
     assertThat(resposta.proposta().tipo()).isEqualTo("SAIDA");
-    assertThat(resposta.proposta().valor()).isEqualTo(45.0);
+    assertThat(resposta.proposta().valor()).isEqualByComparingTo("45.00");
     assertThat(resposta.proposta().data()).isEqualTo("2026-11-10");
     assertThat(resposta.proposta().categoriaSugerida()).isEqualTo("Almoço");
+  }
+
+  @Test
+  @DisplayName("mensagem com varios itens retorna multiplas propostas")
+  void mensagemComVariosItensRetornaMultiplasPropostas() {
+    when(aiClient.completar(any()))
+        .thenReturn(
+            """
+            LANCAMENTO|ENTRADA|2400.00|2026-11-12||Salário|Salário do mês
+            LANCAMENTO|SAIDA|900.00|2026-11-12||Aluguel|Aluguel
+            LANCAMENTO|SAIDA|100.00|2026-11-12||Energia|Luz
+            LANCAMENTO|SAIDA|65.00|2026-11-12||Água|Água
+            LANCAMENTO|SAIDA|600.00|2026-11-12||Alimentação|Alimentação
+            """);
+
+    AiResponse resposta =
+        aiService.processar(
+            "sessao-1",
+            "empresa-1",
+            "entrada do mes 2400 de salario, paguei 900 de aluguel 100 de luz, 65 de agua 600 de"
+                + " alimentacao");
+
+    assertThat(resposta.intent()).isEqualTo("lancamento");
+    assertThat(resposta.propostas()).hasSize(5);
+    assertThat(resposta.proposta()).isEqualTo(resposta.propostas().get(0));
+    assertThat(resposta.propostas().get(0).tipo()).isEqualTo("ENTRADA");
+    assertThat(resposta.propostas().get(0).valor()).isEqualByComparingTo("2400.00");
+    assertThat(resposta.propostas().get(1).tipo()).isEqualTo("SAIDA");
+    assertThat(resposta.propostas().get(1).valor()).isEqualByComparingTo("900.00");
+    // categoriaId nunca é inventado pela IA
+    assertThat(resposta.propostas()).allMatch(p -> p.categoriaId() == null);
+  }
+
+  @Test
+  @DisplayName("propostas duplicadas do modelo sao descartadas")
+  void propostasDuplicadasDoModeloSaoDescartadas() {
+    when(aiClient.completar(any()))
+        .thenReturn(
+            """
+            LANCAMENTO|SAIDA|45.00|2026-11-12||Alimentação|Almoço
+            LANCAMENTO|SAIDA|45.00|2026-11-12||Alimentação|Almoço
+            """);
+
+    AiResponse resposta = aiService.processar("sessao-1", "empresa-1", "gastei 45 no almoço");
+
+    assertThat(resposta.intent()).isEqualTo("lancamento");
+    assertThat(resposta.propostas()).hasSize(1);
+    assertThat(resposta.resposta()).contains("R$ 45,00");
+  }
+
+  @Test
+  @DisplayName("dados reais da empresa vao no prompt enviado a IA")
+  void dadosReaisDaEmpresaVaoNoPromptEnviadoIa() {
+    when(contextoService.montarContexto(1L)).thenReturn("Totais por mês: novembro de 2026");
+    when(aiClient.completar(any())).thenReturn("CONSULTA|R$ 1.234,56");
+
+    aiService.processar("sessao-1", "1", "quanto gastei?");
+
+    @SuppressWarnings("unchecked")
+    ArgumentCaptor<List<Map<String, Object>>> captor = ArgumentCaptor.forClass(List.class);
+    verify(aiClient).completar(captor.capture());
+
+    List<Map<String, Object>> enviados = captor.getValue();
+    String system = (String) enviados.get(0).get("content");
+    assertThat(system).contains("Totais por mês: novembro de 2026");
+    assertThat(system).contains("DADOS REAIS DA EMPRESA");
   }
 
   @Test

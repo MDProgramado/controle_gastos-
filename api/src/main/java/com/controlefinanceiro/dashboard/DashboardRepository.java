@@ -65,4 +65,26 @@ public interface DashboardRepository extends JpaRepository<Lancamento, Long> {
       @Param("empresaId") Long empresaId,
       @Param("dataInicio") LocalDate dataInicio,
       @Param("dataFim") LocalDate dataFim);
+
+  /**
+   * Breakdown por categoria de ENTRADA (mesma lógica do {@link #breakdownSaida}, mas para
+   * créditos). Usado pelo contexto de dados da IA (fase 4).
+   *
+   * @param empresaId tenant do token (via TenantContext, nunca do body)
+   */
+  @Query(
+      "SELECT new com.controlefinanceiro.dashboard.dto.CategoryExpense("
+          + "c.id, c.nome, COALESCE(SUM(l.valor), 0)) "
+          + "FROM Categoria c "
+          + "LEFT JOIN Lancamento l ON l.categoria = c "
+          + "AND l.empresa.id = :empresaId "
+          + "AND l.tipo = 'ENTRADA' "
+          + "AND l.data BETWEEN :dataInicio AND :dataFim "
+          + "WHERE c.empresa.id = :empresaId AND c.tipo = 'ENTRADA' "
+          + "GROUP BY c.id, c.nome "
+          + "ORDER BY COALESCE(SUM(l.valor), 0) DESC")
+  List<CategoryExpense> breakdownEntrada(
+      @Param("empresaId") Long empresaId,
+      @Param("dataInicio") LocalDate dataInicio,
+      @Param("dataFim") LocalDate dataFim);
 }

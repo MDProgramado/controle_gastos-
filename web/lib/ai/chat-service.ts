@@ -1,29 +1,17 @@
-import { chatComIA, type AiChatRequest, type AiChatResponse } from "@/lib/api-client";
+import {
+  chatComIA,
+  gravarLancamentos,
+  type AiChatRequest,
+  type AiChatResponse,
+  type AiPropostaLancamento,
+} from "@/lib/api-client";
 import type {
-  ChatMessage,
   ChatResponse,
   ConfirmarLancamentoRequest,
   PropostaLancamento,
 } from "./types";
 
 const DELAY_MS = 400;
-
-/**
- * Extrai um valor monetário (em reais) de uma string livre.
- * Ex.: "gastei 45 no almoço" → 45 ; "paguei R$ 120,50" → 120.50
- * Retorna null quando não encontra valor.
- */
-function extrairValor(texto: string): number | null {
-  const normalizado = texto
-    .toLowerCase()
-    .replace(/r\$\s*/gi, "")
-    .replace(/\./g, "")
-    .replace(/,/g, ".");
-  const match = normalizado.match(/(\d+(?:\.\d{1,2})?)/);
-  if (!match) return null;
-  const v = parseFloat(match[1]);
-  return isNaN(v) || v <= 0 ? null : v;
-}
 
 /**
  * Envia uma mensagem para o serviço de IA via API real (POST /api/ai/chat).
@@ -36,7 +24,12 @@ export async function enviarMensagem(
 
   const resposta = await chatComIA({
     mensagem: req.mensagem,
-    historico: req.historico,
+    // A API aceita apenas {role, content} no histórico (fail-on-unknown-properties):
+    // enviar o ChatMessage inteiro (id, criadoEm, lancamentoProposta...) é rejeitado com 400.
+    historico: req.historico.map((m) => ({
+      role: m.role,
+      content: m.content,
+    })),
     sessionId: req.sessionId,
   });
 
@@ -49,8 +42,7 @@ export async function enviarMensagem(
     };
   }
 
-  return mapearResposta(resposta);
-}
+  return mapearResposta(resposta);}
 
 /**
  * Mapeia a resposta da API (AiChatResponse) para o formato esperado pelo
@@ -67,18 +59,20 @@ function mapearResposta(resposta: AiChatResponse): ChatResponse {
           opcoes: ["Tentar novamente"],
         };
       }
-      const propostaMapeada: PropostaLancamento = {
-        tipo: proposta.tipo,
-        valor: proposta.valor,
-        data: proposta.data,
-        categoriaId: proposta.categoriaId,
-        categoriaSugerida: proposta.categoriaSugerida,
-        descricao: proposta.descricao,
-      };
+      const mapear = (p: AiPropostaLancamento): PropostaLancamento => ({
+        tipo: p.tipo,
+        valor: p.valor,
+        data: p.data,
+        categoriaId: p.categoriaId,
+        categoriaSugerida: p.categoriaSugerida,
+        descricao: p.descricao,
+      });
+      const lista = resposta.propostas?.length ? resposta.propostas : [proposta];
       return {
         intent: "lancamento",
         resposta: resposta.resposta,
-        proposta: propostaMapeada,
+        proposta: mapear(proposta),
+        propostas: lista.map(mapear),
       };
     }
     case "consulta": {
@@ -102,27 +96,60 @@ function mapearResposta(resposta: AiChatResponse): ChatResponse {
 }
 
 /**
- * Confirma um lançamento junto ao serviço de IA.
- * Como o backend ainda não expõe endpoint separado para confirmação de
- * lançamento, reutilizamos o endpoint de chat com uma mensagem de confirmação.
+ * Confirma o(s) lançamento(s) proposto(s) pela IA.
+ *
+ * A gravação é feita pelo endpoint de LOTE da API (POST /api/lancamentos/lote): transação
+ * tudo-ou-nada (LOT-01/LOT-02) e tenant exclusivamente do token (R3).
  */
 export async function confirmarLancamento(
   req: ConfirmarLancamentoRequest,
 ): Promise<{ id: string }> {
-  // Nota: o backend ainda não tem endpoint dedicado para confirmação de
-  // lançamento. Como workaround, enviamos uma mensagem de confirmação pelo
-  // chat e usamos um ID temporário.
-  await new Promise((resolve) => setTimeout(resolve, DELAY_MS));
-
-  try {
-    await chatComIA({
-      mensagem: `Confirmar lançamento: ${req.tipo} ${req.valor} em ${req.data} categoria ${req.categoriaId ?? "sem categoria"}`,
-      historico: [],
-      sessionId: req.categoriaId || "sem-categoria",
-    });
-  } catch {
-    // Ignora erro de validação; o lançamento já foi "confirmado" localmente.
+  const categoriaId = Number(req.categoriaId);
+  if (!categoriaId) {
+    throw new Error("Escolha a categoria do lançamento antes de confirmar.");
   }
 
-  return { id: `confirm-${Date.now()}` };
+  const ids = await gravarLancamentos([
+    {
+      categoriaId,
+      tipo: req.tipo,
+      valor: req.valor,
+      data: req.data,
+      descricao: req.descricao,
+    },
+  ]);
+
+  if (!ids) {
+    throw new Error("Não foi possível registrar o lançamento.");
+  }
+
+  return { id: String(ids[0] ?? `confirm-${Date.now()}`) };
+}
+
+/**
+ * Confirma vários lançamentos de uma vez (mensagem com vários itens). Uma única transação:
+ * ou entra tudo, ou nada é gravado.
+ */
+export async function confirmarLancamentos(
+  reqs: ConfirmarLancamentoRequest[],
+): Promise<number[]> {
+  const linhas = reqs.map((req) => {
+    const categoriaId = Number(req.categoriaId);
+    if (!categoriaId) {
+      throw new Error("Escolha a categoria de todos os lançamentos antes de confirmar.");
+    }
+    return {
+      categoriaId,
+      tipo: req.tipo,
+      valor: req.valor,
+      data: req.data,
+      descricao: req.descricao,
+    };
+  });
+
+  const ids = await gravarLancamentos(linhas);
+  if (!ids) {
+    throw new Error("Não foi possível registrar os lançamentos.");
+  }
+  return ids;
 }

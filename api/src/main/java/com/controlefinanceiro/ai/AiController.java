@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Endpoint de chat com a IA (fase 4 — OpenRouter + Gemini).
+ * Endpoint de chat com a IA (fase 4 — OpenRouter + Gemma 4).
  *
  * <p>O tenant (empresa_id) vem exclusivamente do token JWT via {@link
  * TenantContext#getEmpresaId()}, nunca do corpo da requisição.
