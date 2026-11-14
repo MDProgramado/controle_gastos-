@@ -54,13 +54,13 @@ body {
    Vermelho      --destructive = saída
 */
 :root {
-  --background: #0F3D2E;
+  --background: #020002;
   --foreground: #A8D5BA;
   --muted: rgba(157, 187, 169, 0.15);
   --muted-foreground: #9DBBA9;
   --card: #0F3D2E;
   --card-foreground: #A8D5BA;
-  --popover: #0F3D2E;
+  --popover: #FFFFFF;
   --popover-foreground: #A8D5BA;
   --primary: #4C956C;
   --primary-foreground: #FFFFFF;
