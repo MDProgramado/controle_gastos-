@@ -7,8 +7,15 @@ import static org.mockito.Mockito.when;
 
 import com.controlefinanceiro.ai.AiClient;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.crypto.MACSigner;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Date;
 import java.util.List;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -115,6 +122,10 @@ class ImportacaoPdfIntegrationTest {
         upload("fatura.pdf", pdfComTexto("fatura do cartao vencimento limite parcela fechamento"));
 
     assertThat(resposta.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(resposta.getBody())
+        .contains("\"modeloUsado\"")
+        .contains("\"degradado\"")
+        .contains("\"resumo\"");
 
     assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM importacao_documento", Long.class))
         .isEqualTo(1);
@@ -183,11 +194,119 @@ class ImportacaoPdfIntegrationTest {
   }
 
   @Test
-  @DisplayName("token ausente → 401 em /api/importacoes (R3)")
+  @DisplayName("token ausente → 401 em todos os endpoints de /api/importacoes (R3)")
   void semTokenRetorna401() {
-    ResponseEntity<String> resposta = rest.getForEntity("/api/importacoes", String.class);
+    HttpHeaders vazios = new HttpHeaders();
 
-    assertThat(resposta.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    assertThat(rest.getForEntity("/api/importacoes", String.class).getStatusCode())
+        .isEqualTo(HttpStatus.UNAUTHORIZED);
+    assertThat(rest.getForEntity("/api/importacoes/1", String.class).getStatusCode())
+        .isEqualTo(HttpStatus.UNAUTHORIZED);
+    assertThat(
+            rest.postForEntity("/api/importacoes/pdf", new HttpEntity<>(vazios), String.class)
+                .getStatusCode())
+        .isEqualTo(HttpStatus.UNAUTHORIZED);
+    assertThat(
+            rest.postForEntity(
+                    "/api/importacoes/1/confirmar",
+                    new HttpEntity<>("{\"itens\":[]}", vazios),
+                    String.class)
+                .getStatusCode())
+        .isEqualTo(HttpStatus.UNAUTHORIZED);
+    assertThat(
+            rest.exchange(
+                    "/api/importacoes/1", HttpMethod.DELETE, new HttpEntity<>(vazios), Void.class)
+                .getStatusCode())
+        .isEqualTo(HttpStatus.UNAUTHORIZED);
+  }
+
+  @Test
+  @DisplayName(
+      "item inválido na resposta da IA vai para rejeitados e não derruba o documento (D-21)")
+  void itemInvalidoVaiParaRejeitados() throws Exception {
+    String json =
+        "{\"itens\":["
+            + "{\"data\":\"2026-11-03\",\"descricao\":\"Almoco\",\"valor\":\"45.00\","
+            + "\"tipo\":\"DESPESA_PAGA\",\"categoria\":\"Alimentacao\"},"
+            + "{\"data\":\"2026-11-04\",\"descricao\":\"Estorno\",\"valor\":\"-5.00\","
+            + "\"tipo\":\"DESPESA_PAGA\",\"categoria\":\"Alimentacao\"}"
+            + "]}";
+    stubIa(json);
+
+    ResponseEntity<String> resposta =
+        upload("fatura.pdf", pdfComTexto("fatura do cartao vencimento limite parcela fechamento"));
+
+    assertThat(resposta.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(resposta.getBody()).contains("VALOR_INVALIDO");
+    // item válido foi gravado; o inválido virou rejeitado (nada do item ruim em staging)
+    assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM importacao_item", Long.class))
+        .isEqualTo(1);
+    assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM importacao_documento", Long.class))
+        .isEqualTo(1);
+  }
+
+  @Test
+  @DisplayName("isolamento: empresa A não vê nem acessa importação da empresa B (R3)")
+  void isolamentoEntreEmpresas() throws Exception {
+    stubIa(JSON_IA);
+    Long empresaB = garantirUsuarioEmpresaB();
+    String tokenB = tokenFixado("outra@controle.com", empresaB, "USER");
+
+    // usuário B importa um documento → staging fica na empresa B (nunca na 1 do seed)
+    HttpHeaders headersB = new HttpHeaders();
+    headersB.setBearerAuth(tokenB);
+    headersB.setContentType(MediaType.MULTIPART_FORM_DATA);
+    MultiValueMap<String, Object> corpoB = new LinkedMultiValueMap<>();
+    corpoB.add(
+        "arquivos",
+        recurso(
+            "fatura-b.pdf", pdfComTexto("fatura do cartao vencimento limite parcela fechamento")));
+    ResponseEntity<String> uploadB =
+        rest.postForEntity(
+            "/api/importacoes/pdf", new HttpEntity<>(corpoB, headersB), String.class);
+    assertThat(uploadB.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+    Long empresaDoDocumento =
+        jdbc.queryForObject("SELECT empresa_id FROM importacao_documento LIMIT 1", Long.class);
+    assertThat(empresaDoDocumento).isEqualTo(empresaB).isNotEqualTo(1L);
+    Long idB = jdbc.queryForObject("SELECT id FROM importacao_documento LIMIT 1", Long.class);
+
+    // empresa A (admin do seed): histórico não traz o documento de B; detalhe e descarte → 404
+    HttpHeaders headersA = new HttpHeaders();
+    headersA.setBearerAuth(token);
+    ResponseEntity<String> historico =
+        rest.exchange("/api/importacoes", HttpMethod.GET, new HttpEntity<>(headersA), String.class);
+    assertThat(historico.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(historico.getBody()).doesNotContain("fatura-b.pdf");
+
+    assertThat(
+            rest.exchange(
+                    "/api/importacoes/" + idB,
+                    HttpMethod.GET,
+                    new HttpEntity<>(headersA),
+                    String.class)
+                .getStatusCode())
+        .isEqualTo(HttpStatus.NOT_FOUND);
+    assertThat(
+            rest.exchange(
+                    "/api/importacoes/" + idB,
+                    HttpMethod.DELETE,
+                    new HttpEntity<>(headersA),
+                    Void.class)
+                .getStatusCode())
+        .isEqualTo(HttpStatus.NOT_FOUND);
+
+    // e a confirmação cruzada também é 404 (confirmar é endpoint separado, 05-05)
+    HttpHeaders jsonA = new HttpHeaders();
+    jsonA.setBearerAuth(token);
+    jsonA.setContentType(MediaType.APPLICATION_JSON);
+    assertThat(
+            rest.postForEntity(
+                    "/api/importacoes/" + idB + "/confirmar",
+                    new HttpEntity<>("{\"itens\":[]}", jsonA),
+                    String.class)
+                .getStatusCode())
+        .isEqualTo(HttpStatus.NOT_FOUND);
   }
 
   @Test
@@ -326,6 +445,48 @@ class ImportacaoPdfIntegrationTest {
           "Usuario Comum",
           "USER");
     }
+  }
+
+  /**
+   * Empresa B + usuário B (outra@controle.com) para o teste de isolamento — idempotente entre os
+   * testes da classe (o container PostgreSQL vive para a classe inteira).
+   */
+  private Long garantirUsuarioEmpresaB() {
+    long jaExiste =
+        jdbc.queryForObject(
+            "SELECT COUNT(*) FROM usuario WHERE email = 'outra@controle.com'", Long.class);
+    if (jaExiste == 0) {
+      jdbc.update("INSERT INTO empresa (nome) VALUES ('Empresa B Isolamento')");
+      Long empresaB =
+          jdbc.queryForObject(
+              "SELECT id FROM empresa WHERE nome = 'Empresa B Isolamento'", Long.class);
+      jdbc.update(
+          "INSERT INTO usuario (empresa_id, email, senha_hash, nome, role, ativo) VALUES (?, ?, ?, ?, ?, true)",
+          empresaB,
+          "outra@controle.com",
+          "senha-nao-usada-jwt-direto",
+          "Usuario Empresa B",
+          "USER");
+    }
+    return jdbc.queryForObject(
+        "SELECT empresa_id FROM usuario WHERE email = 'outra@controle.com'", Long.class);
+  }
+
+  /** Assina um JWT fixture HS256 válido (mesmo padrão de AuthTenantIntegrationTest). */
+  private String tokenFixado(String email, long empresaId, String role) throws Exception {
+    String segredo = System.getenv("JWT_SECRET");
+    Date agora = new Date();
+    JWTClaimsSet claims =
+        new JWTClaimsSet.Builder()
+            .subject(email)
+            .claim("empresa_id", empresaId)
+            .claim("role", role)
+            .issueTime(agora)
+            .expirationTime(new Date(agora.getTime() + 3600_000L))
+            .build();
+    SignedJWT jwt = new SignedJWT(new JWSHeader(JWSAlgorithm.HS256), claims);
+    jwt.sign(new MACSigner(segredo.getBytes(StandardCharsets.UTF_8)));
+    return jwt.serialize();
   }
 
   private long contar(String tabela) {
