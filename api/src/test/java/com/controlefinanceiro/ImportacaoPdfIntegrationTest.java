@@ -106,7 +106,15 @@ class ImportacaoPdfIntegrationTest {
 
   @AfterEach
   void limparStaging() {
-    // Ordem por FK: fatura → item → documento (staging da fase 5 apenas).
+    // Ordem por FK (dependentes primeiro, pai por último):
+    // conta_a_pagar.fatura_id -> fatura_cartao.id
+    // lancamento.documento_id, fatura_cartao.documento_id,
+    // importacao_fatura.documento_id, importacao_item.documento_id
+    // -> importacao_documento.id
+    // (todas introduzidas na fase 5, V3, commit 589fcb6).
+    jdbc.update("DELETE FROM conta_a_pagar");
+    jdbc.update("DELETE FROM lancamento WHERE documento_id IS NOT NULL");
+    jdbc.update("DELETE FROM fatura_cartao");
     jdbc.update("DELETE FROM importacao_fatura");
     jdbc.update("DELETE FROM importacao_item");
     jdbc.update("DELETE FROM importacao_documento");
@@ -227,9 +235,9 @@ class ImportacaoPdfIntegrationTest {
     String json =
         "{\"itens\":["
             + "{\"data\":\"2026-11-03\",\"descricao\":\"Almoco\",\"valor\":\"45.00\","
-            + "\"tipo\":\"DESPESA_PAGA\",\"categoria\":\"Alimentacao\"},"
+            + "\"tipo\":\"DESPESA_PAGA\",\"categoria\":\"Alimentacao\",\"origem\":\"CARTAO\"},"
             + "{\"data\":\"2026-11-04\",\"descricao\":\"Estorno\",\"valor\":\"-5.00\","
-            + "\"tipo\":\"DESPESA_PAGA\",\"categoria\":\"Alimentacao\"}"
+            + "\"tipo\":\"DESPESA_PAGA\",\"categoria\":\"Alimentacao\",\"origem\":\"CARTAO\"}"
             + "]}";
     stubIa(json);
 
