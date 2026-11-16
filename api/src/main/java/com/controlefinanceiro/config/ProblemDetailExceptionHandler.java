@@ -20,6 +20,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
 
 /**
  * Padrão P7 — RFC 7807 ProblemDetail (PLAN §3.3). Nunca logar header {@code Authorization}, cookie
@@ -121,6 +122,18 @@ public class ProblemDetailExceptionHandler {
     return ProblemDetail.forStatusAndDetail(
         HttpStatus.PAYLOAD_TOO_LARGE,
         "Lote de arquivos excede o limite de 40 MB. Envie menos arquivos de uma vez.");
+  }
+
+  /** Campo obrigatório ausente no multipart (ex.: arquivo não enviado) → 400 sem vazar detalhe
+   *  interno do Spring. Não engole MaxUploadSizeExceededException (413), que tem handler
+   *  próprio acima. */
+  @ExceptionHandler(MultipartException.class)
+  public ProblemDetail parteObrigatoriaAusente(MultipartException ex) {
+    if (ex instanceof MaxUploadSizeExceededException) {
+      throw ex; // deixa o handler específico de 413 tratar
+    }
+    return ProblemDetail.forStatusAndDetail(
+        HttpStatus.BAD_REQUEST, "Nenhum arquivo enviado.");
   }
 
   /** Importação não encontrada para a empresa do token → 404 (fase 5, R3). */
