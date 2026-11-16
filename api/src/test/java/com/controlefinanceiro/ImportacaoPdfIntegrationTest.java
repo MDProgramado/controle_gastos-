@@ -14,6 +14,12 @@ import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpRequest.BodyPublishers;
+import java.net.http.HttpResponse;
+import java.net.http.HttpResponse.BodyHandlers;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.List;
@@ -30,6 +36,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpEntity;
@@ -95,6 +102,8 @@ class ImportacaoPdfIntegrationTest {
   @Autowired private PasswordEncoder passwordEncoder;
 
   @MockBean private AiClient aiClient;
+
+  @LocalServerPort private int localServerPort;
 
   private String token;
 
@@ -185,6 +194,38 @@ class ImportacaoPdfIntegrationTest {
             "/api/importacoes/pdf", HttpMethod.POST, new HttpEntity<>(headers), String.class);
 
     assertThat(resposta.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+  }
+
+  @Test
+  @DisplayName("arquivo acima de 8 MB → 413")
+  void arquivoAcimaDoLimiteRetorna413() throws Exception {
+    byte[] arquivoGrande = new byte[9 * 1024 * 1024]; // 9 MB > limite de 8 MB
+    new java.util.Random(42).nextBytes(arquivoGrande);
+
+    // Constrói corpo multipart manualmente para definir Content-Length exato
+    String boundary = "----Boundary_" + System.currentTimeMillis();
+    ByteArrayOutputStream corpo = new ByteArrayOutputStream();
+    corpo.write(("--" + boundary + "\r\n").getBytes(StandardCharsets.UTF_8));
+    corpo.write(
+        ("Content-Disposition: form-data; name=\"arquivos\"; filename=\"grande.pdf\"\r\n")
+            .getBytes(StandardCharsets.UTF_8));
+    corpo.write("Content-Type: application/octet-stream\r\n\r\n".getBytes(StandardCharsets.UTF_8));
+    corpo.write(arquivoGrande);
+    corpo.write(("\r\n--" + boundary + "--\r\n").getBytes(StandardCharsets.UTF_8));
+    byte[] corpoBytes = corpo.toByteArray();
+
+    HttpClient client = HttpClient.newBuilder().build();
+    HttpRequest request =
+        HttpRequest.newBuilder()
+            .uri(URI.create("http://localhost:" + localServerPort + "/api/importacoes/pdf"))
+            .header("Authorization", "Bearer " + token)
+            .header("Content-Type", "multipart/form-data; boundary=" + boundary)
+            .POST(BodyPublishers.ofByteArray(corpoBytes))
+            .build();
+    HttpResponse<String> resposta = client.send(request, BodyHandlers.ofString());
+
+    assertThat(resposta.statusCode()).isEqualTo(HttpStatus.PAYLOAD_TOO_LARGE.value());
+    assertThat(resposta.body()).contains("excede");
   }
 
   @Test
