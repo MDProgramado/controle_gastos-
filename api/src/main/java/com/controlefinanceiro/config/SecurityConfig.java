@@ -12,6 +12,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -26,6 +27,7 @@ import org.springframework.security.web.SecurityFilterChain;
  */
 @Configuration
 @EnableWebSecurity
+@EnableAsync
 public class SecurityConfig {
 
   @Bean
@@ -42,6 +44,9 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.GET, "/api/categorias")
                     .hasAnyRole("ADMIN", "USER")
                     .requestMatchers("/api/categorias/**")
+                    .hasRole("ADMIN")
+                    // Vinculação de telefone WhatsApp é exclusiva de ADMIN
+                    .requestMatchers(HttpMethod.POST, "/api/usuarios/**")
                     .hasRole("ADMIN")
                     .anyRequest()
                     .authenticated())
