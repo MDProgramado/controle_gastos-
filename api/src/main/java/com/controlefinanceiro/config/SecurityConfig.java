@@ -48,6 +48,11 @@ public class SecurityConfig {
                     // Vinculação de telefone WhatsApp é exclusiva de ADMIN
                     .requestMatchers(HttpMethod.POST, "/api/usuarios/**")
                     .hasRole("ADMIN")
+                    // Webhook do WhatsApp é público (autenticação via X-Hub-Signature-256)
+                    .requestMatchers(HttpMethod.GET, "/webhooks/whatsapp")
+                    .permitAll()
+                    .requestMatchers(HttpMethod.POST, "/webhooks/whatsapp")
+                    .permitAll()
                     .anyRequest()
                     .authenticated())
         .oauth2ResourceServer(

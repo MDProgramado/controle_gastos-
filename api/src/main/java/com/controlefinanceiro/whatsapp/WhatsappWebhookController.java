@@ -35,7 +35,7 @@ public class WhatsappWebhookController {
   @Value("${whatsapp.verify.token:}")
   private String verifyToken;
   @Value("${whatsapp.app.secret:}")
-  private String appSecret;
+  String appSecret;
 
   public WhatsappWebhookController(WhatsappWebhookService webhookService) {
     this.webhookService = webhookService;
@@ -69,11 +69,11 @@ public class WhatsappWebhookController {
       @RequestBody String payload) {
 
     if (appSecret == null || appSecret.isBlank()) {
-      throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "WHATSAPP_APP_SECRET não configurado");
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
 
     if (!validarAssinatura(signature, payload)) {
-      throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Assinatura inválida");
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
 
     webhookService.processarWebhook(payload, signature);
