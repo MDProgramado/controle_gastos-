@@ -48,21 +48,22 @@ class UsuarioTelefoneIntegrationTest {
 
   private Long empresaAdminId;
   private Long empresaOutraId;
+  private String empresaOutraNome;
   private String tokenAdmin;
   private String tokenAdminOutraEmpresa;
   private String tokenUser;
 
+  private String sufixoEmpresa() {
+    return String.valueOf(System.currentTimeMillis());
+  }
+
   @BeforeEach
   void setup() throws Exception {
-    // Garante que a empresa existe (cria se não existir)
+    // Nome único por execução: evita depender de UNIQUE constraint em empresa.nome
+    String empresaAdminNome = "Controle Financeiro Teste " + sufixoEmpresa();
     empresaAdminId =
         jdbc.queryForObject(
-            "SELECT id FROM empresa WHERE nome = 'Controle Financeiro'", Long.class);
-    if (empresaAdminId == null) {
-      empresaAdminId =
-          jdbc.queryForObject(
-              "INSERT INTO empresa (nome) VALUES ('Controle Financeiro') RETURNING id", Long.class);
-    }
+            "INSERT INTO empresa (nome) VALUES (?) RETURNING id", Long.class, empresaAdminNome);
 
     // Cria o usuário ADMIN da empresa principal com senha conhecida
     jdbc.update("DELETE FROM usuario WHERE email = 'admin@controle.com'");
@@ -77,10 +78,28 @@ class UsuarioTelefoneIntegrationTest {
     tokenAdmin = login("admin@controle.com", SENHA_FIXTURE);
 
     // Cria uma segunda empresa para teste de isolamento
-    jdbc.update("DELETE FROM empresa WHERE nome = 'Empresa Outra'");
+    empresaOutraNome = "Empresa Outra Teste " + sufixoEmpresa();
     empresaOutraId =
         jdbc.queryForObject(
-            "INSERT INTO empresa (nome) VALUES ('Empresa Outra') RETURNING id", Long.class);
+            "INSERT INTO empresa (nome) VALUES (?) RETURNING id", Long.class, empresaOutraNome);
+
+    // Cria o usuário ADMIN da empresa principal com senha conhecida
+    jdbc.update("DELETE FROM usuario WHERE email = 'admin@controle.com'");
+    jdbc.update(
+        "INSERT INTO usuario (empresa_id, email, senha_hash, nome, role, ativo) "
+            + "VALUES (?, ?, ?, ?, ?, true)",
+        empresaAdminId,
+        "admin@controle.com",
+        new BCryptPasswordEncoder(12).encode(SENHA_FIXTURE),
+        "Administrador",
+        "ADMIN");
+    tokenAdmin = login("admin@controle.com", SENHA_FIXTURE);
+
+    // Cria uma segunda empresa para teste de isolamento
+    empresaOutraNome = "Empresa Outra Teste " + sufixoEmpresa();
+    empresaOutraId =
+        jdbc.queryForObject(
+            "INSERT INTO empresa (nome) VALUES (?) RETURNING id", Long.class, empresaOutraNome);
 
     // Cria um ADMIN na outra empresa com senha conhecida
     jdbc.update("DELETE FROM usuario WHERE email = 'admin@outra.com'");
@@ -112,8 +131,9 @@ class UsuarioTelefoneIntegrationTest {
     jdbc.update("DELETE FROM auditoria_telefone");
     jdbc.update("DELETE FROM whatsapp_codigo_verificacao");
     jdbc.update("DELETE FROM usuario_telefone");
-    jdbc.update("DELETE FROM usuario WHERE email IN ('user@controle.com', 'admin@outra.com')");
-    jdbc.update("DELETE FROM empresa WHERE nome = 'Empresa Outra'");
+    jdbc.update("DELETE FROM usuario WHERE email IN ('user@controle.com', 'admin@outra.com', 'admin@controle.com')");
+    jdbc.update("DELETE FROM empresa WHERE nome = ?", empresaOutraNome);
+    jdbc.update("DELETE FROM empresa WHERE nome LIKE 'Controle Financeiro Teste %'");
   }
 
   /* ========================================================================
