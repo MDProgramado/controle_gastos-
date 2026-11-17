@@ -1,5 +1,6 @@
 package com.controlefinanceiro.whatsapp;
 
+import com.controlefinanceiro.common.AcessoNegadoException;
 import com.controlefinanceiro.common.CodigoVerificacaoInvalidoException;
 import com.controlefinanceiro.common.NaoAutorizadoException;
 import com.controlefinanceiro.common.TelefoneJaVinculadoException;
@@ -90,7 +91,7 @@ public class UsuarioTelefoneService {
             .findById(usuarioId)
             .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado"));
     if (!usuario.getEmpresa().getId().equals(empresaId)) {
-      throw new IllegalArgumentException("Usuário não pertence a esta empresa");
+      throw new AcessoNegadoException("Usuário não pertence a esta empresa");
     }
 
     // Se o número já estiver vinculado a outra empresa, rejeita
@@ -164,7 +165,7 @@ public class UsuarioTelefoneService {
    * @param codigo código de 6 dígitos
    * @return resposta com status de verificação
    */
-  @Transactional
+  @Transactional(noRollbackFor = CodigoVerificacaoInvalidoException.class)
   public TelefoneResponse verificarCodigo(Long usuarioId, String numeroE164, String codigo) {
 
     UsuarioTelefone telefone =

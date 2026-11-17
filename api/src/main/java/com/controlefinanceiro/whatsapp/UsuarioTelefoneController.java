@@ -1,5 +1,6 @@
 package com.controlefinanceiro.whatsapp;
 
+import com.controlefinanceiro.common.AcessoNegadoException;
 import com.controlefinanceiro.common.NaoAutorizadoException;
 import com.controlefinanceiro.common.TenantContext;
 import com.controlefinanceiro.common.UsuarioAuth;
@@ -56,10 +57,10 @@ public class UsuarioTelefoneController {
     Usuario admin = usuarioAutenticado();
 
     if (!"ADMIN".equals(admin.getRole())) {
-      throw new NaoAutorizadoException("Apenas administradores podem vincular telefones");
+      throw new AcessoNegadoException("Apenas administradores podem vincular telefones");
     }
     if (!admin.getEmpresa().getId().equals(empresaId)) {
-      throw new NaoAutorizadoException("Administrador não pertence a esta empresa");
+      throw new AcessoNegadoException("Administrador não pertence a esta empresa");
     }
 
     TelefoneResponse response =
@@ -80,7 +81,7 @@ public class UsuarioTelefoneController {
     Usuario usuario = usuarioAutenticado();
 
     if (!usuario.getEmpresa().getId().equals(empresaId)) {
-      throw new NaoAutorizadoException("Usuário não pertence a esta empresa");
+      throw new AcessoNegadoException("Usuário não pertence a esta empresa");
     }
 
     TelefoneResponse response =
