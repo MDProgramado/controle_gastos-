@@ -1,6 +1,5 @@
 package com.controlefinanceiro.whatsapp;
 
-import com.controlefinanceiro.common.AcessoNegadoException;
 import com.controlefinanceiro.common.NaoAutorizadoException;
 import com.controlefinanceiro.common.TenantContext;
 import com.controlefinanceiro.common.UsuarioAuth;
@@ -57,10 +56,14 @@ public class UsuarioTelefoneController {
     Usuario admin = usuarioAutenticado();
 
     if (!"ADMIN".equals(admin.getRole())) {
-      throw new AcessoNegadoException("Apenas administradores podem vincular telefones");
+      // 401 (não 403): o front (web/app/api/me/route.ts e web/lib/api-client.ts) trata 401 como
+      // "sessão expirada" e limpa o cookie. Usar 403 aqui deixaria o usuário sem saída na tela.
+      // Semanticamente 403 seria mais correto (autorização, não autenticação), mas o contrato com
+      // o front exige 401. Revisar quando o front tratar 403 também.
+      throw new NaoAutorizadoException("Apenas administradores podem vincular telefones");
     }
     if (!admin.getEmpresa().getId().equals(empresaId)) {
-      throw new AcessoNegadoException("Administrador não pertence a esta empresa");
+      throw new NaoAutorizadoException("Administrador não pertence a esta empresa");
     }
 
     TelefoneResponse response =
@@ -81,7 +84,8 @@ public class UsuarioTelefoneController {
     Usuario usuario = usuarioAutenticado();
 
     if (!usuario.getEmpresa().getId().equals(empresaId)) {
-      throw new AcessoNegadoException("Usuário não pertence a esta empresa");
+      // 401 (não 403): mesmo motivo acima — o front trata 401 como sessão expirada.
+      throw new NaoAutorizadoException("Usuário não pertence a esta empresa");
     }
 
     TelefoneResponse response =
