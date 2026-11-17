@@ -18,6 +18,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -53,32 +54,54 @@ class UsuarioTelefoneIntegrationTest {
 
   @BeforeEach
   void setup() throws Exception {
+    // Garante que a empresa existe (cria se não existir)
+    empresaAdminId =
+        jdbc.queryForObject(
+            "SELECT id FROM empresa WHERE nome = 'Controle Financeiro'", Long.class);
+    if (empresaAdminId == null) {
+      empresaAdminId =
+          jdbc.queryForObject(
+              "INSERT INTO empresa (nome) VALUES ('Controle Financeiro') RETURNING id", Long.class);
+    }
+
+    // Cria o usuário ADMIN da empresa principal com senha conhecida
+    jdbc.update("DELETE FROM usuario WHERE email = 'admin@controle.com'");
+    jdbc.update(
+        "INSERT INTO usuario (empresa_id, email, senha_hash, nome, role, ativo) "
+            + "VALUES (?, ?, ?, ?, ?, true)",
+        empresaAdminId,
+        "admin@controle.com",
+        new BCryptPasswordEncoder(12).encode(SENHA_FIXTURE),
+        "Administrador",
+        "ADMIN");
     tokenAdmin = login("admin@controle.com", SENHA_FIXTURE);
-    empresaAdminId = empresaIdDoEmail("admin@controle.com");
 
     // Cria uma segunda empresa para teste de isolamento
+    jdbc.update("DELETE FROM empresa WHERE nome = 'Empresa Outra'");
     empresaOutraId =
         jdbc.queryForObject(
             "INSERT INTO empresa (nome) VALUES ('Empresa Outra') RETURNING id", Long.class);
 
-    // Cria um ADMIN na outra empresa
+    // Cria um ADMIN na outra empresa com senha conhecida
+    jdbc.update("DELETE FROM usuario WHERE email = 'admin@outra.com'");
     jdbc.update(
         "INSERT INTO usuario (empresa_id, email, senha_hash, nome, role, ativo) "
             + "VALUES (?, ?, ?, ?, ?, true)",
         empresaOutraId,
         "admin@outra.com",
-        "$2a$12$invalid.hash.for.test.only.xxxxxxxxxxxxx",
+        new BCryptPasswordEncoder(12).encode(SENHA_FIXTURE),
         "Admin Outra",
         "ADMIN");
     tokenAdminOutraEmpresa = login("admin@outra.com", SENHA_FIXTURE);
 
-    // Cria um USER na empresa admin
+    // Cria um USER na empresa admin com senha conhecida
+    jdbc.update("DELETE FROM usuario WHERE email = 'user@controle.com'");
     jdbc.update(
         "INSERT INTO usuario (empresa_id, email, senha_hash, nome, role, ativo) "
             + "VALUES (?, ?, ?, ?, ?, true)",
         empresaAdminId,
         "user@controle.com",
-        "$2a$12$invalid.hash.for.test.only.xxxxxxxxxxxxx",
+        new BCryptPasswordEncoder(12).encode(SENHA_FIXTURE),
         "Usuário Comum",
         "USER");
     tokenUser = login("user@controle.com", SENHA_FIXTURE);
@@ -208,6 +231,7 @@ class UsuarioTelefoneIntegrationTest {
 
     // Vincula segundo número para o mesmo usuário
     vincularTelefone(tokenAdmin, usuarioIdAdmin, "+5571999999995");
+    assertThat(telefoneAtivo(usuarioIdAdmin, "+5571999999995")).isTrue();
 
     // Primeiro número deve estar inativo
     assertThat(telefoneAtivo(usuarioIdAdmin, "+5571999999996")).isFalse();

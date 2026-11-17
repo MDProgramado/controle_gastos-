@@ -8,8 +8,8 @@ import org.springframework.stereotype.Service;
 /**
  * Processamento assíncrono do webhook do WhatsApp.
  *
- * <p>Responde 200 à Meta imediatamente e processa o payload em segundo plano, para não exceder
- * o tempo limite de resposta da Meta (5 segundos).
+ * <p>Responde 200 à Meta imediatamente e processa o payload em segundo plano, para não exceder o
+ * tempo limite de resposta da Meta (5 segundos).
  */
 @Service
 public class WhatsappWebhookService {
@@ -25,7 +25,9 @@ public class WhatsappWebhookService {
   @Async
   public void processarWebhook(String payload, String signature) {
     try {
-      LOG.info("Processando webhook WhatsApp (payload de {} bytes)", payload == null ? 0 : payload.length());
+      LOG.info(
+          "Processando webhook WhatsApp (payload de {} bytes)",
+          payload == null ? 0 : payload.length());
       // TODO: interpretação da mensagem, busca de telefone vinculado, criação de pendência,
       //       confirmação de lançamento, consulta de dashboard.
     } catch (Exception e) {

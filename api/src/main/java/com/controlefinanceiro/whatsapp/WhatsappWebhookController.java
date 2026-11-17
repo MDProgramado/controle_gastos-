@@ -1,9 +1,7 @@
 package com.controlefinanceiro.whatsapp;
 
-import com.controlefinanceiro.common.TenantContext;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
-import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -16,24 +14,26 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
 
 /**
  * Webhook público da Meta Cloud API (WhatsApp).
  *
  * <p>GET /webhooks/whatsapp — responde o desafio de verificação da Meta (hub.verify_token).
+ *
  * <p>POST /webhooks/whatsapp — valida X-Hub-Signature-256 com o app secret. Se o segredo estiver
  * ausente ou a assinatura for inválida, responde 401 e nada processa.
  *
- * <p>Este controller NÃO contém lógica de negócio — apenas valida a assinatura e delega ao
- * {@link WhatsappWebhookService}.
+ * <p>Este controller NÃO contém lógica de negócio — apenas valida a assinatura e delega ao {@link
+ * WhatsappWebhookService}.
  */
 @RestController
 public class WhatsappWebhookController {
 
   private final WhatsappWebhookService webhookService;
+
   @Value("${whatsapp.verify.token:}")
   private String verifyToken;
+
   @Value("${whatsapp.app.secret:}")
   String appSecret;
 
@@ -42,8 +42,8 @@ public class WhatsappWebhookController {
   }
 
   /**
-   * Desafio de verificação da Meta. Retorna hub.challenge se hub.verify_token coincidir com o
-   * token configurado na env var WHATSAPP_VERIFY_TOKEN.
+   * Desafio de verificação da Meta. Retorna hub.challenge se hub.verify_token coincidir com o token
+   * configurado na env var WHATSAPP_VERIFY_TOKEN.
    */
   @GetMapping("/webhooks/whatsapp")
   public ResponseEntity<?> verificar(
@@ -81,8 +81,8 @@ public class WhatsappWebhookController {
   }
 
   /**
-   * Valida a assinatura HMAC-SHA256 da Meta. Calcula o hash do corpo com o app secret e compara
-   * com o header X-Hub-Signature-256 usando comparação de tempo constante.
+   * Valida a assinatura HMAC-SHA256 da Meta. Calcula o hash do corpo com o app secret e compara com
+   * o header X-Hub-Signature-256 usando comparação de tempo constante.
    */
   private boolean validarAssinatura(String signature, String payload) {
     if (signature == null || !signature.startsWith("sha256=")) {
@@ -92,7 +92,8 @@ public class WhatsappWebhookController {
     String expectedHex;
     try {
       Mac mac = Mac.getInstance("HmacSHA256");
-      SecretKeySpec key = new SecretKeySpec(appSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
+      SecretKeySpec key =
+          new SecretKeySpec(appSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
       mac.init(key);
       byte[] hmacBytes = mac.doFinal(payload.getBytes(StandardCharsets.UTF_8));
       StringBuilder sb = new StringBuilder();

@@ -1,5 +1,4 @@
--- Migration V7: colunas de auditoria de canal WhatsApp em lancamento.
---
+-- Migration V7: Adiciona colunas de auditoria de canal WhatsApp em lancamento.
 -- canal: origem do lançamento (WHATSAPP, MANUAL). Valores nulos para lançamentos
 -- criados antes desta migration (não preencher automaticamente).
 -- message_id_origem: id da mensagem WhatsApp de origem, para idempotência.
