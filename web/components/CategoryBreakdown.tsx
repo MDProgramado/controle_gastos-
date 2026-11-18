@@ -1,53 +1,53 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-import { Card } from "@/components/ui/card"
-import { CardContent } from "@/components/ui/card"
-import { CardHeader } from "@/components/ui/card"
-import { CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
-import { Button } from "@/components/ui/button"
-import { DonutChart } from "@/components/DonutChart"
+import { Card } from "@/components/ui/card";
+import { CardContent } from "@/components/ui/card";
+import { CardHeader } from "@/components/ui/card";
+import { CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
+import { DonutChart } from "@/components/DonutChart";
 
 const MONETARY = new Intl.NumberFormat("pt-BR", {
   style: "currency",
   currency: "BRL",
-})
+});
 
 const PERCENTUAL = new Intl.NumberFormat("pt-BR", {
   style: "percent",
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
-})
+});
 
 type CategoriaGasto = {
-  id: number
-  nome: string
-  total: string
-}
+  id: number;
+  nome: string;
+  total: string;
+};
 
 type CategoryBreakdownProps = {
-  categorias: CategoriaGasto[]
-  totalSaidas: string
-}
+  categorias: CategoriaGasto[];
+  totalSaidas: string;
+};
 
 export function CategoryBreakdown({
   categorias,
   totalSaidas,
 }: CategoryBreakdownProps) {
-  const totalSaidasNum = Number(totalSaidas) || 0
+  const totalSaidasNum = Number(totalSaidas) || 0;
 
   const ordenadas = [...categorias].sort(
-    (a, b) => Number(b.total) - Number(a.total)
-  )
-  const top5 = ordenadas.slice(0, 5)
+    (a, b) => Number(b.total) - Number(a.total),
+  );
+  const top5 = ordenadas.slice(0, 5);
   const outrosTotal = ordenadas
     .slice(5)
-    .reduce((sum, c) => sum + Number(c.total), 0)
+    .reduce((sum, c) => sum + Number(c.total), 0);
 
-  const hasData = totalSaidasNum > 0 && categorias.length > 0
+  const hasData = totalSaidasNum > 0 && categorias.length > 0;
 
   if (!hasData) {
     return (
@@ -64,29 +64,30 @@ export function CategoryBreakdown({
           </Button>
         </CardContent>
       </Card>
-    )
+    );
   }
 
   const rows = top5.map((categoria) => {
     const percentual =
-      totalSaidasNum > 0 ? Number(categoria.total) / totalSaidasNum : 0
+      totalSaidasNum > 0 ? Number(categoria.total) / totalSaidasNum : 0;
     return {
       id: categoria.id,
       nome: categoria.nome,
       total: MONETARY.format(Number(categoria.total)),
       percentual: PERCENTUAL.format(percentual),
       progressValue: percentual * 100,
-    }
-  })
+    };
+  });
 
-  const outrosRow = outrosTotal > 0
-    ? {
-        nome: "Outros",
-        total: MONETARY.format(outrosTotal),
-        percentual: PERCENTUAL.format(outrosTotal / totalSaidasNum),
-        progressValue: (outrosTotal / totalSaidasNum) * 100,
-      }
-    : null
+  const outrosRow =
+    outrosTotal > 0
+      ? {
+          nome: "Outros",
+          total: MONETARY.format(outrosTotal),
+          percentual: PERCENTUAL.format(outrosTotal / totalSaidasNum),
+          progressValue: (outrosTotal / totalSaidasNum) * 100,
+        }
+      : null;
 
   return (
     <Card className="w-full">
@@ -94,26 +95,28 @@ export function CategoryBreakdown({
         <CardTitle>Gastos por categoria</CardTitle>
       </CardHeader>
       <CardContent className="pt-0">
-        <div className="grid gap-6 md:flex md:flex-row md:items-start">
+        <div className="grid gap-7 md:flex md:flex-row md:items-start">
           <DonutChart categorias={categorias} totalSaidas={totalSaidas} />
 
           <div className="flex-1">
             <Card className="h-full">
               <CardHeader>
-                <CardTitle className="text-sm font-semibold">Categorias</CardTitle>
+                <CardTitle className="text-sm font-semibold">
+                  Categorias
+                </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto px">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-border">
-                        <th className="text-left pb-2 text-muted-foreground">
+                        <th className="text-left px-4 pb-2 text-muted-foreground">
                           Categoria
                         </th>
-                        <th className="text-right pb-2 text-muted-foreground">
+                        <th className="text-right px-4 pb-2 text-muted-foreground">
                           Valor
                         </th>
-                        <th className="text-right pb-2 text-muted-foreground">
+                        <th className="text-right px-4 pb-2 text-muted-foreground">
                           Percentual
                         </th>
                       </tr>
@@ -121,15 +124,15 @@ export function CategoryBreakdown({
                     <tbody>
                       {rows.map((row) => (
                         <tr key={row.id} className="border-b border-border/50">
-                          <td className="py-3">{row.nome}</td>
-                          <td className="py-3 text-right">
-                            {row.total}
-                          </td>
-                          <td className="py-3 text-right">
+                          <td className="px-4 py-3">{row.nome}</td>
+                          <td className="px-4 py-3 text-right">{row.total}</td>
+                          <td className="px-4 py-3 text-right">
                             <div className="flex items-center gap-2">
-                              <Badge variant="secondary" className="w-[40px] text-right text-[10px]">
+                              <span
+                                className="inline-flex items-center justify-center whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium bg-destructive/10 text-destructive"
+                              >
                                 {row.percentual}
-                              </Badge>
+                              </span>
                               <Progress
                                 value={row.progressValue}
                                 className="h-1 w-full"
@@ -141,15 +144,15 @@ export function CategoryBreakdown({
                       ))}
                       {outrosRow && (
                         <tr key="outros" className="border-b border-border/50">
-                          <td className="py-3">Outros</td>
-                          <td className="py-3 text-right">
-                            {outrosRow.total}
-                          </td>
-                          <td className="py-3 text-right">
+                          <td className="px-4 py-3">Outros</td>
+                          <td className="px-4 py-3 text-right">{outrosRow.total}</td>
+                          <td className="px-4 py-3 text-right">
                             <div className="flex items-center gap-2">
-                              <Badge variant="secondary" className="w-[40px] text-right text-[10px]">
+                              <span
+                                className="inline-flex items-center justify-center whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium bg-destructive/10 text-destructive"
+                              >
                                 {outrosRow.percentual}
-                              </Badge>
+                              </span>
                               <Progress
                                 value={outrosRow.progressValue}
                                 className="h-1 w-full"
@@ -168,5 +171,5 @@ export function CategoryBreakdown({
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }

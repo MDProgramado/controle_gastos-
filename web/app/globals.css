@@ -5,7 +5,7 @@
 @custom-variant dark (&:is(.dark *));
 
 html {
-  height: 100%;
+  height: 100dvh;
 }
 
 html,
@@ -15,7 +15,7 @@ body {
 }
 
 body {
-  min-height: 100%;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
   -webkit-font-smoothing: antialiased;
@@ -39,59 +39,51 @@ body {
    seção — L e R saem do padding, e as grades de 12 colunas com gap-6 caem
    exatamente nas 12 linhas. Uma por seção dentro de <main>. */
 .wrap {
-  width: 100%;
+  width: 100dvw;
   margin-inline: auto;
   padding-inline: 1rem;
 }
 
-/* ===== UI-SPEC fase 1 — cores da marca e paleta (financeiro) =====
+/* ===== UI-SPEC fase 1 — Paleta Carmesim, Obsidiana e Monocromáticos (financeiro) =====
 
-   Verde escuro #0F3D2E = fundo escuro (dark ground)
-   Verde médio  #9DBBA9 = legendas, bons ~6:1 sobre o fundo escuro
-   Verde claro   #A8D5BA = texto principal, contraste sobre fundo escuro
-   Verde marca   #4C956C = primary (botões de ação) — NUNCA texto pequeno sobre escuro
-   Verde entrada --positive = tom mais claro que primary (diferencia de "ação")
-   Vermelho      --destructive = saída
+   Preto Obsidiana   #0D0D0D = fundo escuro principal (dark ground)
+   Superfície Card   #161415 = elevação sutil sobre o fundo obsidiana
+   Cinza Pedra       #8C8C8C = legendas, textos secundários e divisórias
+   Branco Gelo       #F2F2F2 = texto principal e números de KPI (alto contraste)
+   Carmesim Profundo #73030D = primary (botões de ação e destaque principal)
+   Bordô Queimado    #732F3B = secondary / accent (estados de apoio e séries gráficas)
 */
 :root {
-  --background: #020002;
-  --foreground: #A8D5BA;
-  --muted: rgba(157, 187, 169, 0.15);
-  --muted-foreground: #9DBBA9;
-  --card: #0F3D2E;
-  --card-foreground: #A8D5BA;
-  --popover: #FFFFFF;
-  --popover-foreground: #A8D5BA;
-  --primary: #4C956C;
-  --primary-foreground: #FFFFFF;
-  --secondary: #9DBBA9;
-  --secondary-foreground: #0F3D2E;
-  --muted-foreground: #9DBBA9;
-  --accent: #164532;
-  --accent-foreground: #A8D5BA;
-  --destructive: #E5484D;
-  --destructive-foreground: #FFFFFF;
-  --border: #9DBBA9;
-  --input: #9DBBA9;
-  --ring: #A8D5BA;
-  --positive: #A8D5BA;
-  --positive-foreground: #0F3D2E;
-  --chart-1: #A8D5BA;
-  --chart-2: #9DBBA9;
-  --chart-3: #4C956C;
-  --chart-4: #164532;
-  --chart-5: #2D5A46;
+  --background: #0D0D0D;
+  --foreground: #F2F2F2;
+  --muted: rgba(140, 140, 140, 0.14);
+  --muted-foreground: #8C8C8C;
+  --card: #161415;
+  --card-foreground: #F2F2F2;
+  --popover: #1C191A;
+  --popover-foreground: #F2F2F2;
+  --primary: #73030D;
+  --primary-foreground: #F2F2F2;
+  --secondary: #732F3B;
+  --secondary-foreground: #F2F2F2;
+  --accent: rgba(115, 47, 59, 0.25);
+  --accent-foreground: #F2F2F2;
+  --destructive: #9E1B24;
+  --destructive-foreground: #F2F2F2;
+  --border: rgba(140, 140, 140, 0.25);
+  --input: rgba(140, 140, 140, 0.35);
+  --ring: #732F3B;
+  --positive: #F2F2F2;
+  --positive-foreground: #0D0D0D;
+  --chart-1: #73030D;
+  --chart-2: #732F3B;
+  --chart-3: #F2F2F2;
+  --chart-4: #8C8C8C;
+  --chart-5: #4A1C24;
   --radius: 0.75rem;
 }
 
-/* ===== Tailwind v4: mapa dos tokens de cor =====
-   O Tailwind v4 só gera utilitários de cor (.bg-card, .text-foreground,
-   .border-border...) a partir de variáveis `--color-*` declaradas em
-   `@theme`. Sem este mapa, os utilitários de cor nao sao gerados no CSS
-   compilado e todo componente com `bg-card`/`bg-popover` fica TRANSPARENTE
-   (dialog, popover do select, switch, bordas). Os valores apontam para as
-   variáveis de :root acima — trocar a paleta é mexer só lá.
-*/
+/* ===== Tailwind v4: mapa dos tokens de cor ===== */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -121,33 +113,31 @@ body {
   --color-chart-5: var(--chart-5);
 
   --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
+  --radius-md: calc(var(--radius) - 0.125rem);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
 }
 
 /* Base font 16px (UI-SPEC Typography: override do default 14px do shadcn) */
 html {
-  font-size: 16px;
+  font-size: 1rem;
 }
 
-/* Foco (UI-SPEC): outline 2px sólido com anel do tema — teclado apenas */
+/* Foco (UI-SPEC): outline 0,125rem sólido com anel do tema — teclado apenas */
 :focus-visible {
-  outline: 2px solid var(--ring);
-  outline-offset: 2px;
+  outline: 0.125rem solid var(--ring);
+  outline-offset: 0.125rem;
 }
 
-/* Hover do CTA primário "Entrar": cor primária do tema (UI-SPEC Color) */
+/* Hover do CTA primário: transição suave do carmesim para o bordô queimado */
 [data-slot="button"][data-variant="default"]:hover {
-  background-color: var(--primary);
+  background-color: var(--secondary);
 }
 
-/* Garante que focus-visible sempre mostre um indicador visível (mesmo quando
-   focus-visible:outline-none remove o outline nativo — o anel do kit em
-   focus-visible:ring-2 pode não ser lido pelo checker de consistência). */
+/* Garante que focus-visible sempre mostre um indicador visível */
 .focus-visible\:outline-none:focus-visible {
-  outline: 2px solid var(--ring);
-  outline-offset: 2px;
+  outline: 0.125rem solid var(--ring);
+  outline-offset: 0.125rem;
 }
 
 /* Ground subtil para hero e section 3 (fix no-visual/empty-area) */
@@ -156,7 +146,7 @@ html {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  opacity: 0.5;
+  opacity: 0.35;
 }
 .hero__ground {
   background: linear-gradient(180deg, var(--primary) 0%, transparent 60%);
@@ -179,7 +169,7 @@ html {
 .dark .card:hover,
 .dark [data-slot="card"]:hover {
   border-color: var(--ring);
-  background: color-mix(in oklab, var(--card) 92%, var(--foreground));
+  background: color-mix(in oklab, var(--card) 92%, var(--secondary));
 }
 /* Cards em seções (hero/resumo/análise) — borda sutil, sem sombra */
 .dark section .card,

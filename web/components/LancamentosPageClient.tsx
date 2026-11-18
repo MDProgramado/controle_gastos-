@@ -1,266 +1,343 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { LancamentosTable } from "@/components/LancamentosTable"
-import { LancamentoFormDialog } from "@/components/LancamentoFormDialog"
-import { LoteSheet } from "@/components/LoteSheet"
-import { ChatPanel } from "@/components/ai/chat-panel"
-import { Button } from "@/components/ui/button"
-import { Spinner } from "@/components/Spinner"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { DeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog"
+import * as React from "react";
+import { useRouter } from "next/navigation";
+import { LancamentosTable } from "@/components/LancamentosTable";
+import { LancamentoFormDialog } from "@/components/LancamentoFormDialog";
+import { LoteSheet } from "@/components/LoteSheet";
+import { ChatPanel } from "@/components/ai/chat-panel";
+import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/Spinner";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { DeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog";
 
 type LancamentoData = {
-  id: number
-  tipo: string
-  valor: number
-  data: string
-  descricao: string
-  categoriaNome: string
-  categoriaTipo: string
-}
+  id: number;
+  tipo: string;
+  valor: number;
+  data: string;
+  descricao: string;
+  categoriaNome: string;
+  categoriaTipo: string;
+};
 
 type CategoriaOption = {
-  id: number
-  nome: string
-  tipo: string
-  pessoal: boolean
-  ativo: boolean
-}
+  id: number;
+  nome: string;
+  tipo: string;
+  pessoal: boolean;
+  ativo: boolean;
+};
 
 type LancamentosPageClientProps = {
-  lancamentos: LancamentoData[]
-  total: number
-  categorias: CategoriaOption[]
+  lancamentos: LancamentoData[];
+  total: number;
+  categorias: CategoriaOption[];
   onCriar: (
     request: {
-      categoriaId: number
-      tipo: string
-      valor: number
-      data: string
-      descricao?: string
+      categoriaId: number;
+      tipo: string;
+      valor: number;
+      data: string;
+      descricao?: string;
     },
-  ) => Promise<LancamentoData | null>
+  ) => Promise<LancamentoData | null>;
   onEditar: (
     id: number,
     request: {
-      categoriaId: number
-      tipo: string
-      valor: number
-      data: string
-      descricao?: string
+      categoriaId: number;
+      tipo: string;
+      valor: number;
+      data: string;
+      descricao?: string;
     },
-  ) => Promise<LancamentoData | null>
-  onExcluir: (id: number) => Promise<boolean>
+  ) => Promise<LancamentoData | null>;
+  onExcluir: (id: number) => Promise<boolean>;
   onCriarLote: (
     linhas: Array<{
-      categoriaId: number
-      tipo: string
-      valor: string
-      data: string
-      descricao?: string
+      categoriaId: number;
+      tipo: string;
+      valor: string;
+      data: string;
+      descricao?: string;
     }>,
-  ) => Promise<boolean>
-}
+  ) => Promise<boolean>;
+};
 
 export function LancamentosPageClient({
   lancamentos: lancamentosIniciais,
-  total,
   categorias,
   onCriar,
   onEditar,
   onExcluir,
   onCriarLote,
 }: LancamentosPageClientProps) {
-  // Filtros
-  const [ano, setAno] = React.useState<number | null>(null)
-  const [mes, setMes] = React.useState<number | null>(null)
-  const [tipo, setTipo] = React.useState<string | null>(null)
-  const [categoriaId, setCategoriaId] = React.useState<number | null>(null)
-  const [busca, setBusca] = React.useState("")
+  const router = useRouter();
 
-  const [loading, setLoading] = React.useState(false)
-  const [error, setError] = React.useState<string | null>(null)
+  // 1. Imports e estados de filtro/paginação
+  const [paginaAtual, setPaginaAtual] = React.useState(1);
+  const [tipo, setTipo] = React.useState<string>("TODOS");
+  const [categoriaId, setCategoriaId] = React.useState<string>("TODAS");
+  const [competencia, setCompetencia] = React.useState<string>("");
+  const [busca, setBusca] = React.useState<string>("");
+
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
 
   // Dialog de criar/editar
-  const [formAberto, setFormAberto] = React.useState(false)
-  const [modo, setModo] = React.useState<"criar" | "editar">("criar")
+  const [formAberto, setFormAberto] = React.useState(false);
+  const [modo, setModo] = React.useState<"criar" | "editar">("criar");
   const [editandoLancamento, setEditandoLancamento] = React.useState<
     LancamentoData | null
-  >(null)
-
-  // Sheet de lote
+  >(null);
 
   // Dialog de exclusão
-  const [excluirId, setExcluirId] = React.useState<number | null>(null)
-  const [excluirAberto, setExcluirAberto] = React.useState(false)
+  const [excluirId, setExcluirId] = React.useState<number | null>(null);
+  const [excluirAberto, setExcluirAberto] = React.useState(false);
+
+  // Sheet de lote
+  const [loteAberto, setLoteAberto] = React.useState(false);
+
+  const abrirLote = React.useCallback(() => {
+    setLoteAberto(true);
+  }, []);
+
+  const fecharLote = React.useCallback(() => {
+    setLoteAberto(false);
+  }, []);
 
   const resetForm = React.useCallback(() => {
-    setModo("criar")
-    setEditandoLancamento(null)
-    setFormAberto(false)
-  }, [])
+    setModo("criar");
+    setEditandoLancamento(null);
+    setFormAberto(false);
+  }, []);
 
   const abrirCriar = React.useCallback(() => {
-    setModo("criar")
-    setEditandoLancamento(null)
-    setFormAberto(true)
-  }, [])
+    setModo("criar");
+    setEditandoLancamento(null);
+    setFormAberto(true);
+  }, []);
 
   const abrirEditar = React.useCallback((l: LancamentoData) => {
-    setModo("editar")
-    setEditandoLancamento(l)
-    setFormAberto(true)
-  }, [])
+    setModo("editar");
+    setEditandoLancamento(l);
+    setFormAberto(true);
+  }, []);
 
-  const handleChangeFiltros = React.useCallback(
-    (filtros: {
-      ano?: number | null
-      mes?: number | null
-      tipo?: string | null
-      categoriaId?: number | null
-      busca?: string
-    }) => {
-      if (filtros.ano !== undefined) setAno(filtros.ano)
-      if (filtros.mes !== undefined) setMes(filtros.mes)
-      if (filtros.tipo !== undefined) setTipo(filtros.tipo)
-      if (filtros.categoriaId !== undefined)
-        setCategoriaId(filtros.categoriaId)
-      if (filtros.busca !== undefined) setBusca(filtros.busca)
+  // 4. Conversão segura de valor monetário
+  const parseValorMonetario = React.useCallback(
+    (valorRaw: string | number): number => {
+      if (typeof valorRaw === "number") return valorRaw;
+      return Number.parseFloat(valorRaw.replace(/\./g, "").replace(",", "."));
     },
     [],
-  )
+  );
 
-  const handlePageChange = React.useCallback(() => {}, [])
+  // Mapeia categorias para o formato esperado pelo diálogo (id como string)
+  const categoriasParaDialog = React.useMemo(() => {
+    return categorias.map((c) => ({
+      id: String(c.id),
+      nome: c.nome,
+      tipo: c.tipo as "ENTRADA" | "SAIDA",
+      ativo: c.ativo,
+    }));
+  }, [categorias]);
 
-  const handleRetry = React.useCallback(() => {
-    setError(null)
-  }, [])
+  // 2. Filtragem real com useMemo e reset de página
+  const lancamentosFiltrados = React.useMemo(() => {
+    return lancamentosIniciais.filter((item) => {
+      if (tipo !== "TODOS" && item.tipo !== tipo) {
+        return false;
+      }
 
+      if (categoriaId !== "TODAS") {
+        const catId = Number(categoriaId);
+        const cat = categorias.find((c) => c.id === catId);
+        const matchNome =
+          cat &&
+          item.categoriaNome === cat.nome &&
+          (!item.categoriaTipo || item.categoriaTipo === cat.tipo);
+        if (!matchNome) return false;
+      }
+
+      if (competencia && !item.data.startsWith(competencia)) {
+        return false;
+      }
+
+      if (busca.trim()) {
+        const termo = busca.toLowerCase();
+        const matchDescricao = item.descricao.toLowerCase().includes(termo);
+        const matchCategoria = item.categoriaNome.toLowerCase().includes(termo);
+        if (!matchDescricao && !matchCategoria) return false;
+      }
+
+      return true;
+    });
+  }, [lancamentosIniciais, categorias, tipo, categoriaId, competencia, busca]);
+
+  // Mapeia lançamentos filtrados para o formato da tabela
+  const lancamentosParaTabela = React.useMemo(() => {
+    return lancamentosFiltrados.map((item) => {
+      const cat = categorias.find(
+        (c) =>
+          c.nome === item.categoriaNome && c.tipo === item.categoriaTipo,
+      );
+      return {
+        id: String(item.id),
+        descricao: item.descricao,
+        valor: item.valor,
+        tipo: item.tipo as "ENTRADA" | "SAIDA",
+        data: item.data,
+        categoriaId: cat ? String(cat.id) : undefined,
+        categoriaNome: item.categoriaNome,
+        categoriaTipo: item.tipo as "ENTRADA" | "SAIDA",
+      };
+    });
+  }, [lancamentosFiltrados, categorias]);
+
+  // 3. Mapeamento correto do lançamento para o modal de edição
+  const lancamentoParaForm = React.useMemo(() => {
+    if (!editandoLancamento) return null;
+
+    const categoriaEncontrada = categorias.find(
+      (c) =>
+        c.nome === editandoLancamento.categoriaNome &&
+        c.tipo === editandoLancamento.tipo,
+    );
+
+    return {
+      id: String(editandoLancamento.id),
+      descricao: editandoLancamento.descricao,
+      valor: editandoLancamento.valor,
+      tipo: editandoLancamento.tipo as "ENTRADA" | "SAIDA",
+      categoriaId: categoriaEncontrada ? String(categoriaEncontrada.id) : "",
+      data: editandoLancamento.data,
+    };
+  }, [editandoLancamento, categorias]);
+
+  // 4. handleCriar com parseValorMonetario e router.refresh()
   const handleCriar = React.useCallback(
-    async (request: {
-      categoriaId: number
-      tipo: string
-      valor: string
-      data: string
-      descricao?: string
-    }): Promise<boolean> => {
-      setLoading(true)
-      setError(null)
+    async (dados: {
+      descricao: string;
+      valor: string;
+      tipo: "ENTRADA" | "SAIDA";
+      categoriaId: string;
+      data: string;
+    }): Promise<void> => {
+      setLoading(true);
+      setError(null);
       try {
         const resultado = await onCriar({
-          categoriaId: request.categoriaId,
-          tipo: request.tipo,
-          valor: parseFloat(request.valor),
-          data: request.data,
-          descricao: request.descricao,
-        })
+          categoriaId: Number(dados.categoriaId),
+          tipo: dados.tipo,
+          valor: parseValorMonetario(dados.valor),
+          data: dados.data,
+          descricao: dados.descricao,
+        });
         if (resultado) {
-          resetForm()
-          // Atualiza a lista local
-          // (em um app real, isso viria do servidor via revalidação)
-          window.location.reload()
-          return true
+          resetForm();
+          router.refresh();
         } else {
-          setError("Erro ao criar lançamento. Tente novamente.")
-          return false
+          setError("Erro ao criar lançamento. Tente novamente.");
         }
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
     },
-    [onCriar, resetForm],
-  )
+    [onCriar, resetForm, router, parseValorMonetario],
+  );
 
+  // 4. handleEditar com parseValorMonetario e router.refresh()
   const handleEditar = React.useCallback(
-    async (request: {
-      categoriaId: number
-      tipo: string
-      valor: string
-      data: string
-      descricao?: string
-    }): Promise<boolean> => {
-      if (!editandoLancamento) return false
-      setLoading(true)
-      setError(null)
+    async (dados: {
+      descricao: string;
+      valor: string;
+      tipo: "ENTRADA" | "SAIDA";
+      categoriaId: string;
+      data: string;
+    }): Promise<void> => {
+      if (!editandoLancamento) return;
+      setLoading(true);
+      setError(null);
       try {
         const resultado = await onEditar(editandoLancamento.id, {
-          categoriaId: request.categoriaId,
-          tipo: request.tipo,
-          valor: parseFloat(request.valor),
-          data: request.data,
-          descricao: request.descricao,
-        })
+          categoriaId: Number(dados.categoriaId),
+          tipo: dados.tipo,
+          valor: parseValorMonetario(dados.valor),
+          data: dados.data,
+          descricao: dados.descricao,
+        });
         if (resultado) {
-          resetForm()
-          window.location.reload()
-          return true
+          resetForm();
+          router.refresh();
         } else {
-          setError("Erro ao editar lançamento. Tente novamente.")
-          return false
+          setError("Erro ao editar lançamento. Tente novamente.");
         }
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
     },
-    [onEditar, editandoLancamento, resetForm],
-  )
+    [onEditar, editandoLancamento, resetForm, router, parseValorMonetario],
+  );
 
+  // 4. handleExcluirConfirmar com router.refresh()
   const handleExcluirConfirmar = React.useCallback(async () => {
-    if (!excluirId) return
-    setLoading(true)
-    setError(null)
+    if (!excluirId) return;
+    setLoading(true);
+    setError(null);
     try {
-      const resultado = await onExcluir(excluirId)
+      const resultado = await onExcluir(excluirId);
       if (resultado) {
-        setExcluirAberto(false)
-        setExcluirId(null)
-        window.location.reload()
+        setExcluirAberto(false);
+        setExcluirId(null);
+        router.refresh();
       } else {
-        setError("Erro ao excluir lançamento. Tente novamente.")
+        setError("Erro ao excluir lançamento. Tente novamente.");
       }
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [onExcluir, excluirId])
+  }, [onExcluir, excluirId, router]);
 
+  // 4. handleCriarLote com router.refresh()
   const handleCriarLote = React.useCallback(
-    async (linhas: Array<{
-      categoriaId: number
-      tipo: string
-      valor: string
-      data: string
-      descricao?: string
-    }>): Promise<boolean> => {
-      setLoading(true)
-      setError(null)
+    async (
+      linhas: Array<{
+        categoriaId: number;
+        tipo: string;
+        valor: string;
+        data: string;
+        descricao?: string;
+      }>,
+    ): Promise<boolean> => {
+      setLoading(true);
+      setError(null);
       try {
-        const resultado = await onCriarLote(linhas)
+        const resultado = await onCriarLote(linhas);
         if (resultado) {
-          window.location.reload()
-          return true
+          router.refresh();
+          return true;
         } else {
-          setError("Erro ao salvar lote. Tente novamente.")
-          return false
+          setError("Erro ao salvar lote. Tente novamente.");
+          return false;
         }
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
     },
-    [onCriarLote],
-  )
+    [onCriarLote, router],
+  );
 
-  // Resumo real do mês (soma dos lançamentos recebidos) — o momento
-  // counter-rolls da página: os números rolam uma vez ao entrar na tela.
+  // Resumo real do mês (soma dos lançamentos recebidos)
   const resumo = React.useMemo(() => {
-    let entradas = 0
-    let saidas = 0
+    let entradas = 0;
+    let saidas = 0;
     for (const l of lancamentosIniciais) {
-      if (l.tipo === "ENTRADA") entradas += l.valor
-      else saidas += Math.abs(l.valor)
+      if (l.tipo === "ENTRADA") entradas += l.valor;
+      else saidas += Math.abs(l.valor);
     }
-    return { entradas, saidas, saldo: entradas - saidas }
-  }, [lancamentosIniciais])
+    return { entradas, saidas, saldo: entradas - saidas };
+  }, [lancamentosIniciais]);
 
   const resumoFmt = React.useMemo(
     () =>
@@ -269,13 +346,13 @@ export function LancamentosPageClient({
         currency: "BRL",
       }),
     [],
-  )
+  );
 
   return (
     <div className="space-y-6">
-      {/* Botão de ação principal */}
+      {/* Botões de ação principal */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-3">
           <Button
             type="button"
             variant="default"
@@ -284,20 +361,27 @@ export function LancamentosPageClient({
             className="h-11"
           >
             <span className="flex items-center gap-1">
-              {
-                loading
-                  ? (
-                    <span className="flex items-center gap-1">
-                      <Spinner className="mr-1" />
-                      Criando…
-                    </span>
-                  )
-                  : (
-                    <>
-                      <span className="mr-1">+</span> Novo lançamento
-                    </>
-                  )
-              }
+              {loading ? (
+                <span className="flex items-center gap-1">
+                  <Spinner className="mr-1" />
+                  Criando…
+                </span>
+              ) : (
+                <>
+                  <span className="mr-1">+</span> Novo lançamento
+                </>
+              )}
+            </span>
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={abrirLote}
+            disabled={loading}
+            className="h-11"
+          >
+            <span className="flex items-center gap-1">
+              Lançar em lote
             </span>
           </Button>
         </div>
@@ -308,9 +392,7 @@ export function LancamentosPageClient({
         )}
       </div>
 
-      {/* Resumo do mês — counter-rolls (números reais da listagem).
-          1 coluna no mobile, 3 no md+. O botão de filtro fica à direita
-          do valor (não embaixo, centralizado). */}
+      {/* Resumo do mês — counter-rolls */}
       <div
         className="grid grid-cols-1 gap-x-6 gap-y-6 md:grid-cols-3"
         data-moment="counter-rolls"
@@ -366,7 +448,7 @@ export function LancamentosPageClient({
             <button
               type="button"
               className="shrink-0 text-xs text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              onClick={() => setTipo(null)}
+              onClick={() => setTipo("TODOS")}
               aria-label="Mostrar todas"
             >
               Todas
@@ -375,34 +457,87 @@ export function LancamentosPageClient({
         </div>
       </div>
 
-      {/* Tabela de lançamentos + chat. No mobile tudo empilhado (1 coluna);
-          no lg+ o chat vira coluna lateral ao lado da tabela. */}
+      {/* Filtros + Tabela + Chat */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         <div className="lg:col-span-8">
+          {/* Filtros */}
+          <div className="space-y-5">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground">
+                  Tipo
+                </label>
+                <select
+                  value={tipo}
+                  onChange={(e) => setTipo(e.target.value)}
+                  className="w-full rounded-md border bg-background px-3 py-1.5 text-sm"
+                >
+                  <option value="TODOS">Todos os tipos</option>
+                  <option value="ENTRADA">Entradas</option>
+                  <option value="SAIDA">Saídas</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground">
+                  Categoria
+                </label>
+                <select
+                  value={categoriaId}
+                  onChange={(e) => setCategoriaId(e.target.value)}
+                  className="w-full rounded-md border bg-background px-3 py-1.5 text-sm"
+                >
+                  <option value="TODAS">Todas as categorias</option>
+                  {categorias.map((cat) => (
+                    <option key={cat.id} value={String(cat.id)}>
+                      {cat.nome}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground">
+                  Competência
+                </label>
+                <input
+                  type="month"
+                  value={competencia}
+                  onChange={(e) => setCompetencia(e.target.value)}
+                  className="w-full rounded-md border bg-background px-3 py-1.5 text-sm"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground">
+                  Busca
+                </label>
+                <input
+                  type="text"
+                  value={busca}
+                  onChange={(e) => setBusca(e.target.value)}
+                  placeholder="Descrição ou categoria"
+                  className="w-full rounded-md border bg-background px-3 py-1.5 text-sm"
+                />
+              </div>
+            </div>
+          </div>
+
           <LancamentosTable
-            lancamentos={lancamentosIniciais}
-            total={total}
-            categorias={categorias}
-            ano={ano}
-            mes={mes}
-            tipo={tipo}
-            categoriaId={categoriaId}
-            busca={busca}
-            onChangeFiltros={handleChangeFiltros}
-            onPageChange={handlePageChange}
-            loading={loading}
-            error={error}
-            onRetry={handleRetry}
-            onEditar={abrirEditar}
-            onExcluir={(id) => {
-              setExcluirId(id)
-              setExcluirAberto(true)
+            lancamentos={lancamentosParaTabela}
+            paginaAtual={paginaAtual}
+            pageSize={10}
+            onPageChange={setPaginaAtual}
+            onEdit={(item) => {
+              const original = lancamentosIniciais.find(
+                (l) => String(l.id) === item.id,
+              );
+              if (original) abrirEditar(original);
+            }}
+            onDelete={(item) => {
+              setExcluirId(Number(item.id));
+              setExcluirAberto(true);
             }}
           />
         </div>
 
-        {/* Chat com IA — no mobile ocupa a largura toda abaixo da tabela;
-            no lg+ vira coluna lateral ao lado dela. */}
         <div className="lg:col-span-4">
           <ChatPanel />
         </div>
@@ -412,41 +547,31 @@ export function LancamentosPageClient({
       <LancamentoFormDialog
         isOpen={formAberto}
         onClose={resetForm}
-        onSubmit={
-          modo === "criar" ? handleCriar : handleEditar
-        }
-        categorias={categorias}
-        modo={modo}
-        lancamento={editandoLancamento
-          ? {
-              id: editandoLancamento.id,
-              categoriaId: editandoLancamento.id, // placeholder - categorias seriam buscadas separadamente
-              tipo: editandoLancamento.tipo,
-              valor: editandoLancamento.valor,
-              data: editandoLancamento.data,
-              descricao: editandoLancamento.descricao,
-            }
-          : undefined}
+        onSubmit={modo === "criar" ? handleCriar : handleEditar}
+        categorias={categoriasParaDialog}
+        lancamento={lancamentoParaForm}
       />
 
       {/* Sheet de lote */}
-      <LoteSheet
-        onClose={() => {}}
-        onSubmit={handleCriarLote}
-        categorias={categorias}
-      />
+      {loteAberto && (
+        <LoteSheet
+          onClose={fecharLote}
+          onSubmit={handleCriarLote}
+          categorias={categorias}
+        />
+      )}
 
       {/* Dialog de exclusão */}
       <DeleteConfirmationDialog
         isOpen={excluirAberto}
         onConfirm={handleExcluirConfirmar}
         onClose={() => {
-          setExcluirAberto(false)
-          setExcluirId(null)
+          setExcluirAberto(false);
+          setExcluirId(null);
         }}
         action="excluir"
         target="lançamento"
       />
     </div>
-  )
+  );
 }

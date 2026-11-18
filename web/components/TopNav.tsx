@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import Image from 'next/image';
 
 type RouteItem = {
   href: string;
@@ -47,10 +48,15 @@ export function TopNav({ activeRoute, userRole }: TopNavProps) {
                 : "text-muted-foreground hover:text-foreground",
             )}
           >
-            <span className="text-foreground font-semibold text-sm">Controle</span>
-            <span className="text-muted-foreground font-semibold text-sm">
-              Financeiro
-            </span>
+            <Image 
+            src="ogum.svg"
+            alt="logo"
+            width={100}
+            height={100}
+            />
+            <span className="text-foreground font-semibold text-sm">PLUTO </span>
+            
+            
           </Link>
         </div>
 

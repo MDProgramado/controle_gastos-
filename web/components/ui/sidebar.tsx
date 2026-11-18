@@ -9,13 +9,16 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
-import { Home, DollarSign, Layout, LogOut, ChevronLeft, ChevronRight, FileUp } from "lucide-react"
+import { Home, DollarSign, Layout, LogOut, ChevronLeft, ChevronRight, FileUp, Receipt } from "lucide-react"
+import Image from "next/image"
+import Link from "next/link"
 
 const sidebarItems = [
   { href: "/", label: "Dashboard", icon: Home },
   { href: "/lancamentos", label: "Lançamentos", icon: DollarSign },
   { href: "/categorias", label: "Categorias", icon: Layout },
   { href: "/importacoes", label: "Importar PDF", icon: FileUp },
+  { href: "/contas-a-pagar", label: "Contas a Pagar", icon: Receipt },
 ] as const
 
 // ── Contexto (SidebarProvider) ──────────────────────────────────────────
@@ -115,11 +118,16 @@ function SidebarItem({
   isActive: boolean
   isCollapsed: boolean
 }) {
+  const { onMobileOpenChange } = useSidebar()
+  const handleClick = () => {
+    onMobileOpenChange(false)
+  }
+
   return (
-    <a
+    <Link
       href={item.href}
+      onClick={handleClick}
       className={cn(
-        // h-10: alvo de toque de 40px no mobile.
         "flex h-10 items-center gap-3 rounded-lg border border-transparent px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
         isActive
           ? "bg-accent text-accent-foreground"
@@ -129,7 +137,7 @@ function SidebarItem({
     >
       <item.icon className="h-5 w-5 shrink-0" />
       {!isCollapsed && <span>{item.label}</span>}
-    </a>
+    </Link>
   )
 }
 
@@ -160,6 +168,12 @@ export function SidebarContent({
   ...props
 }: SidebarContentProps) {
   const { collapsed, onCollapseChange, mobileOpen, onMobileOpenChange } = useSidebar()
+  const pathname = usePathname()
+
+  // Fecha o drawer mobile ao navegar entre rotas
+  React.useEffect(() => {
+    onMobileOpenChange(false)
+  }, [pathname, onMobileOpenChange])
 
   // Desktop: sidebar fixo no fluxo (não position:fixed para não sobrepor conteúdo)
   const desktop = (
@@ -173,9 +187,14 @@ export function SidebarContent({
     >
       <div className="flex items-center justify-between px-3 py-4 border-b border-border">
         <div className="flex items-center gap-2">
-          <span className="font-semibold text-lg tracking-tight">Controle</span>
+          <Image 
+            src="ogum.svg"
+            alt="logo"
+            width={50}
+            height={50} 
+            />
           <span className="text-muted-foreground text-xs font-semibold">
-            Financeiro
+            PLUTON
           </span>
         </div>
         <button
@@ -202,12 +221,12 @@ export function SidebarContent({
   // Mobile: Sheet (drawer) — não ocupa largura do conteúdo
   const mobile = (
     <Sheet open={mobileOpen} onOpenChange={onMobileOpenChange}>
-      <SheetContent side="left" className="w-[280px]">
+      <SheetContent side="left" className="max-h-[90dvh] overflow-y-auto w-70">
         <SheetHeader className="flex items-center justify-between">
           {/* SheetTitle (e nao um span): o Radix usa este elemento como
               rotulo acessivel do dialog. */}
           <SheetTitle className="px-3 py-4 text-lg font-semibold tracking-tight">
-            Controle Financeiro
+            PLUTON
           </SheetTitle>
         </SheetHeader>
         <div className="flex-1 overflow-y-auto">

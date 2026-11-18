@@ -286,7 +286,7 @@ export function ChatPanel() {
   return (
     // Altura fixa: no mobile o chat ocupa a largura toda abaixo dos
     // graficos; no lg+ vira coluna lateral ao lado deles.
-    <Card className="flex h-[480px] flex-col border border-input bg-card lg:h-full">
+    <Card className="flex flex-col border border-input bg-card max-h-[90dvh] overflow-hidden">
       <CardHeader className="px-4 py-3 flex items-center justify-between border-b">
         <div className="flex items-center gap-2">
           <CardTitle className="text-sm font-semibold">Assistente</CardTitle>

@@ -35,13 +35,14 @@ test.describe("Categorias", () => {
     await page.goto("/categorias");
     await page.waitForTimeout(2000);
 
-    const btnCriar = page.getByRole("button", { name: /criar categoria/i });
+    const btnCriar = page.getByRole("button", { name: /\+?\s*Nova categoria/i });
     if ((await btnCriar.count()) > 0) {
       await btnCriar.click();
       await page.waitForTimeout(1000);
 
       await page.getByLabel("Nome").fill("Categoria Teste E2E");
-      await page.getByLabel("Tipo").selectOption("ENTRADA");
+      await page.getByLabel("Tipo").click();
+      await page.getByRole("option", { name: /entrada/i }).click();
       await page.getByRole("button", { name: /salvar/i }).click();
       await page.waitForTimeout(2000);
     }

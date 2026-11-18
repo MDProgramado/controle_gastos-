@@ -1,6 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { LoginForm } from "@/components/LoginForm";
 import { SkipLink } from "@/components/SkipLink";
+import Image from "next/image";
 
 // Cache Components (Next 16): o banner depende de searchParams (request time) —
 // a rota bloqueia no servidor em vez de entrar no shell estático (docs oficiais).
@@ -25,11 +26,18 @@ export default async function LoginPage({
         id="main-content"
         className="flex min-h-dvh w-full flex-col items-center justify-center px-4 py-12"
       >
-      <div className="w-full max-w-[400px]">
+      <div className="w-full max-w-100">
         <header className="mb-6 text-center">
           <h1 className="text-[28px] leading-[1.2] font-semibold text-foreground">
-            Controle Financeiro
+            Pluton - Seu assistente pessoal
           </h1>
+          {/* <Image 
+          src="/ogum.svg"
+          alt="logo"
+          width={100}
+          height={100}
+          className="mx-auto my-4"
+          /> */}
           <p className="mt-1 text-base text-muted-foreground">Entre com seu e-mail e senha.</p>
         </header>
 

@@ -20,14 +20,6 @@ import { formatarDataIso, rotuloOrigem } from "@/components/importacoes/Importac
  * (nunca `window.confirm`). Recarrega quando `refreshKey` muda (após uma
  * confirmação na página) e após cada descarte.
  */
-type ImportacoesPendentesProps = {
-  /** Primeira página buscada no Server Component. */
-  inicial: ImportacaoHistorico | null
-  /** Incrementado pelo pai depois de confirmar — força re-fetch. */
-  refreshKey: number
-  /** Chamado quando a API devolve 401 (sessão expirada). */
-  onSessaoExpirada: () => void
-}
 
 const ESTADO: Record<string, { texto: string; variant: "success" | "warning" | "outline" | "destructive" }> = {
   ANALISADO: { texto: "Aguardando revisão", variant: "warning" },
@@ -37,11 +29,20 @@ const ESTADO: Record<string, { texto: string; variant: "success" | "warning" | "
   SEM_TEXTO: { texto: "Sem texto", variant: "outline" },
   ERRO: { texto: "Erro", variant: "destructive" },
 }
+type ImportacoesPendentesProps = {
+  inicial: ImportacaoHistorico | null
+  refreshKey: number
+  onSessaoExpirada: () => void
+  onRevisar: (id: number) => void
+  carregandoRevisaoId?: number | null
+}
 
 export function ImportacoesPendentes({
   inicial,
   refreshKey,
   onSessaoExpirada,
+  onRevisar,
+  carregandoRevisaoId = null,
 }: ImportacoesPendentesProps) {
   const [lista, setLista] = React.useState<ImportacaoHistoricoResumo[]>(
     inicial?.content ?? [],
@@ -162,18 +163,32 @@ export function ImportacoesPendentes({
                         <Badge variant={estado.variant}>{estado.texto}</Badge>
                       </td>
                       <td className="p-4 text-right">
+
                         {pendente && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="text-destructive hover:text-destructive"
-                            onClick={() => setAlvo(importacao)}
-                            disabled={ocupado}
-                          >
-                            Descartar
-                          </Button>
-                        )}
+  <div className="flex items-center justify-end gap-2">
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      onClick={() => onRevisar(importacao.id)}
+      disabled={ocupado || carregandoRevisaoId !== null}
+    >
+      {carregandoRevisaoId === importacao.id ? "Abrindo…" : "Revisar"}
+    </Button>
+    <Button
+      type="button"
+      variant="ghost"
+      size="sm"
+      className="text-destructive hover:text-destructive"
+      onClick={() => setAlvo(importacao)}
+      disabled={ocupado || carregandoRevisaoId !== null}
+    >
+      Descartar
+    </Button>
+  </div>
+)}
+
+
                       </td>
                     </tr>
                   )
@@ -202,17 +217,28 @@ export function ImportacoesPendentes({
                     </span>
                   </div>
                   {pendente && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="mt-2 text-destructive hover:text-destructive"
-                      onClick={() => setAlvo(importacao)}
-                      disabled={ocupado}
-                    >
-                      Descartar
-                    </Button>
-                  )}
+  <div className="flex items-center justify-end gap-2">
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      onClick={() => onRevisar(importacao.id)}
+      disabled={ocupado || carregandoRevisaoId !== null}
+    >
+      {carregandoRevisaoId === importacao.id ? "Abrindo…" : "Revisar"}
+    </Button>
+    <Button
+      type="button"
+      variant="ghost"
+      size="sm"
+      className="text-destructive hover:text-destructive"
+      onClick={() => setAlvo(importacao)}
+      disabled={ocupado || carregandoRevisaoId !== null}
+    >
+      Descartar
+    </Button>
+  </div>
+)}
                 </li>
               )
             })}

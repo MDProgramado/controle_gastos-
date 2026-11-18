@@ -1,13 +1,20 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
+import { Plus, ArrowUpRight, Sparkles, ShieldCheck, AlertTriangle } from "lucide-react";
 import { getMe, getDashboard } from "@/lib/api";
-import { Sidebar } from "@/components/ui/sidebar";
-import { SidebarContent } from "@/components/ui/sidebar";
-import { SidebarInset } from "@/components/ui/sidebar";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarInset,
+} from "@/components/ui/sidebar";
 import { Header } from "@/components/header";
 import { MonthSelector } from "@/components/MonthSelector";
 import { DashboardKPIs } from "@/components/DashboardKPIs";
 import { CategoryBreakdown } from "@/components/CategoryBreakdown";
-import { MonthlyComparison, type MonthlyData } from "@/components/MonthlyComparison";
+import {
+  MonthlyComparison,
+  type MonthlyData,
+} from "@/components/MonthlyComparison";
 import { SkipLink } from "@/components/SkipLink";
 import { KitBoot } from "@/components/KitBoot";
 
@@ -15,11 +22,16 @@ export const instant = false;
 
 const MESES = 6;
 
-export default async function Home({
-  searchParams,
-}: {
-  searchParams: { [key: string]: string | string[] | undefined };
-}) {
+
+interface PageProps {
+  searchParams: Promise<{
+    mes?: string;
+    tipo?: string;
+    categoriaId?: string;
+  }>;
+}
+
+export default async function Home({ searchParams }: PageProps) {
   const usuario = await getMe();
   if (!usuario) {
     redirect("/login?expirada=1");
@@ -40,18 +52,18 @@ export default async function Home({
     redirect("/login?expirada=1");
   }
 
-  // Últimos 6 meses (terminando no mês selecionado) — dados REAIS para a
-  // comparação mensal: o backend não expõe /comparacao-mensal, então pedimos
-  // um dashboard por mês (o mês atual reaproveita a busca já feita acima).
+  // Últimos 6 meses (terminando no mês selecionado)
   const referencias = Array.from({ length: MESES }, (_, i) => {
     const d = new Date(ano, mes - 1 - i, 1);
     return { ano: d.getFullYear(), mes: d.getMonth() + 1, d };
   });
+
   const dashboards = await Promise.all(
     referencias.map((r, i) =>
       i === 0 ? Promise.resolve(dados) : getDashboard(r.ano, r.mes),
     ),
   );
+
   const comparacao: MonthlyData[] = referencias
     .map((r, i) => ({
       mes: r.d
@@ -63,80 +75,126 @@ export default async function Home({
     }))
     .reverse();
 
+  // Indicadores de UX para feedback imediato
+  const entradas = Number(dados.totalEntradas ?? 0);
+  const saidas = Number(dados.totalSaidas ?? 0);
+  const taxaComprometimento =
+    entradas > 0 ? Math.min(Math.round((saidas / entradas) * 100), 100) : 0;
+  const alertaComprometimento = taxaComprometimento >= 80;
+
   return (
     <Sidebar>
       <SkipLink />
       <SidebarContent />
       <SidebarInset>
-        <div className="flex h-full w-full flex-col overflow-hidden">
-          <Header titulo="Visão geral" />
-          <main
-            id="main-content"
-            className="flex-1 overflow-y-auto bg-background px-4 py-6 md:px-8 lg:px-10"
-          >
-            <div className="mx-auto w-full max-w-[1280px]">
-            {/* Hero — entra uma vez no carregamento (data-enter + head line do motion.md) */}
-            <section
-              className="hero flex flex-col justify-start md:min-h-full"
-              data-enter
-              data-screen="free"
-              aria-labelledby="hero-h"
+        <div className="flex h-dvh w-full overflow-hidden bg-background text-foreground">
+          <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+            <Header titulo="Visão geral" />
+
+            <main
+              id="main-content"
+              className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6"
             >
-              <div className="w-full">
-                <div className="flex flex-col gap-4 sm:gap-8 lg:flex-row lg:items-start lg:justify-between">
-                  <div className="hero-text min-w-0 flex-1">
-                    {/* No mobile o título já aparece no cabeçalho (a sidebar
-                        vira drawer): o h1 fica só para leitores de tela,
-                        evitando repetir o mesmo texto duas vezes na tela. */}
+            {/* Container principal com ritmo vertical baseado em Phi (1.618rem / 2.618rem) */}
+            <div className="mx-auto flex w-full max-w-7xl flex-col gap-7 lg:gap-[2.618rem]">
+              
+              {/* 1. CABEÇALHO DE COMANDO (Proporção Áurea interna 1.618fr : 1fr) */}
+              <section
+                className="hero relative overflow-hidden rounded-2xl border border-border/70 bg-card p-5 sm:p-[1.618rem]"
+                data-enter
+                data-screen="free"
+                aria-labelledby="hero-h"
+              >
+                {/* Luz ambiental sutil da paleta no canto superior direito */}
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-primary/15 blur-3xl"
+                />
+
+                <div className="flex w-full flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+                  {/* Bloco texto: Identidade e Contexto */}
+                  <div className="min-w-0 flex-1 max-w-2xl">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-border bg-background/70 px-3 py-1 text-xs font-medium text-muted-foreground">
+                      <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                      <span>Painel Executivo</span>
+                    </div>
+
+                    {/* Razão tipográfica 1.618rem (título) : 1rem (subtítulo) */}
                     <h1
                       id="hero-h"
-                      className="sr-only text-2xl font-semibold tracking-tight text-foreground md:not-sr-only md:text-3xl"
+                      className="sr-only text-[1.618rem] font-semibold leading-tight tracking-tight text-foreground md:not-sr-only"
                     >
                       Visão geral
                     </h1>
-                    <p className="hero__lead mt-2 line-clamp-2 max-w-[52ch] text-sm text-muted-foreground">
-                      Entradas, saídas e saldo do mês em uma tela só —
-                      lançamentos aparecem imediatamente após salvar.
+
+                    <p className="max-w-[55ch] text-[0.9375rem] leading-relaxed text-muted-foreground">
+                      Acompanhe entradas, saídas e a saúde do seu fluxo mensal.
+                      Novos lançamentos atualizam os indicadores em tempo real.
                     </p>
-                    <div className="mt-6">
-                      <MonthSelector />
-                    </div>
-                    {/* Hero CTA — ação principal da tela */}
-                    <form action="/lancamentos" className="mt-4">
-                      <button
-                        type="submit"
-                        className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:w-auto"
-                      >
-                        <span>+</span> Novo lançamento
-                      </button>
-                    </form>
-                    {/* Hero visual para o kit (no-visual/empty-area) */}
-                    <div className="mt-6 sm:mt-8 hidden sm:flex justify-center">
-                      <svg className="w-[320px] h-[200px] text-primary/10" fill="none" stroke="currentColor" strokeWidth="1" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                      </svg>
-                    </div>
                   </div>
-                  <div className="w-full shrink-0 lg:w-[420px]">
-                    {/* espaço reservado para visual do produto (sem preview de demonstração) */}
+
+                  {/* Bloco Controles de Ação (Lei de Fitts - alvos amplos e agrupados) */}
+                  <div className="w-full lg:w-auto shrink-0 flex flex-col gap-3 sm:flex-row sm:items-center lg:justify-end">
+                    <MonthSelector
+                      mesAtual={`${ano}-${String(mes).padStart(2, "0")}`}
+                    />
+
+                    <Link
+                      href="/lancamentos"
+                      className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-medium text-primary-foreground shadow-sm transition-all duration-200 hover:bg-primary/90 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span>Novo lançamento</span>
+                    </Link>
                   </div>
                 </div>
-              </div>
-            </section>
+              </section>
 
-            {/* Resumo — a linha de números é o momento counter-rolls da página */}
-            <section
-              className="flex flex-col justify-start py-10 md:min-h-screen md:justify-center"
-              data-screen="free"
-              aria-labelledby="resumo-h"
-            >
-              <div className="w-full">
-                <h2
-                  id="resumo-h"
-                  className="mb-6 text-lg font-semibold text-foreground"
-                >
-                  Resumo do mês
-                </h2>
+              {/* 2. KPIs PRINCIPAIS + INDICADOR VISUAL DE SAÚDE FINANCEIRA */}
+              <section
+                data-screen="free"
+                aria-labelledby="resumo-h"
+                className="space-y-4"
+              >
+                <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+                  <h2
+                    id="resumo-h"
+                    className="text-xs font-semibold uppercase tracking-widest text-muted-foreground"
+                  >
+                    Resumo do período
+                  </h2>
+
+                  {/* Feedback visual de comprometimento da renda (Redução de carga cognitiva) */}
+                  {entradas > 0 && (
+                    <div className="flex items-center gap-3 rounded-lg border border-border/60 bg-card/60 px-3 py-1.5 text-xs">
+                      <span className="flex items-center gap-1.5 text-muted-foreground">
+                        {alertaComprometimento ? (
+                          <AlertTriangle className="h-3.5 w-3.5 text-primary" />
+                        ) : (
+                          <ShieldCheck className="h-3.5 w-3.5 text-foreground" />
+                        )}
+                        Renda comprometida:
+                      </span>
+
+                      <div className="flex items-center gap-2">
+                        <div className="h-1.5 w-20 overflow-hidden rounded-full bg-muted">
+                          <div
+                            className={`h-full rounded-full transition-all duration-500 ${
+                              alertaComprometimento
+                                ? "bg-primary"
+                                : "bg-foreground"
+                            }`}
+                            style={{ width: `${taxaComprometimento}%` }}
+                          />
+                        </div>
+                        <strong className="font-semibold tabular-nums text-foreground">
+                          {taxaComprometimento}%
+                        </strong>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <DashboardKPIs
                   totalEntradas={Number(dados.totalEntradas)}
                   totalSaidas={Number(dados.totalSaidas)}
@@ -156,48 +214,52 @@ export default async function Home({
                     Number(dados.saldo) - Number(dados.variacaoSaldo)
                   }
                 />
-              </div>
-            </section>
+              </section>
 
-            {/* Análise — gastos por categoria e comparação dos 6 meses.
-                No mobile tudo empilhado (1 coluna); no lg+ os dois
-                gráficos lado a lado. O chat de IA fica em /lancamentos. */}
-            <section
-              className="flex flex-col justify-start py-10 md:min-h-screen md:justify-center"
-              data-screen="free"
-              aria-labelledby="analise-h"
-            >
-              <div className="w-full">
-                <h2
-                  id="analise-h"
-                  className="mb-6 text-lg font-semibold text-foreground"
-                >
-                  Análise do mês
-                </h2>
-                <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-                  <div className="lg:col-span-6">
+              {/* 3. ANÁLISE GRÁFICA EM PROPORÇÃO ÁUREA (61.8% Evolução | 38.2% Categorias) */}
+              <section
+                data-screen="free"
+                aria-labelledby="analise-h"
+                className="space-y-4"
+              >
+                <div className="flex items-center justify-between">
+                  <h2
+                    id="analise-h"
+                    className="text-xs font-semibold uppercase tracking-widest text-muted-foreground"
+                  >
+                    Análise estratégica
+                  </h2>
+
+                  <Link
+                    href="/lancamentos"
+                    className="group inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  >
+                    <Sparkles className="h-3.5 w-3.5 text-primary transition-transform group-hover:scale-110" />
+                    <span>Explorar com IA</span>
+                    <ArrowUpRight className="h-3.5 w-3.5 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                  </Link>
+                </div>
+
+                {/* Grid de comparação mensal e categorias: empilhado no mobile, lado a lado no desktop xl+ */}
+                <div className="grid w-full grid-cols-1 gap-6 xl:grid-cols-2">
+                  <div className="min-w-0 w-full">
+                    <MonthlyComparison meses={comparacao} />
+                  </div>
+                  <div className="min-w-0 w-full">
                     <CategoryBreakdown
                       categorias={dados.categorias}
                       totalSaidas={dados.totalSaidas}
                     />
                   </div>
-                  <div className="lg:col-span-6">
-                    <MonthlyComparison meses={comparacao} />
-                  </div>
                 </div>
-                {/* motion.js/moments.js só DEPOIS da hidratação deste segmento */}
+
                 <KitBoot />
-                {/* Visual para o kit (no-visual/empty-area na seção de análise) */}
-                <div className="mt-12 flex justify-center">
-                  <svg className="w-[260px] h-[150px] text-muted-foreground/20" fill="none" stroke="currentColor" strokeWidth="1" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v1m-6 0a2 2 0 002-2h2a2 2 0 002 2m-6 0a2 2 0 012-2h2a2 2 0 012 2v1m-6 0a2 2 0 002-2h2a2 2 0 002 2v1m0 0a2 2 0 012 2v1m-6-6a2 2 0 012-2h2a2 2 0 012 2v1m0 0a2 2 0 002-2h2a2 2 0 002 2v1m0 0a2 2 0 012 2z" />
-                  </svg>
-                </div>
-              </div>
-            </section>
+              </section>
+
             </div>
           </main>
         </div>
+      </div>
       </SidebarInset>
     </Sidebar>
   );
