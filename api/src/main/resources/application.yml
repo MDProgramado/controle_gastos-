@@ -5,6 +5,14 @@ server:
 spring:
   application:
     name: controle-financeiro-api
+  config:
+    import:
+      - "optional:file:.env[.properties]"
+      - "optional:file:api/.env[.properties]"
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:}
+    username: ${SPRING_DATASOURCE_USERNAME:}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
   jpa:
     # Flyway é dono do schema; Hibernate não toca no schema
     hibernate:

@@ -18,13 +18,12 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * Webhook público da Meta Cloud API (WhatsApp).
  *
- * <p>GET /webhooks/whatsapp — responde o desafio de verificação da Meta (hub.verify_token).
+ * <p>GET /webhooks/whatsapp — responde o desafio de verificação da Meta (hub.verify_token). POST
+ * /webhooks/whatsapp — valida X-Hub-Signature-256 com o app secret, processa as mensagens e
+ * responde 200 à Meta em até 5 segundos (processamento pesado em fila assíncrona).
  *
- * <p>POST /webhooks/whatsapp — valida X-Hub-Signature-256 com o app secret. Se o segredo estiver
- * ausente ou a assinatura for inválida, responde 401 e nada processa.
- *
- * <p>Este controller NÃO contém lógica de negócio — apenas valida a assinatura e delega ao {@link
- * WhatsappWebhookService}.
+ * <p>Este controller NÃO contém lógica de negócio — apenas delega ao {@link
+ * WhatsappWebhookService}, que chama os mesmos services do site.
  */
 @RestController
 public class WhatsappWebhookController {
@@ -35,10 +34,18 @@ public class WhatsappWebhookController {
   private String verifyToken;
 
   @Value("${whatsapp.app.secret:}")
-  String appSecret;
+  private String appSecret;
 
   public WhatsappWebhookController(WhatsappWebhookService webhookService) {
     this.webhookService = webhookService;
+  }
+
+  public void setAppSecret(String appSecret) {
+    this.appSecret = appSecret;
+  }
+
+  public void setVerifyToken(String verifyToken) {
+    this.verifyToken = verifyToken;
   }
 
   /**
@@ -60,60 +67,63 @@ public class WhatsappWebhookController {
   /**
    * Recebe mensagens da Meta. Valida a assinatura HMAC-SHA256 antes de processar.
    *
-   * <p>Se WHATSAPP_APP_SECRET estiver vazio, toda requisição recebe 401. Se a assinatura for
-   * inválida, também 401. Nada é processado sem assinatura válida.
+   * @param signature valor do header X-Hub-Signature-256 (formato sha256=<hex>)
+   * @param payload corpo bruto da requisição (JSON da Meta)
+   * @return 200 sempre que a assinatura for válida (mesmo em caso de erro interno, para a Meta não
+   *     reenviar); 401 se a assinatura for inválida
    */
   @PostMapping("/webhooks/whatsapp")
   public ResponseEntity<?> receber(
       @RequestHeader(name = "X-Hub-Signature-256", required = false) String signature,
       @RequestBody String payload) {
 
-    if (appSecret == null || appSecret.isBlank()) {
-      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-    }
-
     if (!validarAssinatura(signature, payload)) {
-      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+      // Assinatura inválida: 401, nada processado
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Assinatura inválida");
     }
 
+    // Processamento assíncrono: responde 200 imediatamente à Meta
     webhookService.processarWebhook(payload, signature);
     return ResponseEntity.ok().build();
   }
 
   /**
    * Valida a assinatura HMAC-SHA256 da Meta. Calcula o hash do corpo com o app secret e compara com
-   * o header X-Hub-Signature-256 usando comparação de tempo constante.
+   * o header X-Hub-Signature-256.
    */
   private boolean validarAssinatura(String signature, String payload) {
-    if (signature == null || !signature.startsWith("sha256=")) {
+    if (signature == null || appSecret == null || appSecret.isBlank()) {
       return false;
     }
 
-    String expectedHex;
+    String expected = "sha256=";
     try {
       Mac mac = Mac.getInstance("HmacSHA256");
       SecretKeySpec key =
           new SecretKeySpec(appSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
       mac.init(key);
       byte[] hmacBytes = mac.doFinal(payload.getBytes(StandardCharsets.UTF_8));
-      StringBuilder sb = new StringBuilder();
-      for (byte b : hmacBytes) {
-        sb.append(String.format("%02x", b));
-      }
-      expectedHex = sb.toString();
+      expected += bytesToHex(hmacBytes);
     } catch (NoSuchAlgorithmException | InvalidKeyException e) {
       return false;
     }
 
-    String fornecido = signature.substring("sha256=".length());
-    if (fornecido.length() != expectedHex.length()) {
+    // Comparação em tempo constante para evitar timing attack
+    if (signature.length() != expected.length()) {
       return false;
     }
-
     int result = 0;
-    for (int i = 0; i < fornecido.length(); i++) {
-      result |= fornecido.charAt(i) ^ expectedHex.charAt(i);
+    for (int i = 0; i < signature.length(); i++) {
+      result |= signature.charAt(i) ^ expected.charAt(i);
     }
     return result == 0;
+  }
+
+  private static String bytesToHex(byte[] bytes) {
+    StringBuilder sb = new StringBuilder();
+    for (byte b : bytes) {
+      sb.append(String.format("%02x", b));
+    }
+    return sb.toString();
   }
 }

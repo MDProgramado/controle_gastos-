@@ -188,7 +188,7 @@ public class UsuarioTelefoneService {
     // Busca código válido (não usado, não expirado) — filtro de expiração feito em Java pois
     // now() no HQL não é comparável com OffsetDateTime
     List<WhatsappCodigoVerificacao> todosNaoUsados =
-        codigoRepository.findByTelefoneIdAndUsadoEmIsNullOrderByCriadoEmDesc(telefone.getId());
+        codigoRepository.findByUsuarioTelefoneIdOrderByCriadoEmDesc(telefone.getId());
     List<WhatsappCodigoVerificacao> validos =
         todosNaoUsados.stream().filter(c -> !c.isExpirado()).toList();
     if (validos.isEmpty()) {

@@ -131,7 +131,8 @@ class UsuarioTelefoneIntegrationTest {
     jdbc.update("DELETE FROM auditoria_telefone");
     jdbc.update("DELETE FROM whatsapp_codigo_verificacao");
     jdbc.update("DELETE FROM usuario_telefone");
-    jdbc.update("DELETE FROM usuario WHERE email IN ('user@controle.com', 'admin@outra.com', 'admin@controle.com')");
+    jdbc.update(
+        "DELETE FROM usuario WHERE email IN ('user@controle.com', 'admin@outra.com', 'admin@controle.com')");
     jdbc.update("DELETE FROM empresa WHERE nome = ?", empresaOutraNome);
     jdbc.update("DELETE FROM empresa WHERE nome LIKE 'Controle Financeiro Teste %'");
   }

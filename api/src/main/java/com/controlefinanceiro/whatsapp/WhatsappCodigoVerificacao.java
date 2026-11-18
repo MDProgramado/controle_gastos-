@@ -2,7 +2,6 @@ package com.controlefinanceiro.whatsapp;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -14,7 +13,7 @@ import java.time.OffsetDateTime;
 
 /**
  * Entidade da tabela whatsapp_codigo_verificacao. Armazena o código de 6 dígitos (com hash) para
- * verificação de número de telefone, com limite de tentativas e expiração.
+ * verificação de número de telefone, com limite de 5 tentativas por hora e expiração de 10 minutos.
  */
 @Entity
 @Table(name = "whatsapp_codigo_verificacao")
@@ -24,9 +23,9 @@ public class WhatsappCodigoVerificacao {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
-  @ManyToOne(fetch = FetchType.LAZY, optional = false)
-  @JoinColumn(name = "telefone_id", nullable = false)
-  private UsuarioTelefone telefone;
+  @ManyToOne(optional = false)
+  @JoinColumn(name = "usuario_telefone_id", nullable = false)
+  private UsuarioTelefone usuarioTelefone;
 
   @Column(name = "codigo_hash", nullable = false, length = 100)
   private String codigoHash;
@@ -37,11 +36,11 @@ public class WhatsappCodigoVerificacao {
   @Column(nullable = false)
   private int tentativas = 0;
 
-  @Column(name = "usado_em")
-  private OffsetDateTime usadoEm;
-
   @Column(name = "criado_em", nullable = false, updatable = false)
   private OffsetDateTime criadoEm;
+
+  @Column(name = "usado_em")
+  private OffsetDateTime usadoEm;
 
   @PrePersist
   void aoPersistir() {
@@ -61,12 +60,21 @@ public class WhatsappCodigoVerificacao {
     this.id = id;
   }
 
-  public UsuarioTelefone getTelefone() {
-    return telefone;
+  public UsuarioTelefone getUsuarioTelefone() {
+    return usuarioTelefone;
   }
 
+  public void setUsuarioTelefone(UsuarioTelefone usuarioTelefone) {
+    this.usuarioTelefone = usuarioTelefone;
+  }
+
+  /**
+   * Atribui o telefone vinculado a este código de verificação.
+   *
+   * @see #setUsuarioTelefone(UsuarioTelefone)
+   */
   public void setTelefone(UsuarioTelefone telefone) {
-    this.telefone = telefone;
+    setUsuarioTelefone(telefone);
   }
 
   public String getCodigoHash() {
@@ -93,20 +101,20 @@ public class WhatsappCodigoVerificacao {
     this.tentativas = tentativas;
   }
 
-  public OffsetDateTime getUsadoEm() {
-    return usadoEm;
-  }
-
-  public void setUsadoEm(OffsetDateTime usadoEm) {
-    this.usadoEm = usadoEm;
-  }
-
   public OffsetDateTime getCriadoEm() {
     return criadoEm;
   }
 
   public void setCriadoEm(OffsetDateTime criadoEm) {
     this.criadoEm = criadoEm;
+  }
+
+  public OffsetDateTime getUsadoEm() {
+    return usadoEm;
+  }
+
+  public void setUsadoEm(OffsetDateTime usadoEm) {
+    this.usadoEm = usadoEm;
   }
 
   public boolean isExpirado() {
