@@ -196,7 +196,7 @@ export function LoteSheet({
           Lançar em lote
         </button>
       </SheetTrigger>
-      <SheetContent side="right" className="w-full md:max-w-[600px]">
+      <SheetContent side="right" className="max-h-[90dvh] overflow-y-auto w-full md:max-w-[600px]">
         <SheetHeader>
           <SheetTitle>Lançar em lote</SheetTitle>
           {/* O X de fechar (canto superior direito) é o do SheetContent

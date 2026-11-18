@@ -59,6 +59,12 @@ public class Lancamento {
   @Column(length = 16)
   private String origem; // CARTAO | EXTRATO | MANUAL
 
+  @Column(name = "canal", length = 16)
+  private String canal; // WHATSAPP | MANUAL (null para lançamentos anteriores à V7)
+
+  @Column(name = "message_id_origem", length = 255)
+  private String messageIdOrigem; // id da mensagem WhatsApp de origem (idempotência)
+
   @Column(name = "documento_id")
   private Long documentoId;
 
@@ -185,5 +191,21 @@ public class Lancamento {
 
   public void setAtualizadoEm(OffsetDateTime atualizadoEm) {
     this.atualizadoEm = atualizadoEm;
+  }
+
+  public String getCanal() {
+    return canal;
+  }
+
+  public void setCanal(String canal) {
+    this.canal = canal;
+  }
+
+  public String getMessageIdOrigem() {
+    return messageIdOrigem;
+  }
+
+  public void setMessageIdOrigem(String messageIdOrigem) {
+    this.messageIdOrigem = messageIdOrigem;
   }
 }

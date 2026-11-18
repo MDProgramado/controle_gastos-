@@ -3,6 +3,7 @@ import Script from "next/script";
 import "./globals.css";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ImportacaoProvider } from "@/contexts/ImportacaoContext";
 
 export const metadata: Metadata = {
   title: "Controle Financeiro",
@@ -34,7 +35,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       data-motion="true"
       suppressHydrationWarning
     >
-      <body>
+      <body className="min-h-dvh bg-background text-foreground antialiased overflow-x-hidden">
         <meta name="page-type" content="software" />
         <meta name="site-kind" content="software" />
         {/* camada de micro-interações do kit: motion.css DEPOIS do globals.css, motion.js carrega o entrance */}
@@ -48,9 +49,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{ __html: HEAD_LINE }}
         />
-        <TooltipProvider>
-          <SidebarProvider>{children}</SidebarProvider>
-        </TooltipProvider>
+       <TooltipProvider>
+  <SidebarProvider>
+    <ImportacaoProvider>{children}</ImportacaoProvider>
+  </SidebarProvider>
+</TooltipProvider>
       </body>
     </html>
   );

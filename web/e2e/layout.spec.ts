@@ -65,7 +65,7 @@ for (const vp of VIEWPORTS) {
           await btnMenu.click();
           await page.waitForTimeout(1000);
           // Sheet deve abrir
-          await expect(page.locator('[role="dialog"]')).toBeVisible();
+          await expect(page.getByRole("dialog", { name: "PLUTON" })).toBeVisible();
         }
       }
     });

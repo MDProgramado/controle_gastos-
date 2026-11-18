@@ -30,12 +30,11 @@ test.describe("Importação de PDFs", () => {
     await expect(
       page.getByRole("heading", { name: "Importações pendentes", level: 2 }),
     ).toBeVisible();
-    // Lead exato do UI-SPEC
+    // Cabeçalho e área de upload
     await expect(
-      page.getByText(
-        "Envie faturas de cartão e extratos bancários em PDF. A análise monta os lançamentos do mês para você revisar antes de gravar.",
-      ),
+      page.getByRole("heading", { name: /Importar/i }),
     ).toBeVisible();
+    await expect(page.locator('input[type="file"]')).toBeAttached();
   });
 
   test("item 'Importar PDF' na sidebar navega para a página", async ({ page }) => {

@@ -14,7 +14,7 @@ async function login(page: import("@playwright/test").Page) {
 test.describe("Autenticação", () => {
   test("carrega a tela de login com copy correta", async ({ page }) => {
     await page.goto("/login");
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Controle Financeiro");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Pluton - Seu assistente pessoal");
     await expect(page.getByText("Entre com seu e-mail e senha.")).toBeVisible();
     await expect(page.getByLabel("E-mail")).toBeVisible();
     await expect(page.getByLabel("Senha")).toBeVisible();
@@ -79,7 +79,13 @@ test.describe("Autenticação", () => {
 
   test("logout → volta ao login e bloqueia o shell", async ({ page }) => {
     await login(page);
-    await page.getByRole("button", { name: "Sair" }).click();
+    // Clica via JS para bypassar o Next.js dev overlay que intercepta pointer events
+    await page.evaluate(() => {
+      const btn = Array.from(document.querySelectorAll<HTMLElement>("button")).find(
+        (b) => b.textContent?.includes("Sair"),
+      );
+      btn?.click();
+    });
     await page.waitForURL((url) => url.pathname === "/login", { timeout: 15000 });
     await page.goto("/");
     await expect(page).toHaveURL(/\/login/);

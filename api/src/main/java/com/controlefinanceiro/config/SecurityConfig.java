@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.http.HttpMethod;
+import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -26,6 +27,7 @@ import org.springframework.security.web.SecurityFilterChain;
  */
 @Configuration
 @EnableWebSecurity
+@EnableAsync
 public class SecurityConfig {
 
   @Bean
@@ -38,10 +40,20 @@ public class SecurityConfig {
             auth ->
                 auth.requestMatchers("/api/auth/login", "/api/health")
                     .permitAll()
+                    // Webhook público da Meta (validação via X-Hub-Signature-256, não JWT)
+                    .requestMatchers(HttpMethod.GET, "/webhooks/whatsapp")
+                    .permitAll()
+                    .requestMatchers(HttpMethod.POST, "/webhooks/whatsapp")
+                    .permitAll()
                     // GET liberado para ADMIN e USER; escrita restrita a ADMIN (T-2-05, CAT-05)
                     .requestMatchers(HttpMethod.GET, "/api/categorias")
                     .hasAnyRole("ADMIN", "USER")
                     .requestMatchers("/api/categorias/**")
+                    .hasRole("ADMIN")
+                    // Vinculação de telefone WhatsApp é exclusiva de ADMIN (F1, SECURITY.md)
+                    .requestMatchers(HttpMethod.POST, "/api/usuarios/**")
+                    .hasRole("ADMIN")
+                    .requestMatchers(HttpMethod.POST, "/api/whatsapp/**")
                     .hasRole("ADMIN")
                     .anyRequest()
                     .authenticated())

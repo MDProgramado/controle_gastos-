@@ -73,7 +73,7 @@ export function MonthlyComparison({ meses }: MonthlyComparisonProps) {
       </CardHeader>
       <CardContent>
         <div
-          className="grid h-[260px] grid-cols-6 gap-2 md:h-[320px] sm:gap-3"
+          className="grid h-64 grid-cols-6 gap-2 md:h-80 sm:gap-1"
           role="img"
           aria-label={meses
             .map(
@@ -93,13 +93,13 @@ export function MonthlyComparison({ meses }: MonthlyComparisonProps) {
                     como "teve movimento". Zero é zero. */}
                 {m.entradas > 0 && (
                   <div
-                    className="w-1/2 max-w-[18px] bg-positive transition-[height] duration-500"
+                    className="w-1/2 max-w-4 bg-positive transition-[height] duration-500"
                     style={{ height: `${(m.entradas / max) * 100}%` }}
                   />
                 )}
                 {m.saidas > 0 && (
                   <div
-                    className="w-1/2 max-w-[18px] bg-destructive transition-[height] duration-500"
+                    className="w-1/2 max-w-4 bg-destructive transition-[height] duration-500"
                     style={{ height: `${(m.saidas / max) * 100}%` }}
                   />
                 )}

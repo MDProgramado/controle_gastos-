@@ -1,14 +1,17 @@
 package com.controlefinanceiro.config;
 
+import com.controlefinanceiro.common.AcessoNegadoException;
 import com.controlefinanceiro.common.CategoriaDuplicadaException;
 import com.controlefinanceiro.common.CategoriaNaoEncontradaException;
 import com.controlefinanceiro.common.CategoriaTipoIncompativelException;
+import com.controlefinanceiro.common.CodigoVerificacaoInvalidoException;
 import com.controlefinanceiro.common.CredenciaisInvalidasException;
 import com.controlefinanceiro.common.LinhaInvalidaException;
 import com.controlefinanceiro.common.LoteDemasiadoGrandeException;
 import com.controlefinanceiro.common.MonetarioException;
 import com.controlefinanceiro.common.NaoAutorizadoException;
 import com.controlefinanceiro.common.ServicoIaIndisponivelException;
+import com.controlefinanceiro.common.TelefoneNaoPertenceAoUsuarioException;
 import com.controlefinanceiro.importacao.ArquivoInvalidoException;
 import com.controlefinanceiro.importacao.ImportacaoEstadoInvalidoException;
 import com.controlefinanceiro.importacao.ImportacaoNaoEncontradaException;
@@ -20,6 +23,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
 
 /**
  * Padrão P7 — RFC 7807 ProblemDetail (PLAN §3.3). Nunca logar header {@code Authorization}, cookie
@@ -38,6 +42,12 @@ public class ProblemDetailExceptionHandler {
   @ExceptionHandler(NaoAutorizadoException.class)
   public ProblemDetail naoAutorizado(NaoAutorizadoException ex) {
     return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, ex.getMessage());
+  }
+
+  /** Autenticado, mas sem permissão para a operação (isolamento multi-tenant/autorização) → 403. */
+  @ExceptionHandler(AcessoNegadoException.class)
+  public ProblemDetail acessoNegado(AcessoNegadoException ex) {
+    return ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, ex.getMessage());
   }
 
   /** Validação do DTO (@Valid) → 400 listando os campos com problema. */
@@ -123,6 +133,19 @@ public class ProblemDetailExceptionHandler {
         "Lote de arquivos excede o limite de 40 MB. Envie menos arquivos de uma vez.");
   }
 
+  /**
+   * Campo obrigatório ausente no multipart (ex.: arquivo não enviado) → 400 sem vazar detalhe
+   * interno do Spring. Não engole MaxUploadSizeExceededException (413), que tem handler próprio
+   * acima.
+   */
+  @ExceptionHandler(MultipartException.class)
+  public ProblemDetail parteObrigatoriaAusente(MultipartException ex) {
+    if (ex instanceof MaxUploadSizeExceededException) {
+      throw ex; // deixa o handler específico de 413 tratar
+    }
+    return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Nenhum arquivo enviado.");
+  }
+
   /** Importação não encontrada para a empresa do token → 404 (fase 5, R3). */
   @ExceptionHandler(ImportacaoNaoEncontradaException.class)
   public ProblemDetail importacaoNaoEncontrada(ImportacaoNaoEncontradaException ex) {
@@ -133,5 +156,23 @@ public class ProblemDetailExceptionHandler {
   @ExceptionHandler(ImportacaoEstadoInvalidoException.class)
   public ProblemDetail importacaoEstadoInvalido(ImportacaoEstadoInvalidoException ex) {
     return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+  }
+
+  /** Número de telefone não encontrado ou não pertence ao usuário autenticado → 400. */
+  @ExceptionHandler(TelefoneNaoPertenceAoUsuarioException.class)
+  public ProblemDetail telefoneNaoPertenceAoUsuario(TelefoneNaoPertenceAoUsuarioException ex) {
+    return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+  }
+
+  /** Código de verificação inválido/expirado/esgotado → 400 com a mensagem amigável. */
+  @ExceptionHandler(CodigoVerificacaoInvalidoException.class)
+  public ProblemDetail codigoVerificacaoInvalido(CodigoVerificacaoInvalidoException ex) {
+    return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+  }
+
+  /** Exceção de argumento inválido (cadastro/verificação WhatsApp) → 400 ProblemDetail. */
+  @ExceptionHandler(IllegalArgumentException.class)
+  public ProblemDetail argumentoInvalido(IllegalArgumentException ex) {
+    return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
   }
 }

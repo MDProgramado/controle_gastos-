@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
+import Link from "next/link";
+import { ArrowLeft, Layers } from "lucide-react";
 import {
   getMe,
   getLancamentos,
@@ -11,10 +13,13 @@ import {
   criarLote,
 } from "@/lib/api";
 import { LancamentosPageClient } from "@/components/LancamentosPageClient";
-import { Sidebar } from "@/components/ui/sidebar";
-import { SidebarContent } from "@/components/ui/sidebar";
-import { SidebarInset } from "@/components/ui/sidebar";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarInset,
+} from "@/components/ui/sidebar";
 import { Header } from "@/components/header";
+import { MonthSelector } from "@/components/MonthSelector";
 import { SkipLink } from "@/components/SkipLink";
 import { KitBoot } from "@/components/KitBoot";
 
@@ -22,11 +27,17 @@ type LancamentoDataDisplay = Omit<LancamentoData, "valor"> & { valor: number };
 
 export const instant = false;
 
+interface PageProps {
+  searchParams: Promise<{
+    mes?: string;
+    tipo?: string;
+    categoriaId?: string;
+  }>;
+}
+
 export default async function LancamentosPage({
   searchParams,
-}: {
-  searchParams: { [key: string]: string | string[] | undefined };
-}) {
+}: PageProps) {
   const usuario = await getMe();
   if (!usuario) {
     redirect("/login?expirada=1");
@@ -46,15 +57,22 @@ export default async function LancamentosPage({
     fetchCategorias(),
   ]);
 
-  const lancamentos: LancamentoDataDisplay[] = (lancamentosResp?.lancamentos ?? []).map(l => ({
+  const lancamentos: LancamentoDataDisplay[] = (
+    lancamentosResp?.lancamentos ?? []
+  ).map((l) => ({
     ...l,
     valor: Number(l.valor),
   }));
   const total = lancamentosResp?.total ?? lancamentos.length;
 
-  async function actionCriarLancamento(request: Omit<LancamentoRequest, "valor"> & { valor: number }) {
+  async function actionCriarLancamento(
+    request: Omit<LancamentoRequest, "valor"> & { valor: number },
+  ) {
     "use server";
-    const result = await criarLancamento({ ...request, valor: String(request.valor) });
+    const result = await criarLancamento({
+      ...request,
+      valor: String(request.valor),
+    });
     return result ? { ...result, valor: Number(result.valor) } : null;
   }
 
@@ -63,7 +81,10 @@ export default async function LancamentosPage({
     request: Omit<LancamentoRequest, "valor"> & { valor: number },
   ) {
     "use server";
-    const result = await editarLancamento(id, { ...request, valor: String(request.valor) });
+    const result = await editarLancamento(id, {
+      ...request,
+      valor: String(request.valor),
+    });
     return result ? { ...result, valor: Number(result.valor) } : null;
   }
 
@@ -74,11 +95,11 @@ export default async function LancamentosPage({
 
   async function actionCriarLote(
     linhas: Array<{
-      categoriaId: number
-      tipo: string
-      valor: string
-      data: string
-      descricao?: string
+      categoriaId: number;
+      tipo: string;
+      valor: string;
+      data: string;
+      descricao?: string;
     }>,
   ) {
     "use server";
@@ -95,47 +116,98 @@ export default async function LancamentosPage({
       <SkipLink />
       <SidebarContent />
       <SidebarInset>
-        <div className="flex flex-col h-full w-full overflow-hidden">
-          <Header titulo="Lançamentos" />
-          <main
-            id="main-content"
-            className="flex-1 overflow-y-auto bg-background px-4 py-6 md:px-8 lg:px-10"
-          >
-            <div className="mx-auto w-full max-w-[1280px]">
-            {/* Hero — a primeira tela: título + lead (entra no carregamento) */}
-            <section
-              className="hero flex flex-col justify-start md:min-h-full"
-              data-enter
-              data-screen="free"
-              aria-labelledby="hero-h"
-            >
-              <div className="w-full">
-                {/* No mobile o título já aparece no cabeçalho (a sidebar vira
-                    drawer): o h1 fica só para leitores de tela, evitando
-                    repetir o mesmo texto duas vezes na tela. */}
-                <h1
-                  id="hero-h"
-                  className="sr-only text-2xl font-semibold tracking-tight text-foreground md:not-sr-only md:text-3xl"
-                >
-                  Lançamentos
-                </h1>
-                <p className="hero__lead mt-2 line-clamp-2 max-w-[52ch] text-sm text-muted-foreground">
-                  Listagem filtrada por mês. Valor positivo = entrada, negativo
-                  = saída.
-                </p>
-              </div>
-            </section>
+        <div className="flex h-dvh w-full overflow-hidden bg-background text-foreground">
+          <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+            <Header titulo="Lançamentos" />
 
-            {/* Conteúdo — resumo em counter-rolls + tabela do mês */}
-            <section
-              className="flex flex-col justify-start py-10 md:min-h-screen md:justify-center"
-              data-screen="free"
-              aria-labelledby="lista-h"
+            <main
+              id="main-content"
+              className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6"
             >
-              <div className="w-full">
-                <h2 id="lista-h" className="sr-only">
-                  Lançamentos de {nomeMes}
-                </h2>
+            {/* Container principal com ritmo vertical baseado em Phi (1.618rem / 2.618rem) */}
+            <div className="mx-auto flex w-full max-w-7xl flex-col gap-7 lg:gap-[2.618rem]">
+              {/* 1. CABEÇALHO DE COMANDO (Proporção Áurea interna 1.618fr : 1fr) */}
+              <section
+                className="hero relative overflow-hidden rounded-2xl border border-border/70 bg-card p-5 sm:p-[1.618rem]"
+                data-enter
+                data-screen="free"
+                aria-labelledby="hero-lancamentos-h"
+              >
+                {/* Brilho sutil da paleta no canto superior direito */}
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-primary/15 blur-3xl"
+                />
+
+                <div className="flex w-full flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+                  {/* Bloco texto: Navegação de retorno e Contexto */}
+                  <div className="min-w-0 flex-1 max-w-2xl">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Link
+                        href="/"
+                        className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/70 px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:border-ring hover:text-foreground"
+                      >
+                        <ArrowLeft className="h-3 w-3" />
+                        <span>Visão geral</span>
+                      </Link>
+
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/40 px-3 py-1 text-xs font-medium text-muted-foreground">
+                        <Layers className="h-3 w-3 text-primary" />
+                        <span className="tabular-nums">
+                          {total} {total === 1 ? "registro" : "registros"}
+                        </span>
+                      </span>
+                    </div>
+
+                    {/* Razão tipográfica 1.618rem (título) : 0.9375rem (subtítulo) */}
+                    <h1
+                      id="hero-lancamentos-h"
+                      className="text-[1.618rem] font-semibold leading-tight tracking-tight text-foreground"
+                    >
+                      Lançamentos de {nomeMes}{" "}
+                      <span className="font-normal text-muted-foreground">
+                        {ano}
+                      </span>
+                    </h1>
+
+                    <p className="max-w-[55ch] text-[0.9375rem] leading-relaxed text-muted-foreground">
+                      Registre entradas, saídas ou importe movimentações em
+                      lote. Cada alteração recalcula automaticamente o saldo do
+                      mês.
+                    </p>
+                  </div>
+
+                  {/* Bloco Filtro temporal alinhado à direita (Lei de Fitts) */}
+                  <div className="w-full lg:w-auto shrink-0 flex flex-col gap-3 sm:flex-row sm:items-center lg:justify-end">
+                    <MonthSelector
+                      mesAtual={`${ano}-${String(mes).padStart(2, "0")}`}
+                    />
+                  </div>
+                </div>
+              </section>
+
+              {/* 2. ÁREA OPERACIONAL (Resumo em counter-rolls + Tabela / Importação) */}
+              <section
+                data-screen="free"
+                aria-labelledby="lista-h"
+                className="space-y-4"
+              >
+                <div className="flex items-center justify-between">
+                  <h2
+                    id="lista-h"
+                    className="text-xs font-semibold uppercase tracking-widest text-muted-foreground"
+                  >
+                    Movimentações do período
+                  </h2>
+
+                  <span className="text-xs text-muted-foreground">
+                    Competência:{" "}
+                    <strong className="font-medium text-foreground">
+                      {nomeMes}/{ano}
+                    </strong>
+                  </span>
+                </div>
+
                 <LancamentosPageClient
                   lancamentos={lancamentos}
                   total={total}
@@ -145,20 +217,27 @@ export default async function LancamentosPage({
                   onExcluir={actionExcluirLancamento}
                   onCriarLote={actionCriarLote}
                 />
+
                 {/* motion.js/moments.js só DEPOIS da hidratação deste segmento */}
                 <KitBoot />
-              </div>
-            </section>
+              </section>
             </div>
           </main>
         </div>
+      </div>
       </SidebarInset>
     </Sidebar>
   );
 }
 
 async function fetchCategorias(): Promise<
-  Array<{ id: number; nome: string; tipo: string; pessoal: boolean; ativo: boolean }>
+  Array<{
+    id: number;
+    nome: string;
+    tipo: string;
+    pessoal: boolean;
+    ativo: boolean;
+  }>
 > {
   const cookieStore = await cookies();
   const token = cookieStore.get("sess")?.value;

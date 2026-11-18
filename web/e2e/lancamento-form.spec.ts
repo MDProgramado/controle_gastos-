@@ -25,18 +25,24 @@ async function clicarPorCoordenadas(page: import("@playwright/test").Page, selet
   }
 }
 
+async function clicarNovoLancamento(page: import("@playwright/test").Page) {
+  const btn = page.getByRole("button", { name: /\+ Novo lançamento/ });
+  await expect(btn).toBeVisible();
+  await btn.scrollIntoViewIfNeeded();
+  await btn.click();
+}
+
 test.describe("Novo lançamento — Dialog", () => {
   test("clicar '+ Novo lançamento' abre Dialog visível", async ({ page }) => {
     await login(page);
     await page.goto("/lancamentos?mes=2026-11");
     await page.waitForTimeout(5000);
 
-    await page.getByRole("button", { name: /\+ Novo lançamento/ }).click();
-    await page.waitForTimeout(3000);
+    await clicarNovoLancamento(page);
 
-    const dialogs = page.locator('[role="dialog"]').filter({ visible: true });
-    await expect(dialogs.first()).toBeVisible({ timeout: 5000 });
-    await expect(dialogs.first()).toContainText("Novo lançamento");
+    const dialog = page.locator('[role="dialog"]').filter({ visible: true });
+    await expect(dialog.first()).toBeVisible({ timeout: 10000 });
+    await expect(dialog.first()).toContainText("Novo Lançamento");
   });
 
   test("Dialog fecha ao clicar Cancelar", async ({ page }) => {
@@ -44,11 +50,10 @@ test.describe("Novo lançamento — Dialog", () => {
     await page.goto("/lancamentos?mes=2026-11");
     await page.waitForTimeout(5000);
 
-    await page.getByRole("button", { name: /\+ Novo lançamento/ }).click();
-    await page.waitForTimeout(3000);
+    await clicarNovoLancamento(page);
 
-    const visiveis = page.locator('[role="dialog"]').filter({ visible: true });
-    await expect(visiveis.first()).toBeVisible({ timeout: 5000 });
+    const dialog = page.locator('[role="dialog"]').filter({ visible: true });
+    await expect(dialog.first()).toBeVisible({ timeout: 10000 });
 
     await page.getByRole("button", { name: "Cancelar" }).click();
     await page.waitForTimeout(1000);
@@ -62,13 +67,12 @@ test.describe("Novo lançamento — Dialog", () => {
     await page.goto("/lancamentos?mes=2026-11");
     await page.waitForTimeout(5000);
 
-    await page.getByRole("button", { name: /\+ Novo lançamento/ }).click();
-    await page.waitForTimeout(3000);
+    await clicarNovoLancamento(page);
 
-    const visiveis = page.locator('[role="dialog"]').filter({ visible: true });
-    await expect(visiveis.first()).toBeVisible({ timeout: 5000 });
+    const dialog = page.locator('[role="dialog"]').filter({ visible: true });
+    await expect(dialog.first()).toBeVisible({ timeout: 10000 });
 
-    await page.getByRole("button", { name: "Salvar" }).click();
+    await page.getByRole("button", { name: /Criar lançamento/ }).click();
     await page.waitForTimeout(1000);
 
     // Dialog deve permanecer aberto (validação falhou)
@@ -81,13 +85,12 @@ test.describe("Novo lançamento — Dialog", () => {
     await page.goto("/lancamentos?mes=2026-11");
     await page.waitForTimeout(5000);
 
-    await page.getByRole("button", { name: /\+ Novo lançamento/ }).click();
-    await page.waitForTimeout(3000);
+    await clicarNovoLancamento(page);
 
-    const visiveis = page.locator('[role="dialog"]').filter({ visible: true });
-    await expect(visiveis.first()).toBeVisible({ timeout: 5000 });
+    const dialog = page.locator('[role="dialog"]').filter({ visible: true });
+    await expect(dialog.first()).toBeVisible({ timeout: 10000 });
 
-    await page.getByRole("button", { name: "Salvar" }).click();
+    await page.getByRole("button", { name: /Criar lançamento/ }).click();
     await page.waitForTimeout(1000);
 
     const visiveis2 = page.locator('[role="dialog"]').filter({ visible: true });
