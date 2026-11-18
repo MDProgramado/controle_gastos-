@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { cookies } from "next/headers";
 import {
   Sidebar,
@@ -33,9 +34,12 @@ async function getContasAPagar(): Promise<ContaAPagarItem[]> {
   }
 }
 
-export default async function ContasAPagarPage() {
+async function ListaContasAPagar() {
   const contas = await getContasAPagar();
+  return <ContasAPagarClient contasIniciais={contas} />;
+}
 
+export default function ContasAPagarPage() {
   return (
     <Sidebar>
       <SkipLink />
@@ -47,17 +51,26 @@ export default async function ContasAPagarPage() {
 
             <main className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
               <div className="mx-auto flex w-full max-w-7xl flex-col gap-7 lg:gap-[2.618rem]">
-              <h1 className="text-lg font-semibold text-foreground mb-6">
-                Contas a Pagar
-              </h1>
-              <p className="text-sm text-muted-foreground mb-6">
-                Compromissos futuros, boletos e faturas importadas
-              </p>
-              <ContasAPagarClient contasIniciais={contas} />
-            </div>
-          </main>
+                <h1 className="text-lg font-semibold text-foreground mb-6">
+                  Contas a Pagar
+                </h1>
+                <p className="text-sm text-muted-foreground mb-6">
+                  Compromissos futuros, boletos e faturas importadas
+                </p>
+
+                <Suspense
+                  fallback={
+                    <div className="text-sm text-muted-foreground">
+                      Carregando contas a pagar...
+                    </div>
+                  }
+                >
+                  <ListaContasAPagar />
+                </Suspense>
+              </div>
+            </main>
+          </div>
         </div>
-      </div>
       </SidebarInset>
     </Sidebar>
   );
