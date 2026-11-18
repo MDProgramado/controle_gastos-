@@ -82,6 +82,47 @@ public class LancamentoService {
   }
 
   /**
+   * Cria um lançamento para a empresa autenticada com canal e message_id de origem (usado pelo
+   * webhook do WhatsApp).
+   *
+   * @param empresaId tenant extraído do token via TenantContext
+   * @param request dados do lançamento a criar
+   * @param canal origem do lançamento (WHATSAPP | MANUAL)
+   * @param messageIdOrigem id da mensagem WhatsApp de origem (idempotência)
+   * @return resposta do lançamento criado
+   */
+  @Transactional
+  public LancamentoResponse criarComCanal(
+      Long empresaId, LancamentoRequest request, String canal, String messageIdOrigem) {
+    validarValor(request.valor());
+
+    Categoria categoria =
+        categoriaRepository
+            .findByIdAndEmpresaId(request.categoriaId(), empresaId)
+            .orElseThrow(
+                () ->
+                    new com.controlefinanceiro.common.CategoriaNaoEncontradaException(
+                        "Categoria não encontrada: id=%d, empresa=%d"
+                            .formatted(request.categoriaId(), empresaId)));
+
+    validarIntegridadeCategoriaTipo(categoria, request.tipo());
+
+    Lancamento lancamento = new Lancamento();
+    lancamento.setEmpresa(entityManager.getReference(Empresa.class, empresaId));
+    lancamento.setUsuario(usuarioAtual());
+    lancamento.setCategoria(categoria);
+    lancamento.setTipo(request.tipo());
+    lancamento.setValor(request.valor());
+    lancamento.setData(request.data());
+    lancamento.setDescricao(request.descricao());
+    lancamento.setCanal(canal);
+    lancamento.setMessageIdOrigem(messageIdOrigem);
+
+    Lancamento salvo = lancamentoRepository.save(lancamento);
+    return new LancamentoResponse(salvo);
+  }
+
+  /**
    * Edita um lançamento existente da empresa autenticada.
    *
    * @param id id do lançamento

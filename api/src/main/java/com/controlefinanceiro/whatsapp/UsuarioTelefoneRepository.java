@@ -15,7 +15,8 @@ public interface UsuarioTelefoneRepository extends JpaRepository<UsuarioTelefone
 
   Optional<UsuarioTelefone> findByNumeroE164(String numeroE164);
 
-  Optional<UsuarioTelefone> findAtivoByUsuarioId(Long usuarioId);
+  @Query("select t from UsuarioTelefone t where t.usuario.id = :usuarioId and t.ativo = true")
+  Optional<UsuarioTelefone> findAtivoByUsuarioId(@Param("usuarioId") Long usuarioId);
 
   @Query("select t from UsuarioTelefone t where t.empresa.id = :empresaId and t.ativo = true")
   java.util.List<UsuarioTelefone> findByEmpresaIdAndAtivoTrue(@Param("empresaId") Long empresaId);

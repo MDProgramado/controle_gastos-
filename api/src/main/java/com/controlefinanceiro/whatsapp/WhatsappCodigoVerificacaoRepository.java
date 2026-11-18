@@ -25,7 +25,7 @@ public interface WhatsappCodigoVerificacaoRepository
       "select c from WhatsappCodigoVerificacao c "
           + "where c.usuarioTelefone.id = :usuarioTelefoneId "
           + "and c.expiraEm > :agora "
-          + "and c.tentativas < 5 "
+          + "and c.tentativas < 3 "
           + "order by c.criadoEm desc")
   List<WhatsappCodigoVerificacao> findValidByUsuarioTelefoneId(
       @Param("usuarioTelefoneId") Long usuarioTelefoneId, @Param("agora") OffsetDateTime agora);

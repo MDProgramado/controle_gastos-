@@ -23,7 +23,7 @@ public class WhatsappCadastroService {
 
   private static final int CODIGO_DIGITOS = 6;
   private static final int CODIGO_VALIDADE_MINUTOS = 10;
-  private static final int MAX_TENTATIVAS_POR_HORA = 5;
+  private static final int MAX_TENTATIVAS_POR_HORA = 3;
 
   private final SecureRandom random = new SecureRandom();
   private final UsuarioTelefoneRepository telefoneRepository;
@@ -140,7 +140,7 @@ public class WhatsappCadastroService {
    *
    * @return true se o código foi aceito e o número verificado
    */
-  @Transactional
+  @Transactional(noRollbackFor = IllegalArgumentException.class)
   public boolean verificarCodigo(Long usuarioId, String numeroE164, String codigo) {
     UsuarioTelefone telefone =
         telefoneRepository

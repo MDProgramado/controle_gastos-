@@ -297,9 +297,7 @@ public class WhatsappWebhookService {
     LancamentoRequest request = new LancamentoRequest(categoriaId, tipo, valor, data, descricao);
 
     // Chama o mesmo service do REST (canal = WHATSAPP, message_id de origem)
-    // LancamentoResponse salvo =
-    //     lancamentoService.criarComCanal(
-    //         telefone.getEmpresa().getId(), request, "WHATSAPP", messageId);
+    lancamentoService.criarComCanal(telefone.getEmpresa().getId(), request, "WHATSAPP", messageId);
 
     pendencia.setStatus("CONFIRMADA");
     confirmacaoRepository.save(pendencia);

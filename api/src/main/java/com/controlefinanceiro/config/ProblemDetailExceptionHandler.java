@@ -169,4 +169,10 @@ public class ProblemDetailExceptionHandler {
   public ProblemDetail codigoVerificacaoInvalido(CodigoVerificacaoInvalidoException ex) {
     return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
   }
+
+  /** Exceção de argumento inválido (cadastro/verificação WhatsApp) → 400 ProblemDetail. */
+  @ExceptionHandler(IllegalArgumentException.class)
+  public ProblemDetail argumentoInvalido(IllegalArgumentException ex) {
+    return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+  }
 }
