@@ -3,7 +3,7 @@
 **Branch:** `fix/whatsapp-verificacao-plano`  
 **Base:** `a7c15ce` (`main`)  
 **Data:** 2026-11-19  
-**Status final:** Fases 0, 1, 2, 3, 4 e 6 concluídas; Fase 5 não executada. **Pronto para revisão**; o risco da V8 antiga foi avaliado na revisão pré-merge: a V8 nunca esteve na árvore de `main` publicada pela Render (detalhes abaixo).
+**Status final:** Fases 0, 1, 2, 3, 4 e 6 concluídas; Fase 5 não executada. **Pronto para revisão**; o risco de colisão da V8 está encerrado para deploy automático, pois a V8 antiga nunca esteve na cadeia de primeiro pai de `main` (detalhes abaixo).
 
 ## Resumo executivo
 
@@ -16,15 +16,26 @@
 - Checksums das migrations alteradas apenas por EOL foram validados com Flyway `11.7.2` (versão resolvida pelo BOM do Spring Boot `3.5.16`) contra um Postgres temporário: **CHECKSUM_VALIDADO_OK**.
 - Working tree: dois testes modificados, Javadoc documental em `WhatsappWebhookService` e este relatório; sem mudança de comportamento em produção.
 - **Não houve push nem abertura de PR.**
+- Descrição do PR preparada com os três avisos obrigatórios: nova V8 de rename, Fase 5 fora e envio pela Meta ainda indisponível ao usuário final.
 
 ## Revisão pré-merge — pontos levantados
 
-1. **V8 x histórico do Render:** `c9ee1ab` adicionou `V8__empresa_nome_unique.sql` e `e5d7c10` removeu ainda na branch `fix/whatsapp-cadastro-novo`, antes do merge `f0444ce` em `main`. `git log --first-parent main -- 'api/src/main/resources/db/migration/V8__*'` não retorna nada, e `git ls-tree f0444ce api/src/main/resources/db/migration` contém apenas V1/V3/V5/V6/V7. Como `render.yaml:32` publica `branch: main`, a V8 antiga nunca esteve em deploy automático; por isso a migration deste branch permanece como `V8__renomeia_coluna_codigo.sql`. Risco residual: se houve deploy manual da branch de feature, consultar `flyway_schema_history` antes do deploy.
+1. **V8 x histórico do Render — encerrado para deploy automático:** `c9ee1ab` adicionou `V8__empresa_nome_unique.sql` e `e5d7c10` removeu ainda na branch `fix/whatsapp-cadastro-novo`, antes do merge `f0444ce` em `main`. Cada push em `main` cria um novo HEAD na cadeia de primeiro pai; `git log --first-parent main -- 'api/src/main/resources/db/migration/V8__*'` não retorna nada, e `git ls-tree f0444ce api/src/main/resources/db/migration` contém apenas V1/V3/V5/V6/V7. Logo, nenhum estado publicado de `main` teve a V8 antiga. `render.yaml:29-32` define serviço Git-based `runtime: docker` na `branch: main` e não define `autoDeploy`/`autoDeployTrigger`. A especificação oficial da Render (https://render.com/docs/blueprint-spec) diz que omitir `autoDeployTrigger` usa `commit` para serviço novo e mantém o valor atual para serviço existente; o projeto registra D-07 (`push → deploy automático`) em `.planning/PLAN.md:238` e o smoke da fase 1 validou a publicação. Conclusão: o merge em `main` dispara a subida com V6/V7/V8 e a migration deste branch permanece `V8__renomeia_coluna_codigo.sql`. O YAML está marcado como inerte (`render.yaml:21-24`), então o valor definitivo do serviço existente é o do dashboard; se ele estiver `On Commit` (padrão), o cenário acima se aplica.
 2. **Espera do teste de duplicata:** adequada. `aguardarResultado`/`aguardarResultados` fazem polling no banco a cada `Thread.sleep(20)` até `ESPERA_ASSINCRONA_SEGUNDOS = 20`, retornando assim que a condição aparece (`resultado` esperado ou `count(*) == 2`); não é espera fixa cega. `verify(..., timeout(20000))` segue o mesmo princípio. O `0xC0000142` apareceu já após o resumo verde da segunda suíte; não há `*.dump*` em `api/target/surefire-reports`, indicando ruído de encerramento do fork no Windows, não falha de asserção.
 3. **Self-invocation:** os métodos `@Transactional` internos são chamados dentro do próprio bean; a atomicidade efetiva depende de `@Transactional` em `processarWebhook` e do `UPDATE ... WHERE status = 'PENDENTE'`. Essa dependência foi documentada no Javadoc de `WhatsappWebhookService` para evitar remoção acidental da transação externa.
 4. **Versão do Flyway:** a aplicação resolve Flyway `11.7.2` via BOM do Spring Boot `3.5.16` (`spring-boot-dependencies-3.5.16.pom:57`); é a mesma versão usada na prova de checksum com `flyway-maven-plugin:11.7.2`.
 5. **Fase 5:** fora deste PR. `WhatsappEnvioService` continua stub; o PR deve declarar explicitamente que o usuário final ainda não recebe resposta real da Meta.
 6. **Working tree:** commits separados para testes, documentação do Javadoc e relatório; código de produção sem mudança de comportamento.
+
+## Descrição sugerida do PR
+
+```markdown
+Correções de consistência do fluxo WhatsApp: mapeamento JPA, validade da pendência, cadastro unificado de telefone, cooldown/limite por hora e confirmação atômica de lançamento, com testes de regressão e estabilização do teste concorrente.
+
+- A migration `V8__renomeia_coluna_codigo.sql` é a nova V8 deste branch: renomeia `telefone_id` para `usuario_telefone_id`. Ela não é a antiga `V8__empresa_nome_unique.sql`, removida antes do merge em `main`.
+- A Fase 5 (envio real pela Meta Cloud API) não está incluída neste PR.
+- Consequentemente, o envio pela Meta ainda não funciona para o usuário final: `WhatsappEnvioService` permanece como stub/TODO.
+```
 
 ## Execução por fase
 
@@ -168,7 +179,7 @@
 
 - Push e PR não realizados: apenas commit local, conforme solicitado.
 - Fase 5 (envio real via Meta Cloud API) permanece para PR separado; sem ela o usuário final não recebe resposta real da Meta.
-- V6 e V7 estão presentes no histórico de `main` e no commit base `a7c15ce`; V8 foi adicionada neste branch. Checksums das migrations touchadas por EOL foram provados. A V8 antiga (`empresa_nome_unique`) esteve apenas na branch de feature e foi removida antes do merge em `main`, que é a única branch publicada pela Render (`render.yaml:32`); risco residual restrito a deploy manual da branch.
+- V6 e V7 estão presentes no histórico de `main` e no commit base `a7c15ce`; V8 foi adicionada neste branch. Checksums das migrations touchadas por EOL foram provados. A V8 antiga (`empresa_nome_unique`) esteve apenas na branch de feature e foi removida antes do merge em `main`, que é a única branch publicada pela Render (`render.yaml:32`); risco de colisão encerrado para deploy automático (cadeia de primeiro pai sem V8 antiga + `autoDeployTrigger` omitido, cujo padrão é `commit`).
 - Relatório Surefire antigo (`WhatsAppIntegrationTest.txt`) foi substituído pela execução `clean test` e não pertence ao resultado final.
 
 ## Arquivos centrais alterados
