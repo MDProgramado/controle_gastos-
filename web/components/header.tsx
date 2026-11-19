@@ -31,7 +31,7 @@ export function Header({
   onNotificationClick,
   onUserClick,
 }: HeaderProps) {
-  const { onMobileOpenChange } = useSidebar()
+  const { mobileOpen, onMobileOpenChange } = useSidebar()
   const pathname = usePathname()
 const { statusBg, progressoBg } = useImportacaoBackground()
 
@@ -39,9 +39,11 @@ const { statusBg, progressoBg } = useImportacaoBackground()
     <header className="nav relative flex items-center justify-between gap-3 border-b border-border px-4 min-h-16 py-3 md:px-8 lg:px-10">
       <button
         type="button"
-        onClick={() => onMobileOpenChange(true)}
+        onClick={() => onMobileOpenChange(!mobileOpen)}
         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:hidden"
-        aria-label="Abrir menu"
+        aria-label={mobileOpen ? "Fechar menu" : "Abrir menu"}
+        aria-expanded={mobileOpen}
+        aria-controls="mobile-sidebar"
       >
         <Menu className="h-5 w-5" />
       </button>

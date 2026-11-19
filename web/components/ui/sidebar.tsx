@@ -74,7 +74,7 @@ interface SidebarProps {
 
 export function Sidebar({ children }: SidebarProps) {
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-background">
+    <div className="flex h-dvh w-full overflow-hidden bg-background">
       {children}
     </div>
   )
@@ -179,7 +179,7 @@ export function SidebarContent({
   const desktop = (
     <aside
       className={cn(
-        "hidden md:flex flex-col h-full border-r",
+        "hidden h-full shrink-0 flex-col border-r md:flex",
         collapsed ? "w-16" : "w-64",
         className
       )}
@@ -221,7 +221,12 @@ export function SidebarContent({
   // Mobile: Sheet (drawer) — não ocupa largura do conteúdo
   const mobile = (
     <Sheet open={mobileOpen} onOpenChange={onMobileOpenChange}>
-      <SheetContent side="left" className="max-h-[90dvh] overflow-y-auto w-70">
+      <SheetContent
+        id="mobile-sidebar"
+        side="left"
+        overlayClassName="bg-black/60 md:hidden"
+        className="inset-y-0 left-0 z-50 flex h-dvh w-64 flex-col border-r border-border bg-card md:hidden"
+      >
         <SheetHeader className="flex items-center justify-between">
           {/* SheetTitle (e nao um span): o Radix usa este elemento como
               rotulo acessivel do dialog. */}

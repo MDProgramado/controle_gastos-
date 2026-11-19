@@ -51,7 +51,7 @@ export function CategoryBreakdown({
 
   if (!hasData) {
     return (
-      <Card>
+      <Card className="w-full min-w-0">
         <CardHeader>
           <CardTitle>Gastos por categoria</CardTitle>
         </CardHeader>
@@ -90,15 +90,17 @@ export function CategoryBreakdown({
       : null;
 
   return (
-    <Card className="w-full">
+    <Card className="@container w-full min-w-0">
       <CardHeader>
         <CardTitle>Gastos por categoria</CardTitle>
       </CardHeader>
       <CardContent className="pt-0">
-        <div className="grid gap-7 md:flex md:flex-row md:items-start">
-          <DonutChart categorias={categorias} totalSaidas={totalSaidas} />
+        <div className="flex w-full min-w-0 flex-col gap-4 @min-[640px]:flex-row @min-[640px]:items-start @min-[640px]:gap-7">
+          <div className="w-full min-w-0">
+            <DonutChart categorias={categorias} totalSaidas={totalSaidas} />
+          </div>
 
-          <div className="flex-1">
+          <div className="w-full min-w-0 @min-[640px]:flex-1">
             <Card className="h-full">
               <CardHeader>
                 <CardTitle className="text-sm font-semibold">
@@ -106,17 +108,17 @@ export function CategoryBreakdown({
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
-                <div className="overflow-x-auto px">
-                  <table className="w-full text-sm">
+                <div className="w-full min-w-0 overflow-hidden">
+                  <table className="w-full min-w-0 table-fixed text-sm">
                     <thead>
                       <tr className="border-b border-border">
-                        <th className="text-left px-4 pb-2 text-muted-foreground">
+                        <th className="w-[36%] px-2 pb-2 text-left text-muted-foreground @min-[640px]:w-[34%] @min-[640px]:px-4">
                           Categoria
                         </th>
-                        <th className="text-right px-4 pb-2 text-muted-foreground">
+                        <th className="w-[28%] whitespace-nowrap px-2 pb-2 text-right text-muted-foreground @min-[640px]:w-[24%] @min-[640px]:px-4">
                           Valor
                         </th>
-                        <th className="text-right px-4 pb-2 text-muted-foreground">
+                        <th className="w-[36%] whitespace-nowrap px-2 pb-2 text-right text-muted-foreground @min-[640px]:w-[42%] @min-[640px]:px-4">
                           Percentual
                         </th>
                       </tr>
@@ -124,18 +126,20 @@ export function CategoryBreakdown({
                     <tbody>
                       {rows.map((row) => (
                         <tr key={row.id} className="border-b border-border/50">
-                          <td className="px-4 py-3">{row.nome}</td>
-                          <td className="px-4 py-3 text-right">{row.total}</td>
-                          <td className="px-4 py-3 text-right">
+                          <td className="truncate px-2 py-3 @min-[640px]:px-4">
+                            {row.nome}
+                          </td>
+                          <td className="whitespace-nowrap px-2 py-3 text-right @min-[640px]:px-4">
+                            {row.total}
+                          </td>
+                          <td className="px-2 py-3 text-right @min-[640px]:px-4">
                             <div className="flex items-center gap-2">
-                              <span
-                                className="inline-flex items-center justify-center whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium bg-destructive/10 text-destructive"
-                              >
+                              <span className="inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium bg-destructive/10 text-destructive">
                                 {row.percentual}
                               </span>
                               <Progress
                                 value={row.progressValue}
-                                className="h-1 w-full"
+                                className="hidden h-1 min-w-[24px] flex-1 @min-[640px]:block"
                                 style={{ transform: "none" }}
                               />
                             </div>
@@ -144,18 +148,20 @@ export function CategoryBreakdown({
                       ))}
                       {outrosRow && (
                         <tr key="outros" className="border-b border-border/50">
-                          <td className="px-4 py-3">Outros</td>
-                          <td className="px-4 py-3 text-right">{outrosRow.total}</td>
-                          <td className="px-4 py-3 text-right">
+                          <td className="truncate px-2 py-3 @min-[640px]:px-4">
+                            Outros
+                          </td>
+                          <td className="whitespace-nowrap px-2 py-3 text-right @min-[640px]:px-4">
+                            {outrosRow.total}
+                          </td>
+                          <td className="px-2 py-3 text-right @min-[640px]:px-4">
                             <div className="flex items-center gap-2">
-                              <span
-                                className="inline-flex items-center justify-center whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium bg-destructive/10 text-destructive"
-                              >
+                              <span className="inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium bg-destructive/10 text-destructive">
                                 {outrosRow.percentual}
                               </span>
                               <Progress
                                 value={outrosRow.progressValue}
-                                className="h-1 w-full"
+                                className="hidden h-1 min-w-[24px] flex-1 @min-[640px]:block"
                                 style={{ transform: "none" }}
                               />
                             </div>

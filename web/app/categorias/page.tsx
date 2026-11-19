@@ -89,9 +89,25 @@ export default async function CategoriasPage() {
                   className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-primary/15 blur-3xl"
                 />
 
-                <div className="relative grid grid-cols-1 items-center gap-7 lg:grid-cols-8">
-                  {/* Bloco 61.8%: Navegação, Contexto e Hierarquia Tipográfica */}
-                  <div className="space-y-2">
+                <div className="relative flex w-full flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+                  {/* Bloco texto: título e descrição com largura confortável */}
+                  <div className="min-w-0 max-w-xl flex-1 space-y-2">
+                    {/* Razão tipográfica 1.618rem (título) : 0.9375rem (subtítulo) */}
+                    <h1
+                      id="hero-h"
+                      className="sr-only text-[1.618rem] font-semibold leading-tight tracking-tight text-foreground md:not-sr-only"
+                    >
+                      Categorias
+                    </h1>
+
+                    <p className="hero__lead max-w-[55ch] text-[0.9375rem] leading-relaxed text-muted-foreground">
+                      Organize a estrutura de classificação das suas entradas e
+                      saídas para manter os relatórios financeiros precisos.
+                    </p>
+                  </div>
+
+                  {/* Bloco lateral: badges e resumo estrutural */}
+                  <div className="flex shrink-0 flex-col items-start gap-3 lg:items-end">
                     <div className="flex flex-wrap items-center gap-2">
                       <Link
                         href="/"
@@ -110,40 +126,26 @@ export default async function CategoriasPage() {
                       </span>
                     </div>
 
-                    {/* Razão tipográfica 1.618rem (título) : 0.9375rem (subtítulo) */}
-                    <h1
-                      id="hero-h"
-                      className="sr-only text-[1.618rem] font-semibold leading-tight tracking-tight text-foreground md:not-sr-only"
-                    >
-                      Categorias
-                    </h1>
+                    <div className="grid w-auto min-w-[220px] grid-cols-2 gap-3 rounded-xl border border-border/60 bg-background/50 px-5 py-3.5">
+                      <div className="space-y-1">
+                        <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                          <ArrowUpCircle className="h-3.5 w-3.5 text-foreground" />
+                          Entradas
+                        </span>
+                        <p className="text-xl font-semibold tabular-nums text-foreground">
+                          {totalEntradas}
+                        </p>
+                      </div>
 
-                    <p className="hero__lead max-w-[55ch] text-[0.9375rem] leading-relaxed text-muted-foreground">
-                      Organize a estrutura de classificação das suas entradas e
-                      saídas para manter os relatórios financeiros precisos.
-                    </p>
-                  </div>
-
-                  {/* Bloco 38.2%: Resumo Estrutural Instantâneo */}
-                  <div className="grid grid-cols-2 gap-3 rounded-xl border border-border/60 bg-background/50 p-3.5 sm:p-4">
-                    <div className="space-y-1">
-                      <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                        <ArrowUpCircle className="h-3.5 w-3.5 text-foreground" />
-                        Entradas
-                      </span>
-                      <p className="text-xl font-semibold tabular-nums text-foreground">
-                        {totalEntradas}
-                      </p>
-                    </div>
-
-                    <div className="space-y-1 border-l border-border/60 pl-3">
-                      <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                        <ArrowDownCircle className="h-3.5 w-3.5 text-primary" />
-                        Saídas
-                      </span>
-                      <p className="text-xl font-semibold tabular-nums text-foreground">
-                        {totalSaidas}
-                      </p>
+                      <div className="space-y-1 border-l border-border/60 pl-3">
+                        <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                          <ArrowDownCircle className="h-3.5 w-3.5 text-primary" />
+                          Saídas
+                        </span>
+                        <p className="text-xl font-semibold tabular-nums text-foreground">
+                          {totalSaidas}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>

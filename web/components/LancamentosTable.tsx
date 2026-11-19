@@ -61,17 +61,19 @@ export function LancamentosTable({
 
   return (
     <div className="space-y-4">
-      <div className="w-full overflow-x-auto">
+      <div className="hidden w-full overflow-x-auto md:block">
         <div className="rounded-md border min-w-0">
           <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Data</TableHead>
-              <TableHead>Descrição</TableHead>
-              <TableHead>Categoria</TableHead>
-              <TableHead>Tipo</TableHead>
-              <TableHead className="text-right">Valor</TableHead>
-              <TableHead className="w-[100px] text-right">Ações</TableHead>
+              <TableHead className="px-4 py-3.5">Data</TableHead>
+              <TableHead className="px-4 py-3.5">Descrição</TableHead>
+              <TableHead className="px-4 py-3.5">Categoria</TableHead>
+              <TableHead className="px-4 py-3.5">Tipo</TableHead>
+              <TableHead className="px-4 py-3.5 text-right">Valor</TableHead>
+              <TableHead className="w-[100px] px-4 py-3.5 text-right">
+                Ações
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -79,7 +81,7 @@ export function LancamentosTable({
               <TableRow>
                 <TableCell
                   colSpan={6}
-                  className="h-24 text-center text-muted-foreground"
+                  className="h-24 px-4 py-3.5 text-center text-muted-foreground"
                 >
                   Nenhum lançamento encontrado para os filtros selecionados.
                 </TableCell>
@@ -89,14 +91,16 @@ export function LancamentosTable({
                 const isEntrada = item.tipo === "ENTRADA";
                 return (
                   <TableRow key={item.id}>
-                    <TableCell className="whitespace-nowrap px-4">
+                    <TableCell className="whitespace-nowrap px-4 py-3.5">
                       {formatarDataBr(item.data)}
                     </TableCell>
-                    <TableCell className="font-medium px-4">
+                    <TableCell className="px-4 py-3.5 font-medium">
                       {item.descricao}
                     </TableCell>
-                    <TableCell className="px-4">{item.categoriaNome}</TableCell>
-                    <TableCell className="px-4">
+                    <TableCell className="px-4 py-3.5">
+                      {item.categoriaNome}
+                    </TableCell>
+                    <TableCell className="px-4 py-3.5">
                       <Badge
                         variant={isEntrada ? "default" : "secondary"}
                         className={
@@ -109,7 +113,7 @@ export function LancamentosTable({
                       </Badge>
                     </TableCell>
                     <TableCell
-                      className={`text-right font-semibold tabular-nums px-4 ${
+                      className={`px-4 py-3.5 text-right font-semibold tabular-nums ${
                         isEntrada
                           ? "text-emerald-600 dark:text-emerald-400"
                           : "text-rose-600 dark:text-rose-400"
@@ -118,7 +122,7 @@ export function LancamentosTable({
                       {isEntrada ? "+ " : "- "}
                       {formatadorMoeda.format(item.valor)}
                     </TableCell>
-                    <TableCell className="text-right px-4">
+                    <TableCell className="px-4 py-3.5 text-right">
                       <div className="flex justify-end gap-1">
                         <Button
                           type="button"
@@ -147,6 +151,84 @@ export function LancamentosTable({
             )}
           </TableBody>
         </Table>
+      </div>
+
+      <div className="block space-y-3 md:hidden">
+        {paginados.length === 0 ? (
+          <div className="rounded-md border px-4 py-8 text-center text-sm text-muted-foreground">
+            Nenhum lançamento encontrado para os filtros selecionados.
+          </div>
+        ) : (
+          paginados.map((item) => {
+            const isEntrada = item.tipo === "ENTRADA";
+            return (
+              <div
+                key={item.id}
+                className="min-w-0 rounded-lg border border-border bg-card p-3.5"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <p className="min-w-0 flex-1 break-words text-sm font-medium text-foreground">
+                    {item.descricao}
+                  </p>
+                  <span
+                    className={`shrink-0 whitespace-nowrap text-sm font-semibold tabular-nums ${
+                      isEntrada
+                        ? "text-emerald-600 dark:text-emerald-400"
+                        : "text-rose-600 dark:text-rose-400"
+                    }`}
+                  >
+                    {isEntrada ? "+ " : "- "}
+                    {formatadorMoeda.format(item.valor)}
+                  </span>
+                </div>
+
+                <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border/60 pt-3">
+                  <span className="whitespace-nowrap text-xs text-muted-foreground">
+                    {formatarDataBr(item.data)}
+                  </span>
+                  <Badge
+                    variant="outline"
+                    className="max-w-[140px] truncate text-[11px]"
+                  >
+                    {item.categoriaNome}
+                  </Badge>
+                  <Badge
+                    variant={isEntrada ? "default" : "secondary"}
+                    className={
+                      isEntrada
+                        ? "bg-emerald-600/15 text-emerald-700 hover:bg-emerald-600/20 dark:text-emerald-400"
+                        : "bg-rose-600/15 text-rose-700 hover:bg-rose-600/20 dark:text-rose-400"
+                    }
+                  >
+                    {isEntrada ? "Entrada" : "Saída"}
+                  </Badge>
+                  <div className="ml-auto flex shrink-0 items-center gap-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onEdit(item)}
+                      aria-label={`Editar ${item.descricao}`}
+                      className="h-8 w-8"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onDelete(item)}
+                      aria-label={`Excluir ${item.descricao}`}
+                      className="h-8 w-8 text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
 
       <div className="flex flex-col items-center justify-between gap-2 text-sm text-muted-foreground sm:flex-row">

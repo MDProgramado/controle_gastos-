@@ -518,24 +518,24 @@ export function LancamentosPageClient({
                 />
               </div>
             </div>
-          </div>
 
-          <LancamentosTable
-            lancamentos={lancamentosParaTabela}
-            paginaAtual={paginaAtual}
-            pageSize={10}
-            onPageChange={setPaginaAtual}
-            onEdit={(item) => {
-              const original = lancamentosIniciais.find(
-                (l) => String(l.id) === item.id,
-              );
-              if (original) abrirEditar(original);
-            }}
-            onDelete={(item) => {
-              setExcluirId(Number(item.id));
-              setExcluirAberto(true);
-            }}
-          />
+            <LancamentosTable
+              lancamentos={lancamentosParaTabela}
+              paginaAtual={paginaAtual}
+              pageSize={10}
+              onPageChange={setPaginaAtual}
+              onEdit={(item) => {
+                const original = lancamentosIniciais.find(
+                  (l) => String(l.id) === item.id,
+                );
+                if (original) abrirEditar(original);
+              }}
+              onDelete={(item) => {
+                setExcluirId(Number(item.id));
+                setExcluirAberto(true);
+              }}
+            />
+          </div>
         </div>
 
         <div className="lg:col-span-4">

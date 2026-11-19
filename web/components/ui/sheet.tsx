@@ -15,11 +15,12 @@ const SheetContent = React.forwardRef<
     side?: "top" | "right" | "bottom" | "left"
     /** Botão X no canto superior direito (padrão: visível em todo sheet). */
     showCloseButton?: boolean
+    overlayClassName?: string
   }
->(({ className, side = "right", children, showCloseButton = true, ...props }, ref) => (
+>(({ className, overlayClassName, side = "right", children, showCloseButton = true, ...props }, ref) => (
   <SheetPrimitive.Portal>
     <SheetPrimitive.Overlay
-      className="fixed inset-0 z-50 bg-black/80"
+      className={cn("fixed inset-0 z-50 bg-black/80", overlayClassName)}
     />
     <SheetPrimitive.Content
       ref={ref}
