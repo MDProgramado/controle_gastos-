@@ -1,10 +1,7 @@
 package com.controlefinanceiro.whatsapp;
 
-import java.time.OffsetDateTime;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -20,13 +17,4 @@ public interface WhatsappCodigoVerificacaoRepository
 
   List<WhatsappCodigoVerificacao> findByUsuarioTelefoneIdAndUsadoEmIsNullOrderByCriadoEmDesc(
       Long usuarioTelefoneId);
-
-  @Query(
-      "select c from WhatsappCodigoVerificacao c "
-          + "where c.usuarioTelefone.id = :usuarioTelefoneId "
-          + "and c.expiraEm > :agora "
-          + "and c.tentativas < 3 "
-          + "order by c.criadoEm desc")
-  List<WhatsappCodigoVerificacao> findValidByUsuarioTelefoneId(
-      @Param("usuarioTelefoneId") Long usuarioTelefoneId, @Param("agora") OffsetDateTime agora);
 }

@@ -103,7 +103,8 @@ public class UsuarioTelefoneService {
     }
 
     // Determina a ação: TROCAR se já há telefone ativo para este usuário, senão VINCULAR
-    Optional<UsuarioTelefone> telefoneAtivo = telefoneRepository.findAtivoByUsuarioId(usuarioId);
+    Optional<UsuarioTelefone> telefoneAtivo =
+        telefoneRepository.findFirstByUsuarioIdAndAtivoTrue(usuarioId);
     String acao = telefoneAtivo.isPresent() ? "TROCAR" : "VINCULAR";
 
     // Desativa o telefone anterior (se houver)
@@ -247,7 +248,7 @@ public class UsuarioTelefoneService {
 
   /** Busca o telefone ativo de um usuário (para uso em outros módulos). */
   public Optional<UsuarioTelefone> buscarTelefoneAtivoPorUsuario(Long usuarioId) {
-    return telefoneRepository.findAtivoByUsuarioId(usuarioId);
+    return telefoneRepository.findFirstByUsuarioIdAndAtivoTrue(usuarioId);
   }
 
   /** Gera código aleatório de 6 dígitos. */
