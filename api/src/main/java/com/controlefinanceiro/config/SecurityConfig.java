@@ -53,8 +53,6 @@ public class SecurityConfig {
                     // Vinculação de telefone WhatsApp é exclusiva de ADMIN (F1, SECURITY.md)
                     .requestMatchers(HttpMethod.POST, "/api/usuarios/**")
                     .hasRole("ADMIN")
-                    .requestMatchers(HttpMethod.POST, "/api/whatsapp/**")
-                    .hasRole("ADMIN")
                     .anyRequest()
                     .authenticated())
         .oauth2ResourceServer(

@@ -2,11 +2,12 @@ package com.controlefinanceiro;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.controlefinanceiro.lancamento.LancamentoRequest;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -48,6 +49,7 @@ class LancamentoIntegrationTest {
   @Autowired private JdbcTemplate jdbc;
 
   private String tokenAdmin;
+  private final List<Long> categoriasCriadas = new ArrayList<>();
 
   @BeforeEach
   void setup() throws Exception {
@@ -56,18 +58,11 @@ class LancamentoIntegrationTest {
 
   @AfterEach
   void apagarLancamentosECategoriasCriadosNosTestes() {
-    // Isola testes: remove lançamentos e categorias criados via API (id > 16 = seed da V2)
-    jdbc.update("DELETE FROM lancamento");
-    jdbc.update("DELETE FROM categoria WHERE id > 16");
-  }
-
-  @Test
-  void lancamentoRequestNaoExisteAindaRed() {
-    // Referencia LancamentoRequest que ainda não existe — compilação falha (RED).
-    // Esta classe será criada na Task 2 (GREEN).
-    LancamentoRequest request =
-        new LancamentoRequest(1L, "SAIDA", BigDecimal.TEN, LocalDate.now(), "teste");
-    assertThat(request).isNotNull();
+    for (Long categoriaId : categoriasCriadas) {
+      jdbc.update("DELETE FROM lancamento WHERE categoria_id = ?", categoriaId);
+      jdbc.update("DELETE FROM categoria WHERE id = ?", categoriaId);
+    }
+    categoriasCriadas.clear();
   }
 
   @Test
@@ -239,7 +234,9 @@ class LancamentoIntegrationTest {
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
 
     JsonNode body = mapper.readTree(response.getBody());
-    for (JsonNode lancamento : body) {
+    JsonNode lancamentos = body.get("lancamentos");
+    assertThat(lancamentos.isArray()).isTrue();
+    for (JsonNode lancamento : lancamentos) {
       assertThat(lancamento.get("tipo").asText()).isEqualTo("SAIDA");
     }
   }
@@ -254,7 +251,9 @@ class LancamentoIntegrationTest {
     ResponseEntity<String> response =
         rest.exchange(
             "/api/categorias", HttpMethod.POST, new HttpEntity<>(corpo, headers), String.class);
-    return mapper.readTree(response.getBody()).get("id").asLong();
+    Long categoriaId = mapper.readTree(response.getBody()).get("id").asLong();
+    categoriasCriadas.add(categoriaId);
+    return categoriaId;
   }
 
   private Long criarLancamentoViaApi(

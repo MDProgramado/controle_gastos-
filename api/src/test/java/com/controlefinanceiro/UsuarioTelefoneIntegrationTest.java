@@ -2,8 +2,14 @@ package com.controlefinanceiro;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.controlefinanceiro.whatsapp.UsuarioTelefone;
+import com.controlefinanceiro.whatsapp.UsuarioTelefoneRepository;
+import com.controlefinanceiro.whatsapp.WhatsappConfirmacaoPendente;
+import com.controlefinanceiro.whatsapp.WhatsappConfirmacaoPendenteRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.OffsetDateTime;
+import java.time.temporal.ChronoUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -46,6 +52,10 @@ class UsuarioTelefoneIntegrationTest {
 
   @Autowired private JdbcTemplate jdbc;
 
+  @Autowired private UsuarioTelefoneRepository telefoneRepository;
+
+  @Autowired private WhatsappConfirmacaoPendenteRepository confirmacaoRepository;
+
   private Long empresaAdminId;
   private Long empresaOutraId;
   private String empresaOutraNome;
@@ -64,24 +74,6 @@ class UsuarioTelefoneIntegrationTest {
     empresaAdminId =
         jdbc.queryForObject(
             "INSERT INTO empresa (nome) VALUES (?) RETURNING id", Long.class, empresaAdminNome);
-
-    // Cria o usuário ADMIN da empresa principal com senha conhecida
-    jdbc.update("DELETE FROM usuario WHERE email = 'admin@controle.com'");
-    jdbc.update(
-        "INSERT INTO usuario (empresa_id, email, senha_hash, nome, role, ativo) "
-            + "VALUES (?, ?, ?, ?, ?, true)",
-        empresaAdminId,
-        "admin@controle.com",
-        new BCryptPasswordEncoder(12).encode(SENHA_FIXTURE),
-        "Administrador",
-        "ADMIN");
-    tokenAdmin = login("admin@controle.com", SENHA_FIXTURE);
-
-    // Cria uma segunda empresa para teste de isolamento
-    empresaOutraNome = "Empresa Outra Teste " + sufixoEmpresa();
-    empresaOutraId =
-        jdbc.queryForObject(
-            "INSERT INTO empresa (nome) VALUES (?) RETURNING id", Long.class, empresaOutraNome);
 
     // Cria o usuário ADMIN da empresa principal com senha conhecida
     jdbc.update("DELETE FROM usuario WHERE email = 'admin@controle.com'");
@@ -128,6 +120,7 @@ class UsuarioTelefoneIntegrationTest {
 
   @AfterEach
   void limparDadosTeste() {
+    jdbc.update("DELETE FROM whatsapp_confirmacao_pendente");
     jdbc.update("DELETE FROM auditoria_telefone");
     jdbc.update("DELETE FROM whatsapp_codigo_verificacao");
     jdbc.update("DELETE FROM usuario_telefone");
@@ -194,11 +187,71 @@ class UsuarioTelefoneIntegrationTest {
       assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
+    Integer tentativas =
+        jdbc.queryForObject(
+            "SELECT coalesce(sum(c.tentativas), 0) FROM whatsapp_codigo_verificacao c "
+                + "JOIN usuario_telefone t ON t.id = c.usuario_telefone_id "
+                + "WHERE t.numero_e164 = ?",
+            Integer.class,
+            "+5571999999999");
+    assertThat(tentativas).isEqualTo(3);
+
     // 4ª tentativa deve ser bloqueada pelo limite
     ResponseEntity<String> response = verificar(tokenAdmin, "+5571999999999", "000000");
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     JsonNode body = mapper.readTree(response.getBody());
     assertThat(body.get("detail").asText()).contains("tentativas");
+
+    // Código com mais de 1h não entra na janela: pode tentar novamente e o contador avança
+    jdbc.update(
+        "UPDATE whatsapp_codigo_verificacao SET criado_em = now() - interval '2 hours' "
+            + "WHERE usuario_telefone_id = (SELECT id FROM usuario_telefone WHERE numero_e164 = '+5571999999999')");
+    ResponseEntity<String> tentativaAposJanela = verificar(tokenAdmin, "+5571999999999", "000000");
+    assertThat(tentativaAposJanela.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    assertThat(mapper.readTree(tentativaAposJanela.getBody()).get("detail").asText())
+        .doesNotContain("tentativas");
+
+    Integer tentativasAposJanela =
+        jdbc.queryForObject(
+            "SELECT coalesce(sum(c.tentativas), 0) FROM whatsapp_codigo_verificacao c "
+                + "JOIN usuario_telefone t ON t.id = c.usuario_telefone_id "
+                + "WHERE t.numero_e164 = ?",
+            Integer.class,
+            "+5571999999999");
+    assertThat(tentativasAposJanela).isEqualTo(4);
+  }
+
+  /* ========================================================================
+   * Cenário 3b: cooldown de 2 minutos entre envios para o mesmo número/empresa
+   * ======================================================================== */
+
+  @Test
+  void segundoEnvioDentroDoCooldownRetorna429() throws Exception {
+    Long usuarioIdAdmin = usuarioIdDoEmail("admin@controle.com");
+    vincularTelefone(tokenAdmin, usuarioIdAdmin, "+5571999999993");
+
+    ResponseEntity<String> response = postVinculacao(tokenAdmin, usuarioIdAdmin, "+5571999999993");
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+    assertThat(mapper.readTree(response.getBody()).get("detail").asText()).contains("Aguarde");
+  }
+
+  /* ========================================================================
+   * Cenário 3c: número já usado por outra empresa → 409
+   * ======================================================================== */
+
+  @Test
+  void numeroJaVinculadoEmOutraEmpresaRetorna409() throws Exception {
+    Long usuarioIdAdmin = usuarioIdDoEmail("admin@controle.com");
+    Long usuarioIdOutra = usuarioIdDoEmail("admin@outra.com");
+    vincularTelefone(tokenAdmin, usuarioIdAdmin, "+5571999999992");
+
+    ResponseEntity<String> response =
+        postVinculacao(tokenAdminOutraEmpresa, usuarioIdOutra, "+5571999999992");
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+    assertThat(mapper.readTree(response.getBody()).get("detail").asText())
+        .contains("vinculado a outra empresa");
   }
 
   /* ========================================================================
@@ -215,7 +268,7 @@ class UsuarioTelefoneIntegrationTest {
     // Força expiração do código diretamente no banco
     jdbc.update(
         "UPDATE whatsapp_codigo_verificacao SET expira_em = now() - interval '1 hour' "
-            + "WHERE telefone_id = (SELECT id FROM usuario_telefone WHERE numero_e164 = '+5571999999998')");
+            + "WHERE usuario_telefone_id = (SELECT id FROM usuario_telefone WHERE numero_e164 = '+5571999999998')");
 
     ResponseEntity<String> response = verificar(tokenAdmin, "+5571999999998", "123456");
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
@@ -268,20 +321,43 @@ class UsuarioTelefoneIntegrationTest {
     assertThat(auditorias).isEqualTo(2);
   }
 
+  @Test
+  void gravaCodigoEPendenciaComMapeamentoCorreto() throws Exception {
+    Long usuarioIdAdmin = usuarioIdDoEmail("admin@controle.com");
+    vincularTelefone(tokenAdmin, usuarioIdAdmin, "+5571999999994");
+
+    UsuarioTelefone telefone = telefoneRepository.findByNumeroE164("+5571999999994").orElseThrow();
+
+    WhatsappConfirmacaoPendente pendencia = new WhatsappConfirmacaoPendente();
+    pendencia.setUsuarioTelefone(telefone);
+    pendencia.setProposta(
+        "{\"tipo\":\"SAIDA\",\"valor\":\"10.00\",\"data\":\"2026-11-19\",\"descricao\":\"teste\",\"categoriaSugerida\":\"Alimentacao\"}");
+    pendencia.setExpiraEm(OffsetDateTime.now().plus(24, ChronoUnit.HOURS));
+    pendencia.setStatus("PENDENTE");
+    WhatsappConfirmacaoPendente salva = confirmacaoRepository.saveAndFlush(pendencia);
+
+    assertThat(salva.getId()).isNotNull();
+    assertThat(confirmacaoRepository.findById(salva.getId())).isPresent();
+  }
+
   /* ========================================================================
    * Helpers
    * ======================================================================== */
 
   private void vincularTelefone(String token, Long usuarioId, String numeroE164) throws Exception {
+    assertThat(postVinculacao(token, usuarioId, numeroE164).getStatusCode())
+        .isEqualTo(HttpStatus.OK);
+  }
+
+  private ResponseEntity<String> postVinculacao(String token, Long usuarioId, String numeroE164)
+      throws Exception {
     String corpo = "{\"numeroE164\":\"" + numeroE164 + "\"}";
     HttpHeaders headers = authHeaders(token);
-    ResponseEntity<String> response =
-        rest.exchange(
-            "/api/usuarios/%d/telefone".formatted(usuarioId),
-            HttpMethod.POST,
-            new HttpEntity<>(corpo, headers),
-            String.class);
-    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    return rest.exchange(
+        "/api/usuarios/%d/telefone".formatted(usuarioId),
+        HttpMethod.POST,
+        new HttpEntity<>(corpo, headers),
+        String.class);
   }
 
   private ResponseEntity<String> verificar(String token, String numeroE164, String codigo)

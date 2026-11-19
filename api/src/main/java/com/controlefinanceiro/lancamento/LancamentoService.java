@@ -94,7 +94,23 @@ public class LancamentoService {
   @Transactional
   public LancamentoResponse criarComCanal(
       Long empresaId, LancamentoRequest request, String canal, String messageIdOrigem) {
+    return criarComCanal(empresaId, usuarioAtual().getId(), request, canal, messageIdOrigem);
+  }
+
+  @Transactional
+  public LancamentoResponse criarComCanal(
+      Long empresaId,
+      Long usuarioId,
+      LancamentoRequest request,
+      String canal,
+      String messageIdOrigem) {
     validarValor(request.valor());
+
+    Usuario usuario =
+        usuarioRepository
+            .findById(usuarioId)
+            .filter(u -> u.getEmpresa().getId().equals(empresaId))
+            .orElseThrow(() -> new NaoAutorizadoException("Usuário não encontrado"));
 
     Categoria categoria =
         categoriaRepository
@@ -109,7 +125,7 @@ public class LancamentoService {
 
     Lancamento lancamento = new Lancamento();
     lancamento.setEmpresa(entityManager.getReference(Empresa.class, empresaId));
-    lancamento.setUsuario(usuarioAtual());
+    lancamento.setUsuario(usuario);
     lancamento.setCategoria(categoria);
     lancamento.setTipo(request.tipo());
     lancamento.setValor(request.valor());
