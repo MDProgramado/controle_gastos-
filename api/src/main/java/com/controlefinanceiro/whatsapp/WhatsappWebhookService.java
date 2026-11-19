@@ -68,6 +68,10 @@ public class WhatsappWebhookService {
    * Processa um webhook da Meta. Deve ser chamado com o corpo já verificado quanto à assinatura. O
    * processamento pesado é assíncrono (@Async) para responder 200 à Meta em até 5s.
    *
+   * <p>Os métodos transacionais de confirmação são chamados por self-invocation; a atomicidade
+   * depende da transação deste método. Não remover @Transactional aqui sem extrair a confirmação
+   * para outro bean.
+   *
    * @param payload corpo JSON do webhook da Meta
    * @param signature valor do header X-Hub-Signature-256
    */
