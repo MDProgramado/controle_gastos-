@@ -239,7 +239,9 @@ class LancamentoIntegrationTest {
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
 
     JsonNode body = mapper.readTree(response.getBody());
-    for (JsonNode lancamento : body) {
+    JsonNode lancamentos = body.get("lancamentos");
+    assertThat(lancamentos.isArray()).isTrue();
+    for (JsonNode lancamento : lancamentos) {
       assertThat(lancamento.get("tipo").asText()).isEqualTo("SAIDA");
     }
   }
