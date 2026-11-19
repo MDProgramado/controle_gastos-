@@ -4,6 +4,7 @@ import com.controlefinanceiro.common.AcessoNegadoException;
 import com.controlefinanceiro.common.CategoriaDuplicadaException;
 import com.controlefinanceiro.common.CategoriaNaoEncontradaException;
 import com.controlefinanceiro.common.CategoriaTipoIncompativelException;
+import com.controlefinanceiro.common.CodigoVerificacaoCooldownException;
 import com.controlefinanceiro.common.CodigoVerificacaoInvalidoException;
 import com.controlefinanceiro.common.CredenciaisInvalidasException;
 import com.controlefinanceiro.common.LinhaInvalidaException;
@@ -11,6 +12,7 @@ import com.controlefinanceiro.common.LoteDemasiadoGrandeException;
 import com.controlefinanceiro.common.MonetarioException;
 import com.controlefinanceiro.common.NaoAutorizadoException;
 import com.controlefinanceiro.common.ServicoIaIndisponivelException;
+import com.controlefinanceiro.common.TelefoneJaVinculadoException;
 import com.controlefinanceiro.common.TelefoneNaoPertenceAoUsuarioException;
 import com.controlefinanceiro.importacao.ArquivoInvalidoException;
 import com.controlefinanceiro.importacao.ImportacaoEstadoInvalidoException;
@@ -168,6 +170,18 @@ public class ProblemDetailExceptionHandler {
   @ExceptionHandler(CodigoVerificacaoInvalidoException.class)
   public ProblemDetail codigoVerificacaoInvalido(CodigoVerificacaoInvalidoException ex) {
     return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+  }
+
+  /** Solicitação de código dentro do cooldown de envio → 429. */
+  @ExceptionHandler(CodigoVerificacaoCooldownException.class)
+  public ProblemDetail codigoVerificacaoCooldown(CodigoVerificacaoCooldownException ex) {
+    return ProblemDetail.forStatusAndDetail(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage());
+  }
+
+  /** Número já vinculado a outra empresa → 409. */
+  @ExceptionHandler(TelefoneJaVinculadoException.class)
+  public ProblemDetail telefoneJaVinculado(TelefoneJaVinculadoException ex) {
+    return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
   }
 
   /** Exceção de argumento inválido (cadastro/verificação WhatsApp) → 400 ProblemDetail. */

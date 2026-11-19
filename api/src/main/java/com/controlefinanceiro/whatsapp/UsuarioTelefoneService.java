@@ -1,6 +1,7 @@
 package com.controlefinanceiro.whatsapp;
 
 import com.controlefinanceiro.common.AcessoNegadoException;
+import com.controlefinanceiro.common.CodigoVerificacaoCooldownException;
 import com.controlefinanceiro.common.CodigoVerificacaoInvalidoException;
 import com.controlefinanceiro.common.NaoAutorizadoException;
 import com.controlefinanceiro.common.TelefoneJaVinculadoException;
@@ -31,6 +32,8 @@ public class UsuarioTelefoneService {
 
   private static final int CODIGO_DIGITOS = 6;
   private static final int CODIGO_VALIDADE_MINUTOS = 10;
+  private static final int COOLDOWN_ENVIO_MINUTOS = 2;
+  private static final int JANELA_TENTATIVAS_HORAS = 1;
   private static final int MAX_TENTATIVAS_POR_HORA = 3;
 
   private final SecureRandom random = new SecureRandom();
@@ -100,6 +103,21 @@ public class UsuarioTelefoneService {
         && !telefoneExistente.get().getEmpresa().getId().equals(empresaId)) {
       throw new TelefoneJaVinculadoException(
           "Número de telefone já está vinculado a outra empresa");
+    }
+
+    // Cooldown de envio por empresa + número, independente do usuário alvo
+    OffsetDateTime agora = OffsetDateTime.now();
+    Optional<WhatsappCodigoVerificacao> ultimoEnvio =
+        codigoRepository
+            .findFirstByUsuarioTelefone_EmpresaIdAndUsuarioTelefone_NumeroE164OrderByCriadoEmDesc(
+                empresaId, numeroE164);
+    if (ultimoEnvio.isPresent()
+        && ultimoEnvio
+            .get()
+            .getCriadoEm()
+            .isAfter(agora.minus(COOLDOWN_ENVIO_MINUTOS, ChronoUnit.MINUTES))) {
+      throw new CodigoVerificacaoCooldownException(
+          "Aguarde " + COOLDOWN_ENVIO_MINUTOS + " minutos antes de solicitar outro código");
     }
 
     // Determina a ação: TROCAR se já há telefone ativo para este usuário, senão VINCULAR
@@ -209,8 +227,12 @@ public class UsuarioTelefoneService {
       throw new CodigoVerificacaoInvalidoException("Código expirado. Solicite um novo.");
     }
 
-    // Verifica limite de tentativas (3 por hora)
-    if (codigoAtual.getTentativas() >= MAX_TENTATIVAS_POR_HORA) {
+    // Verifica limite de tentativas do número na janela de 1 hora
+    long tentativasRecentes =
+        codigoRepository.contarTentativasRecentes(
+            telefone.getId(),
+            OffsetDateTime.now().minus(JANELA_TENTATIVAS_HORAS, ChronoUnit.HOURS));
+    if (tentativasRecentes >= MAX_TENTATIVAS_POR_HORA) {
       throw new CodigoVerificacaoInvalidoException(
           "Limite de tentativas excedido. Solicite um novo código.");
     }
@@ -220,15 +242,13 @@ public class UsuarioTelefoneService {
       codigoAtual.incrementarTentativa();
       codigoRepository.save(codigoAtual);
 
-      if (codigoAtual.getTentativas() >= MAX_TENTATIVAS_POR_HORA) {
+      long tentativasApos = tentativasRecentes + 1;
+      if (tentativasApos >= MAX_TENTATIVAS_POR_HORA) {
         throw new CodigoVerificacaoInvalidoException(
             "Código inválido. Limite de tentativas excedido.");
       }
       throw new CodigoVerificacaoInvalidoException(
-          "Código inválido. Tentativa "
-              + codigoAtual.getTentativas()
-              + " de "
-              + MAX_TENTATIVAS_POR_HORA);
+          "Código inválido. Tentativa " + tentativasApos + " de " + MAX_TENTATIVAS_POR_HORA);
     }
 
     // Código correto: marca como verificado e usado
