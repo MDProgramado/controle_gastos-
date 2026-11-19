@@ -34,7 +34,7 @@ public class UsuarioTelefone {
   @JoinColumn(name = "empresa_id", nullable = false)
   private Empresa empresa;
 
-  @Column(nullable = false, length = 20, unique = true)
+  @Column(name = "numero_e164", nullable = false, length = 20, unique = true)
   private String numeroE164;
 
   @Column(name = "verificado_em")

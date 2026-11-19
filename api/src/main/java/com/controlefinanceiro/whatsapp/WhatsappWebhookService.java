@@ -34,6 +34,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class WhatsappWebhookService {
 
   private static final Logger LOG = LoggerFactory.getLogger(WhatsappWebhookService.class);
+  private static final int CONFIRMACAO_VALIDADE_HORAS = 24;
 
   private final UsuarioTelefoneRepository telefoneRepository;
   private final WhatsappMensagemProcessadaRepository mensagemRepository;
@@ -195,7 +196,7 @@ public class WhatsappWebhookService {
                 "data", proposta.data(),
                 "categoriaSugerida", proposta.categoriaSugerida(),
                 "descricao", proposta.descricao())));
-    pendencia.setExpiraEm(OffsetDateTime.now().plus(10, ChronoUnit.MINUTES));
+    pendencia.setExpiraEm(OffsetDateTime.now().plus(CONFIRMACAO_VALIDADE_HORAS, ChronoUnit.HOURS));
     pendencia.setStatus("PENDENTE");
     confirmacaoRepository.save(pendencia);
 

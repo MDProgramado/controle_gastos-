@@ -10,6 +10,8 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 /**
  * Entidade da tabela whatsapp_confirmacao_pendente. Armazena uma proposta de lançamento aguardando
@@ -34,7 +36,8 @@ public class WhatsappConfirmacaoPendente {
   @JoinColumn(name = "usuario_telefone_id", nullable = false)
   private UsuarioTelefone usuarioTelefone;
 
-  @Column(nullable = false, columnDefinition = "jsonb")
+  @JdbcTypeCode(SqlTypes.JSON)
+  @Column(nullable = false)
   private String proposta;
 
   @Column(name = "expira_em", nullable = false)

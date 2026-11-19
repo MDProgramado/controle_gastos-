@@ -2,8 +2,14 @@ package com.controlefinanceiro;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.controlefinanceiro.whatsapp.UsuarioTelefone;
+import com.controlefinanceiro.whatsapp.UsuarioTelefoneRepository;
+import com.controlefinanceiro.whatsapp.WhatsappConfirmacaoPendente;
+import com.controlefinanceiro.whatsapp.WhatsappConfirmacaoPendenteRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.OffsetDateTime;
+import java.time.temporal.ChronoUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -45,6 +51,10 @@ class UsuarioTelefoneIntegrationTest {
   @Autowired private ObjectMapper mapper;
 
   @Autowired private JdbcTemplate jdbc;
+
+  @Autowired private UsuarioTelefoneRepository telefoneRepository;
+
+  @Autowired private WhatsappConfirmacaoPendenteRepository confirmacaoRepository;
 
   private Long empresaAdminId;
   private Long empresaOutraId;
@@ -128,6 +138,7 @@ class UsuarioTelefoneIntegrationTest {
 
   @AfterEach
   void limparDadosTeste() {
+    jdbc.update("DELETE FROM whatsapp_confirmacao_pendente");
     jdbc.update("DELETE FROM auditoria_telefone");
     jdbc.update("DELETE FROM whatsapp_codigo_verificacao");
     jdbc.update("DELETE FROM usuario_telefone");
@@ -215,7 +226,7 @@ class UsuarioTelefoneIntegrationTest {
     // Força expiração do código diretamente no banco
     jdbc.update(
         "UPDATE whatsapp_codigo_verificacao SET expira_em = now() - interval '1 hour' "
-            + "WHERE telefone_id = (SELECT id FROM usuario_telefone WHERE numero_e164 = '+5571999999998')");
+            + "WHERE usuario_telefone_id = (SELECT id FROM usuario_telefone WHERE numero_e164 = '+5571999999998')");
 
     ResponseEntity<String> response = verificar(tokenAdmin, "+5571999999998", "123456");
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
@@ -266,6 +277,25 @@ class UsuarioTelefoneIntegrationTest {
             Integer.class,
             usuarioIdAdmin);
     assertThat(auditorias).isEqualTo(2);
+  }
+
+  @Test
+  void gravaCodigoEPendenciaComMapeamentoCorreto() throws Exception {
+    Long usuarioIdAdmin = usuarioIdDoEmail("admin@controle.com");
+    vincularTelefone(tokenAdmin, usuarioIdAdmin, "+5571999999994");
+
+    UsuarioTelefone telefone = telefoneRepository.findByNumeroE164("+5571999999994").orElseThrow();
+
+    WhatsappConfirmacaoPendente pendencia = new WhatsappConfirmacaoPendente();
+    pendencia.setUsuarioTelefone(telefone);
+    pendencia.setProposta(
+        "{\"tipo\":\"SAIDA\",\"valor\":\"10.00\",\"data\":\"2026-11-19\",\"descricao\":\"teste\",\"categoriaSugerida\":\"Alimentacao\"}");
+    pendencia.setExpiraEm(OffsetDateTime.now().plus(24, ChronoUnit.HOURS));
+    pendencia.setStatus("PENDENTE");
+    WhatsappConfirmacaoPendente salva = confirmacaoRepository.saveAndFlush(pendencia);
+
+    assertThat(salva.getId()).isNotNull();
+    assertThat(confirmacaoRepository.findById(salva.getId())).isPresent();
   }
 
   /* ========================================================================
