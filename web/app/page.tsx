@@ -220,7 +220,7 @@ export default async function Home({ searchParams }: PageProps) {
               <section
                 data-screen="free"
                 aria-labelledby="analise-h"
-                className="space-y-4"
+                className="w-full min-w-0 space-y-4"
               >
                 <div className="flex items-center justify-between">
                   <h2
@@ -241,11 +241,11 @@ export default async function Home({ searchParams }: PageProps) {
                 </div>
 
                 {/* Grid de comparação mensal e categorias: empilhado no mobile, lado a lado no desktop xl+ */}
-                <div className="grid w-full grid-cols-1 gap-6 xl:grid-cols-2">
-                  <div className="min-w-0 w-full">
+                <div className="grid w-full min-w-0 grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+                  <div className="w-full min-w-0">
                     <MonthlyComparison meses={comparacao} />
                   </div>
-                  <div className="min-w-0 w-full">
+                  <div className="w-full min-w-0">
                     <CategoryBreakdown
                       categorias={dados.categorias}
                       totalSaidas={dados.totalSaidas}

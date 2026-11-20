@@ -82,9 +82,26 @@ export default async function ImportacoesPage() {
                   className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-primary/15 blur-3xl"
                 />
 
-                <div className="relative grid grid-cols-1 items-center gap-7 lg:grid-cols-8">
-                  {/* Bloco 61.8%: Navegação, Contexto e Segurança */}
-                  <div className="space-y-2">
+                <div className="relative flex w-full flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+                  {/* Bloco texto: título e descrição com largura confortável */}
+                  <div className="min-w-0 max-w-xl flex-1 space-y-2">
+                    {/* Razão tipográfica 1.618rem (título) : 0.9375rem (subtítulo) */}
+                    <h1
+                      id="hero-h"
+                      className="sr-only text-[1.618rem] font-semibold leading-tight tracking-tight text-foreground md:not-sr-only"
+                    >
+                      Importar PDFs
+                    </h1>
+
+                    <p className="hero__lead max-w-[55ch] text-[0.9375rem] leading-relaxed text-muted-foreground">
+                      Envie faturas de cartão e extratos bancários em PDF. A
+                      extração identifica a competência e monta os lançamentos
+                      para você revisar antes de gravar.
+                    </p>
+                  </div>
+
+                  {/* Bloco lateral: badges e guia visual do fluxo */}
+                  <div className="flex shrink-0 flex-col items-start gap-3 lg:items-end">
                     <div className="flex flex-wrap items-center gap-2">
                       <Link
                         href="/lancamentos"
@@ -105,59 +122,44 @@ export default async function ImportacoesPage() {
                       </span>
                     </div>
 
-                    {/* Razão tipográfica 1.618rem (título) : 0.9375rem (subtítulo) */}
-                    <h1
-                      id="hero-h"
-                      className="sr-only text-[1.618rem] font-semibold leading-tight tracking-tight text-foreground md:not-sr-only"
-                    >
-                      Importar PDFs
-                    </h1>
+                    <div className="flex w-full shrink-0 flex-col justify-center rounded-xl border border-border/60 bg-background/50 px-5 py-4 sm:w-auto">
+                      <span className="mb-2.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        Fluxo de processamento seguro
+                      </span>
 
-                    <p className="hero__lead max-w-[55ch] text-[0.9375rem] leading-relaxed text-muted-foreground">
-                      Envie faturas de cartão e extratos bancários em PDF. A
-                      extração identifica a competência e monta os lançamentos
-                      para você revisar antes de gravar.
-                    </p>
-                  </div>
+                      <ol className="flex flex-wrap items-center gap-3 text-xs">
+                        <li className="flex items-center gap-1.5 font-medium text-foreground">
+                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-primary/20 text-primary">
+                            <UploadCloud className="h-3.5 w-3.5" />
+                          </span>
+                          <span>1. Envio</span>
+                        </li>
 
-                  {/* Bloco 38.2%: Guia Visual do Fluxo (Visibilidade do Status & Prevenção de Erros) */}
-                  <div className="flex flex-col justify-center rounded-xl border border-border/60 bg-background/50 p-3.5 sm:p-4">
-                    <span className="mb-2.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      Fluxo de processamento seguro
-                    </span>
+                        <ChevronRight
+                          aria-hidden="true"
+                          className="h-3.5 w-3.5 shrink-0 text-muted-foreground/60"
+                        />
 
-                    <ol className="flex items-center justify-between gap-1.5 text-xs">
-                      <li className="flex items-center gap-1.5 font-medium text-foreground">
-                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-primary/20 text-primary">
-                          <UploadCloud className="h-3.5 w-3.5" />
-                        </span>
-                        <span>Envio</span>
-                      </li>
+                        <li className="flex items-center gap-1.5 font-medium text-foreground">
+                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground">
+                            <ListChecks className="h-3.5 w-3.5" />
+                          </span>
+                          <span>2. Revisão</span>
+                        </li>
 
-                      <ChevronRight
-                        aria-hidden="true"
-                        className="h-3.5 w-3.5 shrink-0 text-muted-foreground/60"
-                      />
+                        <ChevronRight
+                          aria-hidden="true"
+                          className="h-3.5 w-3.5 shrink-0 text-muted-foreground/60"
+                        />
 
-                      <li className="flex items-center gap-1.5 font-medium text-foreground">
-                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground">
-                          <ListChecks className="h-3.5 w-3.5" />
-                        </span>
-                        <span>Revisão</span>
-                      </li>
-
-                      <ChevronRight
-                        aria-hidden="true"
-                        className="h-3.5 w-3.5 shrink-0 text-muted-foreground/60"
-                      />
-
-                      <li className="flex items-center gap-1.5 font-medium text-foreground">
-                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground">
-                          <CheckCircle2 className="h-3.5 w-3.5" />
-                        </span>
-                        <span>Gravação</span>
-                      </li>
-                    </ol>
+                        <li className="flex items-center gap-1.5 font-medium text-foreground">
+                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground">
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                          </span>
+                          <span>3. Gravação</span>
+                        </li>
+                      </ol>
+                    </div>
                   </div>
                 </div>
               </section>

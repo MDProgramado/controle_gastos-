@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select } from "@/components/ui/select"
 import { SelectTrigger } from "@/components/ui/select"
@@ -83,7 +82,7 @@ export function ChatPanel() {
     {
       id: "msg-0",
       role: "assistant",
-      content: "Olá! Sou seu assistente financeiro. Como posso ajudar?",
+      content: "Olá, eu sou Pluton! Sou seu assistente financeiro. Como posso ajudar?",
       criadoEm: new Date(),
       opcoes: MENSAGENS_EXEMPLO,
     },
@@ -287,10 +286,10 @@ export function ChatPanel() {
     // Altura fixa: no mobile o chat ocupa a largura toda abaixo dos
     // graficos; no lg+ vira coluna lateral ao lado deles.
     <Card className="flex flex-col border border-input bg-card max-h-[90dvh] overflow-hidden">
-      <CardHeader className="px-4 py-3 flex items-center justify-between border-b">
-        <div className="flex items-center gap-2">
-          <CardTitle className="text-sm font-semibold">Assistente</CardTitle>
-          <Badge variant="outline" className="text-xs">beta</Badge>
+      <CardHeader className="flex items-center justify-between border-b px-4 py-3">
+        <div className="flex flex-col gap-0.5">
+          <CardTitle className="text-sm font-semibold">PLUTON</CardTitle>
+          <p className="text-xs text-muted-foreground">Seu assistente financeiro</p>
         </div>
       </CardHeader>
 
@@ -336,7 +335,7 @@ export function ChatPanel() {
                 ) : ehLancamento ? (
                   renderCardConfirmacao(m, listaPropostas)
                 ) : (
-                  <div className="max-w-[80%] rounded-lg bg-muted p-3 text-sm text-foreground">
+                  <div className="w-full max-w-full min-w-0 overflow-hidden rounded-lg bg-muted p-3 text-sm text-foreground">
                     {/* A resposta da IA vem em Markdown (tabelas, listas,
                         negrito) — por isso o Markdown. */}
                     <Markdown>{m.content}</Markdown>
@@ -367,7 +366,7 @@ export function ChatPanel() {
                               setValorInput(opcao)
                               enviarMensagemHandler(opcao)
                             }}
-                            className="text-xs"
+                            className="h-auto w-full max-w-full whitespace-normal break-words px-3 py-2 text-left leading-snug text-xs"
                           >
                             {opcao}
                           </Button>
@@ -403,7 +402,7 @@ export function ChatPanel() {
             !digitando &&
             !erro &&
             propostas.length === 0 && (
-              <div className="flex flex-col gap-2 max-w-[80%] text-sm text-muted-foreground">
+              <div className="flex w-full max-w-full min-w-0 flex-col gap-2 text-sm text-muted-foreground">
                 <p>Diga algo como:</p>
                 <div className="flex flex-wrap gap-2">
                   {MENSAGENS_EXEMPLO.map((exemplo) => (
@@ -413,7 +412,7 @@ export function ChatPanel() {
                         setValorInput(exemplo)
                         enviarMensagemHandler(exemplo)
                       }}
-                      className="text-sm text-primary underline underline-offset-4 hover:text-primary/80"
+                      className="h-auto w-full max-w-full whitespace-normal break-words px-3 py-2 text-left leading-snug text-sm text-primary underline underline-offset-4 hover:text-primary/80"
                     >
                       {exemplo}
                     </button>
