@@ -11,6 +11,7 @@ import com.controlefinanceiro.common.LinhaInvalidaException;
 import com.controlefinanceiro.common.LoteDemasiadoGrandeException;
 import com.controlefinanceiro.common.MonetarioException;
 import com.controlefinanceiro.common.NaoAutorizadoException;
+import com.controlefinanceiro.common.RoleInvalidoException;
 import com.controlefinanceiro.common.ServicoIaIndisponivelException;
 import com.controlefinanceiro.common.TelefoneJaVinculadoException;
 import com.controlefinanceiro.common.TelefoneNaoPertenceAoUsuarioException;
@@ -50,6 +51,12 @@ public class ProblemDetailExceptionHandler {
   @ExceptionHandler(AcessoNegadoException.class)
   public ProblemDetail acessoNegado(AcessoNegadoException ex) {
     return ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, ex.getMessage());
+  }
+
+  /** Role fora do enum ADMIN/USER → 400 ProblemDetail. */
+  @ExceptionHandler(RoleInvalidoException.class)
+  public ProblemDetail roleInvalido(RoleInvalidoException ex) {
+    return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
   }
 
   /** Validação do DTO (@Valid) → 400 listando os campos com problema. */
