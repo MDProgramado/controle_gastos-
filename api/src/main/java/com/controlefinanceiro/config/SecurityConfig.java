@@ -37,7 +37,11 @@ public class SecurityConfig {
         .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(
             auth ->
-                auth.requestMatchers("/api/auth/login", "/api/health")
+                auth.requestMatchers(
+                        "/api/auth/login",
+                        "/api/auth/registro",
+                        "/api/auth/convites/aceitar",
+                        "/api/health")
                     .permitAll()
                     // Webhook público da Meta (validação via X-Hub-Signature-256, não JWT)
                     .requestMatchers(HttpMethod.GET, "/webhooks/whatsapp")
@@ -49,8 +53,8 @@ public class SecurityConfig {
                     .hasAnyRole("ADMIN", "USER")
                     .requestMatchers("/api/categorias/**")
                     .hasRole("ADMIN")
-                    // Vinculação de telefone WhatsApp é exclusiva de ADMIN (F1, SECURITY.md)
-                    .requestMatchers(HttpMethod.POST, "/api/usuarios/**")
+                    // Gestão de contas e vinculação de telefone: somente ADMIN (D-04, F1)
+                    .requestMatchers("/api/usuarios/**")
                     .hasRole("ADMIN")
                     // Conhecimento da IA é administrativo e escopado pela empresa do JWT (F-002)
                     .requestMatchers("/api/ai/chat/conhecimento", "/api/ai/chat/conhecimento/**")

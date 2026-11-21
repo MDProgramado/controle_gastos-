@@ -1,11 +1,13 @@
 package com.controlefinanceiro.config;
 
 import com.controlefinanceiro.common.AcessoNegadoException;
+import com.controlefinanceiro.common.CadastroInvalidoException;
 import com.controlefinanceiro.common.CategoriaDuplicadaException;
 import com.controlefinanceiro.common.CategoriaNaoEncontradaException;
 import com.controlefinanceiro.common.CategoriaTipoIncompativelException;
 import com.controlefinanceiro.common.CodigoVerificacaoCooldownException;
 import com.controlefinanceiro.common.CodigoVerificacaoInvalidoException;
+import com.controlefinanceiro.common.ConviteInvalidoException;
 import com.controlefinanceiro.common.CredenciaisInvalidasException;
 import com.controlefinanceiro.common.LinhaInvalidaException;
 import com.controlefinanceiro.common.LoteDemasiadoGrandeException;
@@ -15,6 +17,7 @@ import com.controlefinanceiro.common.RoleInvalidoException;
 import com.controlefinanceiro.common.ServicoIaIndisponivelException;
 import com.controlefinanceiro.common.TelefoneJaVinculadoException;
 import com.controlefinanceiro.common.TelefoneNaoPertenceAoUsuarioException;
+import com.controlefinanceiro.common.UsuarioNaoEncontradoException;
 import com.controlefinanceiro.importacao.ArquivoInvalidoException;
 import com.controlefinanceiro.importacao.ImportacaoEstadoInvalidoException;
 import com.controlefinanceiro.importacao.ImportacaoNaoEncontradaException;
@@ -39,6 +42,24 @@ public class ProblemDetailExceptionHandler {
   @ExceptionHandler(CredenciaisInvalidasException.class)
   public ProblemDetail credenciaisInvalidas(CredenciaisInvalidasException ex) {
     return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, ex.getMessage());
+  }
+
+  /** Cadastro/convite recusado com mensagem genérica → 400 (anti-enumeração). */
+  @ExceptionHandler(CadastroInvalidoException.class)
+  public ProblemDetail cadastroInvalido(CadastroInvalidoException ex) {
+    return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+  }
+
+  /** Convite inexistente, expirado, usado ou com e-mail divergente → 400. */
+  @ExceptionHandler(ConviteInvalidoException.class)
+  public ProblemDetail conviteInvalido(ConviteInvalidoException ex) {
+    return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+  }
+
+  /** Usuário fora da empresa do token → 404 (sem vazar existência entre tenants). */
+  @ExceptionHandler(UsuarioNaoEncontradoException.class)
+  public ProblemDetail usuarioNaoEncontrado(UsuarioNaoEncontradoException ex) {
+    return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
   }
 
   /** Rota autenticada sem token/token inválido/expirado (via SecurityContext) → 401. */
