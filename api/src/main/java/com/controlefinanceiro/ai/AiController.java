@@ -37,7 +37,7 @@ public class AiController {
    */
   @PostMapping("/chat")
   public ResponseEntity<AiResponse> chat(@RequestBody AiRequest request) {
-    String empresaId = TenantContext.getEmpresaId().toString();
+    String empresaId = empresaId();
     String sessionId =
         request.sessionId() != null ? request.sessionId() : java.util.UUID.randomUUID().toString();
 
@@ -46,31 +46,35 @@ public class AiController {
   }
 
   /* ========================================================================
-  APIs de administração de conhecimento e memória (úteis para testes
-  e para alimentar a base de conhecimento da IA)
+  Administração do conhecimento: restrita a ADMIN no SecurityConfig e sempre
+  escopada pela empresa do JWT (F-002). Limpeza de sessão também usa o tenant.
   ======================================================================== */
 
   @GetMapping("/chat/conhecimento")
   public ResponseEntity<String> obterConhecimento() {
-    return ResponseEntity.ok(aiService.obterConhecimento());
+    return ResponseEntity.ok(aiService.obterConhecimento(empresaId()));
   }
 
   @PostMapping("/chat/conhecimento")
   public ResponseEntity<Void> definirConhecimento(@RequestBody AiConhecimentoRequest request) {
-    aiService.definirConhecimento(request.conhecimento());
+    aiService.definirConhecimento(empresaId(), request.conhecimento());
     return ResponseEntity.ok().build();
   }
 
   @PostMapping("/chat/conhecimento/limpar")
   public ResponseEntity<Void> limparConhecimento() {
-    aiService.definirConhecimento("");
+    aiService.definirConhecimento(empresaId(), "");
     return ResponseEntity.ok().build();
   }
 
   @PostMapping("/chat/sessao/{sessionId}/limpar")
   public ResponseEntity<Void> limparSessao(@PathVariable String sessionId) {
-    aiService.limparSessao(sessionId);
+    aiService.limparSessao(sessionId, empresaId());
     return ResponseEntity.ok().build();
+  }
+
+  private String empresaId() {
+    return TenantContext.getEmpresaId().toString();
   }
 
   public record AiConhecimentoRequest(String conhecimento) {}

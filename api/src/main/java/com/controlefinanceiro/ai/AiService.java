@@ -127,7 +127,7 @@ public class AiService {
       Conhecimento da empresa (definido pelo administrador):
       %s
       """
-            .formatted(hoje, hoje, hoje, dadosReais, knowledgeStore.obterConhecimento());
+            .formatted(hoje, hoje, hoje, dadosReais, knowledgeStore.obterConhecimento(empresaId));
 
     mensagens.add(Map.of("role", "system", "content", systemPrompt));
 
@@ -351,16 +351,16 @@ public class AiService {
   API de conhecimento (alimentável pelo administrador)
   ======================================================================== */
 
-  public String obterConhecimento() {
-    return knowledgeStore.obterConhecimento();
+  public String obterConhecimento(String empresaId) {
+    return knowledgeStore.obterConhecimento(empresaId);
   }
 
-  public void definirConhecimento(String texto) {
-    knowledgeStore.definirConhecimento(texto);
+  public void definirConhecimento(String empresaId, String texto) {
+    knowledgeStore.definirConhecimento(empresaId, texto);
   }
 
-  public boolean temConhecimento() {
-    return knowledgeStore.temConhecimento();
+  public boolean temConhecimento(String empresaId) {
+    return knowledgeStore.temConhecimento(empresaId);
   }
 
   /* ========================================================================
@@ -371,11 +371,11 @@ public class AiService {
     return memoryStore.totalSessoes();
   }
 
-  public List<AiMessage> obterHistorico(String sessionId) {
-    return memoryStore.obterHistorico(sessionId);
+  public List<AiMessage> obterHistorico(String sessionId, String empresaId) {
+    return memoryStore.obterHistorico(sessionId, empresaId);
   }
 
-  public void limparSessao(String sessionId) {
-    memoryStore.limpar(sessionId);
+  public void limparSessao(String sessionId, String empresaId) {
+    memoryStore.limpar(sessionId, empresaId);
   }
 }

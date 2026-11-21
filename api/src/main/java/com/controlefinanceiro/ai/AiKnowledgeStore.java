@@ -1,26 +1,28 @@
 package com.controlefinanceiro.ai;
 
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.stereotype.Component;
 
 /**
- * Repositório de conhecimento da IA. É um local onde o usuário (ou administrador) pode alimentar
- * textos de contexto que a IA usará ao responder (ex.: regras de negócio, categorias padrão,
- * políticas). Implementação inicial em memória; pode ser migrada para banco quando necessário.
+ * Repositório de conhecimento da IA, escopado por empresa (F-002). O texto definido por uma empresa
+ * nunca é injetado no prompt de outra.
  */
 @Component
 public class AiKnowledgeStore {
 
-  private String conhecimento = "";
+  private final Map<String, String> conhecimentos = new ConcurrentHashMap<>();
 
-  public String obterConhecimento() {
-    return conhecimento;
+  public String obterConhecimento(String empresaId) {
+    return conhecimentos.getOrDefault(Objects.requireNonNull(empresaId, "empresaId"), "");
   }
 
-  public void definirConhecimento(String texto) {
-    this.conhecimento = texto == null ? "" : texto;
+  public void definirConhecimento(String empresaId, String texto) {
+    conhecimentos.put(Objects.requireNonNull(empresaId, "empresaId"), texto == null ? "" : texto);
   }
 
-  public boolean temConhecimento() {
-    return conhecimento != null && !conhecimento.isBlank();
+  public boolean temConhecimento(String empresaId) {
+    return !obterConhecimento(empresaId).isBlank();
   }
 }

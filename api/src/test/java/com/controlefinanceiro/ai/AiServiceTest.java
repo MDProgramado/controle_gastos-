@@ -162,7 +162,7 @@ class AiServiceTest {
     AiResponse primeira = aiService.processar("sessao-1", "empresa-1", "mensagem um");
     AiResponse segunda = aiService.processar("sessao-1", "empresa-1", "mensagem dois");
 
-    List<AiMessage> historico = aiService.obterHistorico("sessao-1");
+    List<AiMessage> historico = aiService.obterHistorico("sessao-1", "empresa-1");
     assertThat(historico).hasSize(4); // usuário + assistente × 2
     assertThat(historico.get(0).role()).isEqualTo("user");
     assertThat(historico.get(0).content()).isEqualTo("mensagem um");
@@ -174,12 +174,14 @@ class AiServiceTest {
   @Test
   @DisplayName("conhecimento alimentado e recuperado")
   void conhecimentoEhAlimentadoERecuperado() {
-    assertThat(aiService.temConhecimento()).isFalse();
+    assertThat(aiService.temConhecimento("empresa-1")).isFalse();
 
-    aiService.definirConhecimento("Categorias: Alimentação, Transporte, Supermercado.");
+    aiService.definirConhecimento(
+        "empresa-1", "Categorias: Alimentação, Transporte, Supermercado.");
 
-    assertThat(aiService.temConhecimento()).isTrue();
-    assertThat(aiService.obterConhecimento()).contains("Alimentação", "Transporte", "Supermercado");
+    assertThat(aiService.temConhecimento("empresa-1")).isTrue();
+    assertThat(aiService.obterConhecimento("empresa-1"))
+        .contains("Alimentação", "Transporte", "Supermercado");
   }
 
   @Test
@@ -197,9 +199,9 @@ class AiServiceTest {
     when(aiClient.completar(any())).thenReturn("CONSULTA|Resposta");
 
     aiService.processar("sessao-1", "empresa-1", "mensagem um");
-    assertThat(aiService.obterHistorico("sessao-1")).hasSize(2);
+    assertThat(aiService.obterHistorico("sessao-1", "empresa-1")).hasSize(2);
 
-    aiService.limparSessao("sessao-1");
-    assertThat(aiService.obterHistorico("sessao-1")).isEmpty();
+    aiService.limparSessao("sessao-1", "empresa-1");
+    assertThat(aiService.obterHistorico("sessao-1", "empresa-1")).isEmpty();
   }
 }

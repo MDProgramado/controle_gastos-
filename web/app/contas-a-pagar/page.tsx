@@ -9,20 +9,18 @@ import { Header } from "@/components/header";
 import { SkipLink } from "@/components/SkipLink";
 import { ContasAPagarClient, type ContaAPagarItem } from "@/components/ContasAPagarClient";
 
-const BACKEND_URL =
-  process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-
 async function getContasAPagar(): Promise<ContaAPagarItem[]> {
+  const apiUrl = process.env.API_URL;
+  if (!apiUrl) return [];
+
   try {
     const cookieStore = await cookies();
-    const token =
-      cookieStore.get("sess")?.value ||
-      cookieStore.get("access_token")?.value ||
-      cookieStore.get("auth_token")?.value;
+    const token = cookieStore.get("sess")?.value;
+    if (!token) return [];
 
-    const res = await fetch(`${BACKEND_URL}/contas-a-pagar`, {
+    const res = await fetch(`${apiUrl}/api/contas-a-pagar`, {
       headers: {
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        Authorization: `Bearer ${token}`,
       },
       cache: "no-store",
     });
