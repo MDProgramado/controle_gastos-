@@ -9,21 +9,19 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-/**
- * Repositório de {@link ImportacaoDocumento}.
- *
- * <p>Todas as queries filtram por empresa_id (tenant, R3).
- */
+/** Repositório de documentos de importação, escalonado por empresa_id e usuario_id do token. */
 @Repository
 public interface ImportacaoDocumentoRepository extends JpaRepository<ImportacaoDocumento, Long> {
 
-  ImportacaoDocumento findByEmpresaIdAndHashSha256(Long empresaId, String hashSha256);
+  ImportacaoDocumento findByEmpresaIdAndUsuarioIdAndHashSha256(
+      Long empresaId, Long usuarioId, String hashSha256);
 
-  /** Histórico da empresa, mais recente primeiro (tela de importações). */
-  Page<ImportacaoDocumento> findByEmpresaIdOrderByIdDesc(Long empresaId, Pageable pageable);
+  Page<ImportacaoDocumento> findByEmpresaIdAndUsuarioIdOrderByIdDesc(
+      Long empresaId, Long usuarioId, Pageable pageable);
 
-  /** Busca um documento dentro do tenant (isolamento R3 — nunca expõe de outra empresa). */
-  @Query("select d from ImportacaoDocumento d where d.id = :id and d.empresa.id = :empresaId")
-  Optional<ImportacaoDocumento> findByIdAndEmpresaId(
-      @Param("id") Long id, @Param("empresaId") Long empresaId);
+  @Query(
+      "select d from ImportacaoDocumento d where d.id = :id and d.empresa.id = :empresaId"
+          + " and d.usuario.id = :usuarioId")
+  Optional<ImportacaoDocumento> findByIdAndEmpresaIdAndUsuarioId(
+      @Param("id") Long id, @Param("empresaId") Long empresaId, @Param("usuarioId") Long usuarioId);
 }

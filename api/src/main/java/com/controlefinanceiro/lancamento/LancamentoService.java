@@ -2,12 +2,12 @@ package com.controlefinanceiro.lancamento;
 
 import com.controlefinanceiro.categoria.Categoria;
 import com.controlefinanceiro.categoria.CategoriaRepository;
+import com.controlefinanceiro.common.CategoriaNaoEncontradaException;
+import com.controlefinanceiro.common.CategoriaTipoIncompativelException;
 import com.controlefinanceiro.common.LinhaInvalidaException;
 import com.controlefinanceiro.common.LoteDemasiadoGrandeException;
 import com.controlefinanceiro.common.MonetarioException;
 import com.controlefinanceiro.common.NaoAutorizadoException;
-import com.controlefinanceiro.common.TenantContext;
-import com.controlefinanceiro.common.UsuarioAuth;
 import com.controlefinanceiro.empresa.Empresa;
 import com.controlefinanceiro.usuario.Usuario;
 import com.controlefinanceiro.usuario.UsuarioRepository;
@@ -17,16 +17,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import org.springframework.data.domain.Page;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Serviço de lançamentos (segue o padrão de {@link
- * com.controlefinanceiro.categoria.CategoriaService}). R3: empresa_id vem exclusivamente de {@link
- * TenantContext#getEmpresaId()}, nunca do body. LAN-05: todo cálculo monetário usa BigDecimal,
- * scale=2, HALF_EVEN; nenhum double/float.
+ * Serviço de lançamentos. empresa_id e usuario_id vêm exclusivamente do token (TenantContext e
+ * UsuarioContext), nunca do body. Toda consulta financeira é escalonada por ambos. LAN-05: apenas
+ * BigDecimal, scale=2, HALF_EVEN.
  */
 @Service
 public class LancamentoService {
@@ -47,55 +45,15 @@ public class LancamentoService {
     this.entityManager = entityManager;
   }
 
-  /**
-   * Cria um lançamento para a empresa autenticada.
-   *
-   * @param empresaId tenant extraído do token via TenantContext
-   * @param request dados do lançamento a criar
-   * @return resposta do lançamento criado
-   */
   @Transactional
-  public LancamentoResponse criar(Long empresaId, LancamentoRequest request) {
+  public LancamentoResponse criar(Long empresaId, Long usuarioId, LancamentoRequest request) {
     validarValor(request.valor());
-
-    Categoria categoria =
-        categoriaRepository
-            .findByIdAndEmpresaId(request.categoriaId(), empresaId)
-            .orElseThrow(
-                () ->
-                    new com.controlefinanceiro.common.CategoriaNaoEncontradaException(
-                        "Categoria não encontrada: id=%d, empresa=%d"
-                            .formatted(request.categoriaId(), empresaId)));
-
+    Categoria categoria = categoria(empresaId, request.categoriaId());
     validarIntegridadeCategoriaTipo(categoria, request.tipo());
 
-    Lancamento lancamento = new Lancamento();
-    lancamento.setEmpresa(entityManager.getReference(Empresa.class, empresaId));
-    lancamento.setUsuario(usuarioAtual());
-    lancamento.setCategoria(categoria);
-    lancamento.setTipo(request.tipo());
-    lancamento.setValor(request.valor());
-    lancamento.setData(request.data());
-    lancamento.setDescricao(request.descricao());
-
-    Lancamento salvo = lancamentoRepository.save(lancamento);
-    return new LancamentoResponse(salvo);
-  }
-
-  /**
-   * Cria um lançamento para a empresa autenticada com canal e message_id de origem (usado pelo
-   * webhook do WhatsApp).
-   *
-   * @param empresaId tenant extraído do token via TenantContext
-   * @param request dados do lançamento a criar
-   * @param canal origem do lançamento (WHATSAPP | MANUAL)
-   * @param messageIdOrigem id da mensagem WhatsApp de origem (idempotência)
-   * @return resposta do lançamento criado
-   */
-  @Transactional
-  public LancamentoResponse criarComCanal(
-      Long empresaId, LancamentoRequest request, String canal, String messageIdOrigem) {
-    return criarComCanal(empresaId, usuarioAtual().getId(), request, canal, messageIdOrigem);
+    Lancamento lancamento = novoLancamento(empresaId, usuarioId, categoria, request);
+    lancamento.setOrigem("MANUAL");
+    return new LancamentoResponse(lancamentoRepository.save(lancamento));
   }
 
   @Transactional
@@ -106,69 +64,26 @@ public class LancamentoService {
       String canal,
       String messageIdOrigem) {
     validarValor(request.valor());
-
-    Usuario usuario =
-        usuarioRepository
-          .findById(Objects.requireNonNull(usuarioId, "usuarioId"))
-            .filter(u -> u.getEmpresa().getId().equals(empresaId))
-            .orElseThrow(() -> new NaoAutorizadoException("Usuário não encontrado"));
-
-    Categoria categoria =
-        categoriaRepository
-            .findByIdAndEmpresaId(request.categoriaId(), empresaId)
-            .orElseThrow(
-                () ->
-                    new com.controlefinanceiro.common.CategoriaNaoEncontradaException(
-                        "Categoria não encontrada: id=%d, empresa=%d"
-                            .formatted(request.categoriaId(), empresaId)));
-
+    Categoria categoria = categoria(empresaId, request.categoriaId());
     validarIntegridadeCategoriaTipo(categoria, request.tipo());
 
-    Lancamento lancamento = new Lancamento();
-    lancamento.setEmpresa(entityManager.getReference(Empresa.class, empresaId));
-    lancamento.setUsuario(usuario);
-    lancamento.setCategoria(categoria);
-    lancamento.setTipo(request.tipo());
-    lancamento.setValor(request.valor());
-    lancamento.setData(request.data());
-    lancamento.setDescricao(request.descricao());
+    Lancamento lancamento = novoLancamento(empresaId, usuarioId, categoria, request);
     lancamento.setCanal(canal);
     lancamento.setMessageIdOrigem(messageIdOrigem);
-
-    Lancamento salvo = lancamentoRepository.save(lancamento);
-    return new LancamentoResponse(salvo);
+    return new LancamentoResponse(lancamentoRepository.save(lancamento));
   }
 
-  /**
-   * Edita um lançamento existente da empresa autenticada.
-   *
-   * @param id id do lançamento
-   * @param empresaId tenant extraído do token via TenantContext
-   * @param request novos dados do lançamento
-   * @return resposta do lançamento atualizado
-   */
   @Transactional
-  public LancamentoResponse editar(Long id, Long empresaId, LancamentoRequest request) {
+  public LancamentoResponse editar(
+      Long id, Long empresaId, Long usuarioId, LancamentoRequest request) {
     validarValor(request.valor());
 
     Lancamento lancamento =
         lancamentoRepository
-          .findById(Objects.requireNonNull(id, "id"))
-            .filter(l -> l.getEmpresa().getId().equals(empresaId))
-            .orElseThrow(
-                () ->
-                    new com.controlefinanceiro.common.CategoriaNaoEncontradaException(
-                        "Lançamento não encontrado: id=%d, empresa=%d".formatted(id, empresaId)));
+            .findByIdAndEmpresaIdAndUsuarioId(id, empresaId, usuarioId)
+            .orElseThrow(() -> naoEncontrado(id, empresaId));
 
-    Categoria categoria =
-        categoriaRepository
-            .findByIdAndEmpresaId(request.categoriaId(), empresaId)
-            .orElseThrow(
-                () ->
-                    new com.controlefinanceiro.common.CategoriaNaoEncontradaException(
-                        "Categoria não encontrada: id=%d, empresa=%d"
-                            .formatted(request.categoriaId(), empresaId)));
-
+    Categoria categoria = categoria(empresaId, request.categoriaId());
     validarIntegridadeCategoriaTipo(categoria, request.tipo());
 
     lancamento.setCategoria(categoria);
@@ -177,71 +92,40 @@ public class LancamentoService {
     lancamento.setData(request.data());
     lancamento.setDescricao(request.descricao());
 
-    Lancamento salvo = lancamentoRepository.save(lancamento);
-    return new LancamentoResponse(salvo);
+    return new LancamentoResponse(lancamentoRepository.save(lancamento));
   }
 
-  /**
-   * Exclui um lançamento existente da empresa autenticada.
-   *
-   * @param id id do lançamento
-   * @param empresaId tenant extraído do token via TenantContext
-   */
   @Transactional
-  public void excluir(Long id, Long empresaId) {
+  public void excluir(Long id, Long empresaId, Long usuarioId) {
     Lancamento lancamento =
         lancamentoRepository
-            .findById(Objects.requireNonNull(id, "id"))
-            .filter(l -> l.getEmpresa().getId().equals(empresaId))
-            .orElseThrow(
-                () ->
-                    new com.controlefinanceiro.common.CategoriaNaoEncontradaException(
-                        "Lançamento não encontrado: id=%d, empresa=%d".formatted(id, empresaId)));
-
-    lancamentoRepository.delete(Objects.requireNonNull(lancamento, "lancamento"));
+            .findByIdAndEmpresaIdAndUsuarioId(id, empresaId, usuarioId)
+            .orElseThrow(() -> naoEncontrado(id, empresaId));
+    lancamentoRepository.delete(lancamento);
   }
 
-  /**
-   * Lista lançamentos da empresa autenticada com filtros opcionais de mês, ano, tipo e categoria.
-   *
-   * @param empresaId tenant extraído do token via TenantContext
-   * @param ano filtro opcional por ano
-   * @param mes filtro opcional por mês
-   * @param tipo filtro opcional por tipo (ENTRADA | SAIDA)
-   * @param categoriaId filtro opcional por id da categoria
-   * @param pageable paginação
-   * @return página de respostas de lançamento
-   */
+  @Transactional(readOnly = true)
+  public LancamentoResponse buscarPorId(Long id, Long empresaId, Long usuarioId) {
+    return new LancamentoResponse(
+        lancamentoRepository
+            .findByIdAndEmpresaIdAndUsuarioId(
+                Objects.requireNonNull(id, "id"), empresaId, usuarioId)
+            .orElseThrow(() -> naoEncontrado(id, empresaId)));
+  }
+
   @Transactional(readOnly = true)
   public LancamentoPage listar(
-      Long empresaId, Integer ano, Integer mes, String tipo, Long categoriaId) {
+      Long empresaId, Long usuarioId, Integer ano, Integer mes, String tipo, Long categoriaId) {
     Page<Lancamento> page =
-        lancamentoRepository.findByEmpresaIdAndFiltros(
-            empresaId,
-            ano,
-            mes,
-            tipo,
-            categoriaId,
-            org.springframework.data.domain.PageRequest.of(0, 50));
-    List<LancamentoResponse> lista =
-        page.getContent().stream().map(LancamentoResponse::new).toList();
-    return new LancamentoPage(lista, page.getTotalElements());
+        lancamentoRepository.findByEmpresaIdAndUsuarioIdAndFiltros(
+            empresaId, usuarioId, ano, mes, tipo, categoriaId, PageRequest.of(0, 50));
+    return new LancamentoPage(
+        page.getContent().stream().map(LancamentoResponse::new).toList(), page.getTotalElements());
   }
 
-  /**
-   * Processa um lote de lançamentos em transação tudo-ou-nada (LOT-01, LOT-02, T-02-08).
-   *
-   * <p>Limite de 500 linhas (T-02-09). Cada linha é validada pelo {@link #criar(Long,
-   * LancamentoRequest)}; se qualquer linha falhar, a exceção é convertida em {@link
-   * LinhaInvalidaException} carregando o índice base 0 da linha, e o {@code @Transactional} garante
-   * rollback completo — nenhuma linha é persistida.
-   *
-   * @param empresaId tenant extraído do token via TenantContext (T-02-10)
-   * @param lote lote de linhas a criar
-   * @return lançamentos criados, na ordem do lote
-   */
   @Transactional
-  public List<LancamentoResponse> processarLote(Long empresaId, LancamentoLoteRequest lote) {
+  public List<LancamentoResponse> processarLote(
+      Long empresaId, Long usuarioId, LancamentoLoteRequest lote) {
     List<LancamentoLoteRequest.LancamentoLinha> linhas =
         lote.linhas() == null ? List.of() : lote.linhas();
 
@@ -253,49 +137,65 @@ public class LancamentoService {
     List<LancamentoResponse> criados = new ArrayList<>(linhas.size());
     for (int i = 0; i < linhas.size(); i++) {
       try {
-        criados.add(criar(empresaId, linhas.get(i).toRequest()));
+        criados.add(criar(empresaId, usuarioId, linhas.get(i).toRequest()));
       } catch (RuntimeException ex) {
-        // LOT-02: reporta o índice base 0 da linha inválida e aborta o lote inteiro
         throw new LinhaInvalidaException(i, ex.getMessage());
       }
     }
     return criados;
   }
 
+  private Lancamento novoLancamento(
+      Long empresaId, Long usuarioId, Categoria categoria, LancamentoRequest request) {
+    Usuario usuario =
+        usuarioRepository
+            .findByIdAndEmpresaId(Objects.requireNonNull(usuarioId, "usuarioId"), empresaId)
+            .orElseThrow(() -> new NaoAutorizadoException("Usuário não encontrado"));
+
+    Lancamento lancamento = new Lancamento();
+    lancamento.setEmpresa(entityManager.getReference(Empresa.class, empresaId));
+    lancamento.setUsuario(usuario);
+    lancamento.setCategoria(categoria);
+    lancamento.setTipo(request.tipo());
+    lancamento.setValor(request.valor());
+    lancamento.setData(request.data());
+    lancamento.setDescricao(request.descricao());
+    return lancamento;
+  }
+
+  private Categoria categoria(Long empresaId, Long categoriaId) {
+    return categoriaRepository
+        .findByIdAndEmpresaId(Objects.requireNonNull(categoriaId, "categoriaId"), empresaId)
+        .orElseThrow(
+            () ->
+                new CategoriaNaoEncontradaException(
+                    "Categoria não encontrada: id=%d, empresa=%d"
+                        .formatted(categoriaId, empresaId)));
+  }
+
+  private CategoriaNaoEncontradaException naoEncontrado(Long id, Long empresaId) {
+    return new CategoriaNaoEncontradaException(
+        "Lançamento não encontrado: id=%d, empresa=%d".formatted(id, empresaId));
+  }
+
   /** Valida valor monetário: escala <= 2 e positivo (LAN-04, LAN-07). */
   private void validarValor(BigDecimal valor) {
-    // LAN-04: rejeita (não arredonda) se mais de 2 casas decimais
     if (valor.scale() > 2) {
       throw new MonetarioException(
           "Valor monetário deve ter no máximo 2 casas decimais. Valor informado tem %d casas."
               .formatted(valor.scale()));
     }
-    // LAN-07: valor deve ser positivo
     if (valor.signum() <= 0) {
       throw new MonetarioException("Valor deve ser positivo. Valor informado: %s".formatted(valor));
     }
   }
 
-  /**
-   * Valida integridade categoria×tipo: o tipo da categoria deve bater com o tipo do lançamento
-   * (CAT-04).
-   */
+  /** Valida integridade categoria×tipo (CAT-04). */
   private void validarIntegridadeCategoriaTipo(Categoria categoria, String tipoLancamento) {
     if (!categoria.getTipo().equals(tipoLancamento)) {
-      throw new com.controlefinanceiro.common.CategoriaTipoIncompativelException(
+      throw new CategoriaTipoIncompativelException(
           "Categoria '%s' é do tipo '%s', incompatível com lançamento do tipo '%s'"
               .formatted(categoria.getNome(), categoria.getTipo(), tipoLancamento));
     }
-  }
-
-  /** Retorna o usuário autenticado a partir do principal no SecurityContext (R3). */
-  private Usuario usuarioAtual() {
-    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-    if (auth != null && auth.getPrincipal() instanceof UsuarioAuth usuarioAuth) {
-      return usuarioRepository
-          .findByEmail(usuarioAuth.subject())
-          .orElseThrow(() -> new NaoAutorizadoException("Usuário não encontrado"));
-    }
-    throw new NaoAutorizadoException();
   }
 }

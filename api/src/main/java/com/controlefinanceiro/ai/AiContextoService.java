@@ -1,5 +1,6 @@
 package com.controlefinanceiro.ai;
 
+import com.controlefinanceiro.common.UsuarioContext;
 import com.controlefinanceiro.dashboard.DashboardRepository;
 import com.controlefinanceiro.dashboard.dto.CategoryExpense;
 import com.controlefinanceiro.lancamento.Lancamento;
@@ -52,6 +53,7 @@ public class AiContextoService {
     if (empresaId == null) {
       return "";
     }
+    Long usuarioId = UsuarioContext.getUsuarioId();
 
     LocalDate hoje = LocalDate.now(FUSO);
     StringBuilder sb = new StringBuilder();
@@ -60,8 +62,10 @@ public class AiContextoService {
     for (int i = 0; i < MESES_NO_HISTORICO; i++) {
       LocalDate inicio = hoje.withDayOfMonth(1).minusMonths(i);
       LocalDate fim = inicio.withDayOfMonth(inicio.lengthOfMonth());
-      BigDecimal entradas = normalizar(dashboardRepository.totalEntradas(empresaId, inicio, fim));
-      BigDecimal saidas = normalizar(dashboardRepository.totalSaidas(empresaId, inicio, fim));
+      BigDecimal entradas =
+          normalizar(dashboardRepository.totalEntradas(empresaId, usuarioId, inicio, fim));
+      BigDecimal saidas =
+          normalizar(dashboardRepository.totalSaidas(empresaId, usuarioId, inicio, fim));
       BigDecimal saldo = entradas.subtract(saidas);
       sb.append("- ")
           .append(nomeMes(inicio))
@@ -80,9 +84,9 @@ public class AiContextoService {
     LocalDate fimMes = inicioMes.withDayOfMonth(inicioMes.lengthOfMonth());
 
     List<CategoryExpense> saidasPorCategoria =
-        dashboardRepository.breakdownSaida(empresaId, inicioMes, fimMes);
+        dashboardRepository.breakdownSaida(empresaId, usuarioId, inicioMes, fimMes);
     List<CategoryExpense> entradasPorCategoria =
-        dashboardRepository.breakdownEntrada(empresaId, inicioMes, fimMes);
+        dashboardRepository.breakdownEntrada(empresaId, usuarioId, inicioMes, fimMes);
 
     sb.append("\nCategorias no mês atual (").append(nomeMes(inicioMes)).append("):\n");
     for (CategoryExpense c : saidasPorCategoria) {
@@ -106,8 +110,8 @@ public class AiContextoService {
 
     List<Lancamento> recentes =
         lancamentoRepository
-            .findByEmpresaIdAndFiltros(
-                empresaId, null, null, null, null, PageRequest.of(0, MAX_LANCAMENTOS))
+            .findByEmpresaIdAndUsuarioIdAndFiltros(
+                empresaId, usuarioId, null, null, null, null, PageRequest.of(0, MAX_LANCAMENTOS))
             .getContent();
 
     if (!recentes.isEmpty()) {
@@ -145,8 +149,7 @@ public class AiContextoService {
   private String formatarMoeda(BigDecimal valor) {
     java.text.DecimalFormat formato =
         new java.text.DecimalFormat(
-            "#,##0.00",
-            java.text.DecimalFormatSymbols.getInstance(Locale.forLanguageTag("pt-BR")));
+            "#,##0.00", java.text.DecimalFormatSymbols.getInstance(Locale.forLanguageTag("pt-BR")));
     return "R$ " + formato.format(normalizar(valor));
   }
 }

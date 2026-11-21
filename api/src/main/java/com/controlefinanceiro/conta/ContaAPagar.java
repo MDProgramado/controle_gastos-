@@ -2,6 +2,7 @@ package com.controlefinanceiro.conta;
 
 import com.controlefinanceiro.categoria.Categoria;
 import com.controlefinanceiro.empresa.Empresa;
+import com.controlefinanceiro.usuario.Usuario;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -35,6 +36,11 @@ public class ContaAPagar {
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(name = "empresa_id", nullable = false)
   private Empresa empresa;
+
+  /** Usuário dono do compromisso (isolamento financeiro por usuário). */
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @JoinColumn(name = "usuario_id", nullable = false)
+  private Usuario usuario;
 
   /** Fatura de origem (quando o compromisso veio de fatura de cartão). */
   @Column(name = "fatura_id")
@@ -88,6 +94,14 @@ public class ContaAPagar {
 
   public void setEmpresa(Empresa empresa) {
     this.empresa = empresa;
+  }
+
+  public Usuario getUsuario() {
+    return usuario;
+  }
+
+  public void setUsuario(Usuario usuario) {
+    this.usuario = usuario;
   }
 
   public Long getFaturaId() {

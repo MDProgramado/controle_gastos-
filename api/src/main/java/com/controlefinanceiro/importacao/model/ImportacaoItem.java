@@ -1,6 +1,7 @@
 package com.controlefinanceiro.importacao.model;
 
 import com.controlefinanceiro.empresa.Empresa;
+import com.controlefinanceiro.usuario.Usuario;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -33,6 +34,11 @@ public class ImportacaoItem {
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(name = "empresa_id", nullable = false)
   private Empresa empresa;
+
+  /** Usuário dono do item de staging (isolamento financeiro por usuário). */
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @JoinColumn(name = "usuario_id", nullable = false)
+  private Usuario usuario;
 
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(name = "documento_id", nullable = false)
@@ -103,6 +109,14 @@ public class ImportacaoItem {
 
   public void setEmpresa(Empresa empresa) {
     this.empresa = empresa;
+  }
+
+  public Usuario getUsuario() {
+    return usuario;
+  }
+
+  public void setUsuario(Usuario usuario) {
+    this.usuario = usuario;
   }
 
   public ImportacaoDocumento getDocumento() {

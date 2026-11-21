@@ -5,7 +5,7 @@ import com.controlefinanceiro.categoria.CategoriaRepository;
 import com.controlefinanceiro.common.LinhaInvalidaException;
 import com.controlefinanceiro.common.ServicoIaIndisponivelException;
 import com.controlefinanceiro.common.TenantContext;
-import com.controlefinanceiro.common.UsuarioAuth;
+import com.controlefinanceiro.common.UsuarioContext;
 import com.controlefinanceiro.conta.ContaAPagar;
 import com.controlefinanceiro.conta.ContaAPagarRepository;
 import com.controlefinanceiro.conta.FaturaCartao;
@@ -28,13 +28,12 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.multipart.MultipartFile;
@@ -46,8 +45,8 @@ import org.springframework.web.multipart.MultipartFile;
  *
  * <p>D-02: nada é gravado em {@code lancamento} ou {@code conta_a_pagar} aqui — a confirmação
  * (05-05) é uma etapa separada, explícita e transacional. R3: {@code empresa_id} e o usuário vêm
- * exclusivamente do token ({@link TenantContext}), nunca do body. D-14: o PDF bruto nunca é
- * persistido — só hash SHA-256, metadados e o resultado estruturado.
+ * exclusivamente do token ({@link TenantContext} e {@link UsuarioContext}), nunca do body. D-14: o
+ * PDF bruto nunca é persistido — só hash SHA-256, metadados e o resultado estruturado.
  *
  * <p>Uma falha em um arquivo não derruba os demais (try/catch por arquivo). Quando a IA está
  * indisponível e <em>nenhum</em> documento foi analisado, propaga {@link
@@ -154,6 +153,10 @@ public class ImportacaoService {
    * @return documentos analisados, resumo do mês e alertas
    */
   public ResultadoAnalise analisar(MultipartFile[] arquivos) {
+    return analisar(TenantContext.getEmpresaId(), UsuarioContext.getUsuarioId(), arquivos);
+  }
+
+  public ResultadoAnalise analisar(Long empresaId, Long usuarioId, MultipartFile[] arquivos) {
     if (arquivos == null || arquivos.length == 0) {
       throw new ArquivoInvalidoException("Envie pelo menos um arquivo PDF.");
     }
@@ -163,8 +166,7 @@ public class ImportacaoService {
               .formatted(MAXIMO_ARQUIVOS));
     }
 
-    Long empresaId = TenantContext.getEmpresaId();
-    Usuario usuario = usuarioDoToken();
+    Usuario usuario = usuario(empresaId, usuarioId);
     List<String> categoriasDoTenant = nomesDeCategorias(empresaId);
 
     List<DocumentoAnalise> documentos = new ArrayList<>();
@@ -176,11 +178,15 @@ public class ImportacaoService {
       String nome = nomeDoArquivo(arquivo);
       try {
         DocumentoAnalise resultado =
-            analisarArquivo(arquivo, empresaId, usuario, categoriasDoTenant);
+            analisarArquivo(arquivo, empresaId, usuarioId, usuario, categoriasDoTenant);
         documentos.add(resultado);
         if ("ANALISADO".equals(resultado.status())) {
-          itensDoLote.addAll(itemRepository.findByDocumentoId(resultado.documentoId()));
-          ImportacaoFatura fatura = faturaRepository.findByDocumentoId(resultado.documentoId());
+          itensDoLote.addAll(
+              itemRepository.findByDocumentoIdAndEmpresaIdAndUsuarioId(
+                  resultado.documentoId(), empresaId, usuarioId));
+          ImportacaoFatura fatura =
+              faturaRepository.findByDocumentoIdAndEmpresaIdAndUsuarioId(
+                  resultado.documentoId(), empresaId, usuarioId);
           if (fatura != null) {
             faturasDoLote.add(fatura);
           }
@@ -261,27 +267,37 @@ public class ImportacaoService {
       FaturaView fatura,
       AnalisadorConsolidado.ResumoAnalitico resumo) {}
 
-  /** Histórico da empresa, paginado (tenant do token — R3). */
+  /** Histórico da empresa/usuário do token, paginado. */
   public Page<DocumentoResumo> listar(Pageable pageable) {
-    Long empresaId = TenantContext.getEmpresaId();
+    return listar(TenantContext.getEmpresaId(), UsuarioContext.getUsuarioId(), pageable);
+  }
+
+  public Page<DocumentoResumo> listar(Long empresaId, Long usuarioId, Pageable pageable) {
     return documentoRepository
-        .findByEmpresaIdOrderByIdDesc(empresaId, pageable)
+        .findByEmpresaIdAndUsuarioIdOrderByIdDesc(empresaId, usuarioId, pageable)
         .map(this::toResumo);
   }
 
-  /** Detalhe de uma importação do tenant (itens + fatura + resumo recalculado). */
+  /** Detalhe de uma importação do tenant/usuário (itens + fatura + resumo recalculado). */
   public DocumentoDetalhe detalhar(Long id) {
-    Long empresaId = TenantContext.getEmpresaId();
+    return detalhar(TenantContext.getEmpresaId(), UsuarioContext.getUsuarioId(), id);
+  }
+
+  public DocumentoDetalhe detalhar(Long empresaId, Long usuarioId, Long id) {
     ImportacaoDocumento documento =
         documentoRepository
-            .findByIdAndEmpresaId(id, empresaId)
+            .findByIdAndEmpresaIdAndUsuarioId(id, empresaId, usuarioId)
             .orElseThrow(
                 () ->
                     new ImportacaoNaoEncontradaException(
                         "Importação %d não encontrada.".formatted(id)));
 
-    List<ImportacaoItem> itens = itemRepository.findByDocumentoId(documento.getId());
-    ImportacaoFatura fatura = faturaRepository.findByDocumentoId(documento.getId());
+    List<ImportacaoItem> itens =
+        itemRepository.findByDocumentoIdAndEmpresaIdAndUsuarioId(
+            documento.getId(), empresaId, usuarioId);
+    ImportacaoFatura fatura =
+        faturaRepository.findByDocumentoIdAndEmpresaIdAndUsuarioId(
+            documento.getId(), empresaId, usuarioId);
     AnalisadorConsolidado.ResumoAnalitico resumo =
         analisadorConsolidado.montarResumo(itens, fatura, null, null);
 
@@ -307,12 +323,15 @@ public class ImportacaoService {
    * descartada (os lançamentos já existem) → 409.
    */
   public void descartar(Long id) {
-    Long empresaId = TenantContext.getEmpresaId();
+    descartar(TenantContext.getEmpresaId(), UsuarioContext.getUsuarioId(), id);
+  }
+
+  public void descartar(Long empresaId, Long usuarioId, Long id) {
     transactionTemplate.executeWithoutResult(
         status -> {
           ImportacaoDocumento documento =
               documentoRepository
-                  .findByIdAndEmpresaId(id, empresaId)
+                  .findByIdAndEmpresaIdAndUsuarioId(id, empresaId, usuarioId)
                   .orElseThrow(
                       () ->
                           new ImportacaoNaoEncontradaException(
@@ -361,13 +380,17 @@ public class ImportacaoService {
    * @param request seleção do usuário (itens a incluir, overrides de categoria)
    */
   public ResultadoConfirmacao confirmar(Long importacaoId, ConfirmarRequest request) {
-    Long empresaId = TenantContext.getEmpresaId();
+    return confirmar(
+        TenantContext.getEmpresaId(), UsuarioContext.getUsuarioId(), importacaoId, request);
+  }
 
+  public ResultadoConfirmacao confirmar(
+      Long empresaId, Long usuarioId, Long importacaoId, ConfirmarRequest request) {
     return transactionTemplate.execute(
         status -> {
           ImportacaoDocumento documento =
               documentoRepository
-                  .findByIdAndEmpresaId(importacaoId, empresaId)
+                  .findByIdAndEmpresaIdAndUsuarioId(importacaoId, empresaId, usuarioId)
                   .orElseThrow(
                       () ->
                           new ImportacaoNaoEncontradaException(
@@ -379,7 +402,9 @@ public class ImportacaoService {
                     .formatted(importacaoId, documento.getStatus()));
           }
 
-          List<ImportacaoItem> itensStaging = itemRepository.findByDocumentoId(documento.getId());
+          List<ImportacaoItem> itensStaging =
+              itemRepository.findByDocumentoIdAndEmpresaIdAndUsuarioId(
+                  documento.getId(), empresaId, usuarioId);
           Map<Long, ConfirmarRequest.ConfirmarItem> selecao =
               selecaoPorItem(request == null ? null : request.itens());
 
@@ -392,11 +417,15 @@ public class ImportacaoService {
           // D-08: chaves de dedupe já gravadas; chaves novas entram aqui dentro para pegar
           // duplicidade dentro do próprio lote.
           Set<String> chavesGravadas =
-              new HashSet<>(lancamentoRepository.findChavesDedupeByEmpresaId(empresaId));
+              new HashSet<>(
+                  lancamentoRepository.findChavesDedupeByEmpresaIdAndUsuarioId(
+                      empresaId, usuarioId));
 
-          Usuario usuario = usuarioDoToken();
+          Usuario usuario = usuario(empresaId, usuarioId);
           FaturaCartao faturaCartao = null;
-          ImportacaoFatura faturaStaging = faturaRepository.findByDocumentoId(documento.getId());
+          ImportacaoFatura faturaStaging =
+              faturaRepository.findByDocumentoIdAndEmpresaIdAndUsuarioId(
+                  documento.getId(), empresaId, usuarioId);
 
           for (int i = 0; i < itensStaging.size(); i++) {
             ImportacaoItem item = itensStaging.get(i);
@@ -430,7 +459,10 @@ public class ImportacaoService {
                 contaAPagarIds.add(gravado.contaAPagarId());
                 if (gravado.faturaId() != null && faturaCartao == null) {
                   long faturaId = gravado.faturaId();
-                  faturaCartao = faturaCartaoRepository.findById(faturaId).orElse(null);
+                  faturaCartao =
+                      faturaCartaoRepository
+                          .findByIdAndEmpresaIdAndUsuarioId(faturaId, empresaId, usuarioId)
+                          .orElse(null);
                 }
               }
               importados++;
@@ -567,11 +599,13 @@ public class ImportacaoService {
     if (faturaStaging != null) {
       FaturaCartao faturaCartao =
           faturaCartaoRepository
-              .findByDocumentoId(documento.getId())
+              .findByDocumentoIdAndEmpresaIdAndUsuarioId(
+                  documento.getId(), documento.getEmpresa().getId(), usuario.getId())
               .orElseGet(
                   () -> {
                     FaturaCartao nova = new FaturaCartao();
                     nova.setEmpresa(documento.getEmpresa());
+                    nova.setUsuario(usuario);
                     nova.setDocumento(documento);
                     nova.setTotal(faturaStaging.getTotal());
                     nova.setDataVencimento(faturaStaging.getDataVencimento());
@@ -584,6 +618,7 @@ public class ImportacaoService {
 
     ContaAPagar conta = new ContaAPagar();
     conta.setEmpresa(documento.getEmpresa());
+    conta.setUsuario(usuario);
     conta.setFaturaId(faturaId);
     conta.setCategoria(categoria);
     conta.setDescricao(item.getDescricao());
@@ -618,7 +653,11 @@ public class ImportacaoService {
   /* ============================ fluxo por arquivo ============================ */
 
   private DocumentoAnalise analisarArquivo(
-      MultipartFile arquivo, Long empresaId, Usuario usuario, List<String> categoriasDoTenant)
+      MultipartFile arquivo,
+      Long empresaId,
+      Long usuarioId,
+      Usuario usuario,
+      List<String> categoriasDoTenant)
       throws IOException {
     validar(arquivo);
 
@@ -628,7 +667,8 @@ public class ImportacaoService {
     String hash = sha256(bytes);
 
     // D-09: mesmo arquivo + mesmo tenant já importado → DUPLICADO, sem novo staging.
-    if (documentoRepository.findByEmpresaIdAndHashSha256(empresaId, hash) != null) {
+    if (documentoRepository.findByEmpresaIdAndUsuarioIdAndHashSha256(empresaId, usuarioId, hash)
+        != null) {
       return new DocumentoAnalise(
           nome,
           "DUPLICADO",
@@ -667,11 +707,11 @@ public class ImportacaoService {
     IaExtracaoService.ResultadoExtracao extracao =
         iaExtracaoService.extrair(sanitizado, categoriasDoTenant, String.valueOf(empresaId));
 
-    List<ImportacaoItem> itens = construirItens(empresaId, extracao, tipoDocumento);
-    ImportacaoFatura fatura = construirFatura(empresaId, extracao, tipoDocumento);
+    List<ImportacaoItem> itens = construirItens(empresaId, usuario, extracao, tipoDocumento);
+    ImportacaoFatura fatura = construirFatura(empresaId, usuario, extracao, tipoDocumento);
 
     // D-09: dedupe contra lancamento (chave_dedupe) e itens de staging IMPORTADO.
-    marcarDuplicadosExternos(empresaId, itens);
+    marcarDuplicadosExternos(empresaId, usuarioId, itens);
 
     // D-26: alertas por item (duplicidade, atípico, fatura no extrato) + resumo.
     AnalisadorConsolidado.ResumoAnalitico resumoDoDocumento =
@@ -696,6 +736,7 @@ public class ImportacaoService {
               if (fatura != null) {
                 // Tenant vem do documento (mesmo padrão dos itens: empresa via entidade, R3).
                 fatura.setEmpresa(doc.getEmpresa());
+                fatura.setUsuario(doc.getUsuario());
                 fatura.setDocumento(doc);
                 faturaRepository.save(fatura);
               }
@@ -723,7 +764,10 @@ public class ImportacaoService {
   /* ============================ construção de entidades ============================ */
 
   private List<ImportacaoItem> construirItens(
-      Long empresaId, IaExtracaoService.ResultadoExtracao extracao, String tipoDocumento) {
+      Long empresaId,
+      Usuario usuario,
+      IaExtracaoService.ResultadoExtracao extracao,
+      String tipoDocumento) {
     List<ImportacaoItem> itens = new ArrayList<>();
     for (IaExtracaoService.ItemExtraido extraido : extracao.itens()) {
       // Origem da IA vs classificação do documento: quando divergem, vale a classificação local
@@ -734,6 +778,7 @@ public class ImportacaoService {
           mapeadorCategoria.mapear(extraido.categoria(), tipoDoItem(extraido.tipo()), empresaId);
 
       ImportacaoItem item = new ImportacaoItem();
+      item.setUsuario(usuario);
       item.setData(extraido.data());
       item.setDescricao(extraido.descricao());
       item.setValor(extraido.valor().setScale(2, java.math.RoundingMode.HALF_EVEN));
@@ -757,12 +802,16 @@ public class ImportacaoService {
   }
 
   private ImportacaoFatura construirFatura(
-      Long empresaId, IaExtracaoService.ResultadoExtracao extracao, String tipoDocumento) {
+      Long empresaId,
+      Usuario usuario,
+      IaExtracaoService.ResultadoExtracao extracao,
+      String tipoDocumento) {
     IaExtracaoService.FaturaExtraida extraida = extracao.fatura();
     if (extraida == null || !"CARTAO".equals(tipoDocumento)) {
       return null;
     }
     ImportacaoFatura fatura = new ImportacaoFatura();
+    fatura.setUsuario(usuario);
     fatura.setTotal(extraida.total().setScale(2, java.math.RoundingMode.HALF_EVEN));
     if (extraida.vencimento() != null) {
       fatura.setDataVencimento(extraida.vencimento());
@@ -782,6 +831,7 @@ public class ImportacaoService {
     for (int i = 0; i < itens.size(); i++) {
       ImportacaoItem item = itens.get(i);
       item.setEmpresa(doc.getEmpresa());
+      item.setUsuario(doc.getUsuario());
       item.setDocumento(doc);
       itemRepository.save(item);
     }
@@ -809,13 +859,15 @@ public class ImportacaoService {
     return documentoRepository.save(documento);
   }
 
-  private void marcarDuplicadosExternos(Long empresaId, List<ImportacaoItem> itens) {
+  private void marcarDuplicadosExternos(
+      Long empresaId, Long usuarioId, List<ImportacaoItem> itens) {
     if (itens.isEmpty()) {
       return;
     }
     Set<String> chavesExistentes =
-        new HashSet<>(lancamentoRepository.findChavesDedupeByEmpresaId(empresaId));
-    itemRepository.findByEmpresaIdAndStatus(empresaId, "IMPORTADO").stream()
+        new HashSet<>(
+            lancamentoRepository.findChavesDedupeByEmpresaIdAndUsuarioId(empresaId, usuarioId));
+    itemRepository.findByEmpresaIdAndUsuarioIdAndStatus(empresaId, usuarioId, "IMPORTADO").stream()
         .map(
             item ->
                 Deduplicador.gerarChaveDedupe(
@@ -893,16 +945,12 @@ public class ImportacaoService {
     return original != null && !original.isBlank() ? original : "documento.pdf";
   }
 
-  private Usuario usuarioDoToken() {
-    // O filtro JWT produz UsuarioAuthAuthenticationToken com principal
-    // UsuarioAuth (SecurityConfig) — mesmo padrão de TenantContext/AuthMeController.
-    Authentication autenticacao = SecurityContextHolder.getContext().getAuthentication();
-    if (autenticacao != null && autenticacao.getPrincipal() instanceof UsuarioAuth auth) {
-      return usuarioRepository
-          .findByEmail(auth.subject())
-          .orElseThrow(() -> new IllegalStateException("Usuário do token não encontrado."));
-    }
-    throw new IllegalStateException("Token sem principal de usuário válido.");
+  private Usuario usuario(Long empresaId, Long usuarioId) {
+    return usuarioRepository
+        .findByIdAndEmpresaId(
+            Objects.requireNonNull(usuarioId, "usuarioId"),
+            Objects.requireNonNull(empresaId, "empresaId"))
+        .orElseThrow(() -> new IllegalStateException("Usuário do token não encontrado."));
   }
 
   private String truncar(String texto, int limite) {

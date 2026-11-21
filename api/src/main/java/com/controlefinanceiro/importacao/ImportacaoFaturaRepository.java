@@ -4,13 +4,10 @@ import com.controlefinanceiro.importacao.model.ImportacaoFatura;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-/**
- * Repositório de {@link ImportacaoFatura}.
- *
- * <p>Todas as queries filtram por empresa_id (tenant, R3).
- */
+/** Repositório de cabeçalhos de staging, escalonado por empresa_id e usuario_id do token. */
 @Repository
 public interface ImportacaoFaturaRepository extends JpaRepository<ImportacaoFatura, Long> {
 
-  ImportacaoFatura findByDocumentoId(Long documentoId);
+  ImportacaoFatura findByDocumentoIdAndEmpresaIdAndUsuarioId(
+      Long documentoId, Long empresaId, Long usuarioId);
 }

@@ -5,15 +5,13 @@ import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-/**
- * Repositório de {@link ImportacaoItem}.
- *
- * <p>Todas as queries filtram por empresa_id (tenant, R3).
- */
+/** Repositório de itens de staging, escalonado por empresa_id e usuario_id do token. */
 @Repository
 public interface ImportacaoItemRepository extends JpaRepository<ImportacaoItem, Long> {
 
-  List<ImportacaoItem> findByDocumentoId(Long documentoId);
+  List<ImportacaoItem> findByDocumentoIdAndEmpresaIdAndUsuarioId(
+      Long documentoId, Long empresaId, Long usuarioId);
 
-  List<ImportacaoItem> findByEmpresaIdAndStatus(Long empresaId, String status);
+  List<ImportacaoItem> findByEmpresaIdAndUsuarioIdAndStatus(
+      Long empresaId, Long usuarioId, String status);
 }
