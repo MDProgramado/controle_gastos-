@@ -101,7 +101,7 @@ class ImportacaoServiceTest {
     SecurityContextHolder.getContext()
         .setAuthentication(
             new UsernamePasswordAuthenticationToken(
-                new UsuarioAuth(EMAIL, EMPRESA_ID, "ADMIN"), null, List.of()));
+                new UsuarioAuth(EMAIL, EMPRESA_ID, 7L, 0, "ADMIN"), null, List.of()));
 
     empresa = new Empresa();
     empresa.setId(EMPRESA_ID);

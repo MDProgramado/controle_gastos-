@@ -1,7 +1,10 @@
 package com.controlefinanceiro.config;
 
+import com.controlefinanceiro.common.Role;
+import com.controlefinanceiro.common.RoleInvalidoException;
 import com.controlefinanceiro.common.UsuarioAuth;
 import com.controlefinanceiro.common.UsuarioAuthAuthenticationToken;
+import com.controlefinanceiro.usuario.UsuarioRepository;
 import java.util.List;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -17,6 +20,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.InvalidBearerTokenException;
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
 
 /**
@@ -30,7 +34,8 @@ import org.springframework.security.web.SecurityFilterChain;
 public class SecurityConfig {
 
   @Bean
-  SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+  SecurityFilterChain securityFilterChain(HttpSecurity http, UsuarioRepository usuarioRepository)
+      throws Exception {
     http
         // API stateless com Bearer — CSRF não se aplica (o cookie httpOnly fica no BFF do web)
         .csrf(csrf -> csrf.disable())
@@ -63,7 +68,9 @@ public class SecurityConfig {
                     .authenticated())
         .oauth2ResourceServer(
             oauth2 ->
-                oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())));
+                oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())))
+        .addFilterAfter(
+            new UsuarioSessaoFilter(usuarioRepository), BearerTokenAuthenticationFilter.class);
     return http.build();
   }
 
@@ -76,12 +83,31 @@ public class SecurityConfig {
   Converter<Jwt, AbstractAuthenticationToken> jwtAuthenticationConverter() {
     return jwt -> {
       Object empresaClaim = jwt.getClaim("empresa_id");
-      String role = jwt.getClaim("role");
-      if (!(empresaClaim instanceof Number numero) || role == null || role.isBlank()) {
-        throw new InvalidBearerTokenException("Token sem as claims de sessão (empresa_id/role)");
+      Object usuarioClaim = jwt.getClaim("usuario_id");
+      Object versaoClaim = jwt.getClaim("token_version");
+      String roleClaim = jwt.getClaim("role");
+      if (!(empresaClaim instanceof Number empresa)
+          || !(usuarioClaim instanceof Number usuario)
+          || !(versaoClaim instanceof Number versao)
+          || roleClaim == null
+          || roleClaim.isBlank()) {
+        throw new InvalidBearerTokenException(
+            "Token sem as claims de sessão (empresa_id/usuario_id/token_version/role)");
       }
-      UsuarioAuth principal = new UsuarioAuth(jwt.getSubject(), numero.longValue(), role);
-      var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + role));
+      Role role;
+      try {
+        role = Role.from(roleClaim);
+      } catch (RoleInvalidoException ex) {
+        throw new InvalidBearerTokenException("Role inválida no token", ex);
+      }
+      UsuarioAuth principal =
+          new UsuarioAuth(
+              jwt.getSubject(),
+              empresa.longValue(),
+              usuario.longValue(),
+              versao.intValue(),
+              role.valor());
+      var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + role.valor()));
       return new UsuarioAuthAuthenticationToken(principal, authorities);
     };
   }
