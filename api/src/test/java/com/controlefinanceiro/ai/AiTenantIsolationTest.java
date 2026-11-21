@@ -7,13 +7,18 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.controlefinanceiro.common.UsuarioAuth;
+import com.controlefinanceiro.common.UsuarioAuthAuthenticationToken;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 /** Regressões de isolamento entre empresas (F-001 e F-002 do SECURITY.md). */
 class AiTenantIsolationTest {
@@ -25,10 +30,20 @@ class AiTenantIsolationTest {
   void setup() {
     aiClient = mock(AiClient.class);
     AiContextoService contextoService = mock(AiContextoService.class);
-    when(contextoService.montarContexto(any())).thenReturn("");
+    when(contextoService.montarContexto(any(), any())).thenReturn("");
     aiService =
         new AiService(aiClient, new AiMemoryStore(), new AiKnowledgeStore(), contextoService);
     when(aiClient.completar(any())).thenReturn("CONSULTA|Resposta");
+    SecurityContextHolder.getContext()
+        .setAuthentication(
+            new UsuarioAuthAuthenticationToken(
+                new UsuarioAuth("usuario@teste.com", 1L, 7L, 0, "USER"),
+                List.of(new SimpleGrantedAuthority("ROLE_USER"))));
+  }
+
+  @AfterEach
+  void limparContexto() {
+    SecurityContextHolder.clearContext();
   }
 
   @Test

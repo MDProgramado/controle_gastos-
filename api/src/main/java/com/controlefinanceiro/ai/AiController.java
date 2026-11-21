@@ -1,6 +1,7 @@
 package com.controlefinanceiro.ai;
 
 import com.controlefinanceiro.common.TenantContext;
+import com.controlefinanceiro.common.UsuarioContext;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -41,7 +42,9 @@ public class AiController {
     String sessionId =
         request.sessionId() != null ? request.sessionId() : java.util.UUID.randomUUID().toString();
 
-    AiResponse resposta = aiService.processar(sessionId, empresaId, request.mensagem());
+    AiResponse resposta =
+        aiService.processar(
+            sessionId, empresaId, UsuarioContext.getUsuarioId().toString(), request.mensagem());
     return ResponseEntity.ok(resposta);
   }
 
@@ -69,7 +72,7 @@ public class AiController {
 
   @PostMapping("/chat/sessao/{sessionId}/limpar")
   public ResponseEntity<Void> limparSessao(@PathVariable String sessionId) {
-    aiService.limparSessao(sessionId, empresaId());
+    aiService.limparSessao(sessionId, empresaId(), UsuarioContext.getUsuarioId().toString());
     return ResponseEntity.ok().build();
   }
 

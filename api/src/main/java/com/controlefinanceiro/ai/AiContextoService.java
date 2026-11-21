@@ -48,12 +48,15 @@ public class AiContextoService {
    * @param empresaId tenant extraído do token (R3)
    * @return texto pronto para o prompt
    */
-  @Transactional(readOnly = true)
   public String montarContexto(Long empresaId) {
+    return montarContexto(empresaId, UsuarioContext.getUsuarioId());
+  }
+
+  @Transactional(readOnly = true)
+  public String montarContexto(Long empresaId, Long usuarioId) {
     if (empresaId == null) {
       return "";
     }
-    Long usuarioId = UsuarioContext.getUsuarioId();
 
     LocalDate hoje = LocalDate.now(FUSO);
     StringBuilder sb = new StringBuilder();

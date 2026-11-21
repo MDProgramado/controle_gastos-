@@ -1,5 +1,6 @@
 package com.controlefinanceiro.ai;
 
+import com.controlefinanceiro.common.UsuarioContext;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -52,28 +53,27 @@ public class AiService {
    * @return resposta estruturada da IA
    */
   public AiResponse processar(String sessionId, String empresaId, String mensagem) {
+    return processar(sessionId, empresaId, UsuarioContext.getUsuarioId().toString(), mensagem);
+  }
+
+  public AiResponse processar(
+      String sessionId, String empresaId, String usuarioId, String mensagem) {
     if (mensagem == null || mensagem.isBlank()) {
       return new AiResponse(
           "esclarecimento", "Informe uma mensagem.", List.of(), null, List.of(), List.of());
     }
 
-    // 1. Obter sessão (memória de curto prazo)
-    AiSession sessao = memoryStore.obterOuCriar(sessionId, empresaId);
+    memoryStore.adicionarMensagem(sessionId, empresaId, usuarioId, new AiMessage("user", mensagem));
 
-    // 2. Adicionar mensagem do usuário ao histórico
-    sessao.adicionar(new AiMessage("user", mensagem));
+    List<AiMessage> historico = memoryStore.obterHistorico(sessionId, empresaId, usuarioId);
+    List<Map<String, Object>> mensagens =
+        montarMensagens(historico, mensagem, empresaId, usuarioId);
 
-    // 3. Montar a lista de mensagens para a OpenRouter
-    List<Map<String, Object>> mensagens = montarMensagens(sessao, mensagem, empresaId);
-
-    // 4. Chamar a OpenRouter
     String respostaTexto = aiClient.completar(mensagens);
-
-    // 5. Interpretar a resposta para extrair o intent
     AiResponse resposta = interpretar(respostaTexto);
 
-    // 6. Adicionar a resposta da IA ao histórico (retroalimentação)
-    sessao.adicionar(new AiMessage("assistant", resposta.resposta()));
+    memoryStore.adicionarMensagem(
+        sessionId, empresaId, usuarioId, new AiMessage("assistant", resposta.resposta()));
 
     return resposta;
   }
@@ -85,11 +85,11 @@ public class AiService {
    * @param empresaId tenant extraído do JWT (R3) — usado para montar os dados reais
    */
   private List<Map<String, Object>> montarMensagens(
-      AiSession sessao, String mensagemUsuario, String empresaId) {
+      List<AiMessage> historico, String mensagemUsuario, String empresaId, String usuarioId) {
     List<Map<String, Object>> mensagens = new ArrayList<>();
 
     String hoje = LocalDate.now(FUSO).toString();
-    String dadosReais = montarDadosReais(empresaId);
+    String dadosReais = montarDadosReais(empresaId, usuarioId);
 
     String systemPrompt =
         """
@@ -134,7 +134,6 @@ public class AiService {
     // Histórico de conversa (últimas N mensagens para não estourar o contexto).
     // A mensagem do usuário JÁ está no histórico (adicionada no processar), por isso não a
     // repetimos aqui — senão o modelo receberia a pergunta em duplicidade.
-    List<AiMessage> historico = sessao.mensagens();
     int inicio = Math.max(0, historico.size() - MAX_MENSAGENS_HISTORICO);
     for (int i = inicio; i < historico.size(); i++) {
       AiMessage m = historico.get(i);
@@ -153,10 +152,10 @@ public class AiService {
    * Monta o bloco de dados reais da empresa. Se a empresa ainda não tiver lançamentos, devolve um
    * aviso para a IA não inventar números.
    */
-  private String montarDadosReais(String empresaId) {
+  private String montarDadosReais(String empresaId, String usuarioId) {
     try {
-      Long id = Long.valueOf(empresaId);
-      String contexto = contextoService.montarContexto(id);
+      String contexto =
+          contextoService.montarContexto(Long.valueOf(empresaId), Long.valueOf(usuarioId));
       if (contexto == null || contexto.isBlank()) {
         return "(a empresa ainda não possui lançamentos registrados)";
       }
@@ -372,10 +371,18 @@ public class AiService {
   }
 
   public List<AiMessage> obterHistorico(String sessionId, String empresaId) {
-    return memoryStore.obterHistorico(sessionId, empresaId);
+    return obterHistorico(sessionId, empresaId, UsuarioContext.getUsuarioId().toString());
+  }
+
+  public List<AiMessage> obterHistorico(String sessionId, String empresaId, String usuarioId) {
+    return memoryStore.obterHistorico(sessionId, empresaId, usuarioId);
   }
 
   public void limparSessao(String sessionId, String empresaId) {
-    memoryStore.limpar(sessionId, empresaId);
+    limparSessao(sessionId, empresaId, UsuarioContext.getUsuarioId().toString());
+  }
+
+  public void limparSessao(String sessionId, String empresaId, String usuarioId) {
+    memoryStore.limpar(sessionId, empresaId, usuarioId);
   }
 }
