@@ -65,7 +65,7 @@ public class IaExtracaoService {
 
     List<String> lista =
         java.util.Arrays.stream(modelosConfig.split(","))
-            .map(String::trim)
+            .map(s -> s.trim())
             .filter(s -> !s.isEmpty())
             .distinct()
             .toList();

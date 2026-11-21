@@ -429,7 +429,8 @@ public class ImportacaoService {
               } else {
                 contaAPagarIds.add(gravado.contaAPagarId());
                 if (gravado.faturaId() != null && faturaCartao == null) {
-                  faturaCartao = faturaCartaoRepository.findById(gravado.faturaId()).orElse(null);
+                  long faturaId = gravado.faturaId();
+                  faturaCartao = faturaCartaoRepository.findById(faturaId).orElse(null);
                 }
               }
               importados++;
@@ -701,6 +702,10 @@ public class ImportacaoService {
               return doc;
             });
 
+    if (documento == null) {
+      throw new IllegalStateException("A transação não retornou o documento salvo.");
+    }
+
     return new DocumentoAnalise(
         nome,
         "ANALISADO",
@@ -878,8 +883,8 @@ public class ImportacaoService {
 
   private List<String> nomesDeCategorias(Long empresaId) {
     return categoriaRepository.findByEmpresaId(empresaId).stream()
-        .filter(Categoria::isAtivo)
-        .map(Categoria::getNome)
+        .filter(categoria -> categoria.isAtivo())
+        .map(categoria -> categoria.getNome())
         .toList();
   }
 

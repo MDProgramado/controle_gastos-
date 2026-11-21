@@ -15,6 +15,7 @@ import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import org.springframework.data.domain.Page;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -108,7 +109,7 @@ public class LancamentoService {
 
     Usuario usuario =
         usuarioRepository
-            .findById(usuarioId)
+          .findById(Objects.requireNonNull(usuarioId, "usuarioId"))
             .filter(u -> u.getEmpresa().getId().equals(empresaId))
             .orElseThrow(() -> new NaoAutorizadoException("Usuário não encontrado"));
 
@@ -152,7 +153,7 @@ public class LancamentoService {
 
     Lancamento lancamento =
         lancamentoRepository
-            .findById(id)
+          .findById(Objects.requireNonNull(id, "id"))
             .filter(l -> l.getEmpresa().getId().equals(empresaId))
             .orElseThrow(
                 () ->
@@ -190,14 +191,14 @@ public class LancamentoService {
   public void excluir(Long id, Long empresaId) {
     Lancamento lancamento =
         lancamentoRepository
-            .findById(id)
+            .findById(Objects.requireNonNull(id, "id"))
             .filter(l -> l.getEmpresa().getId().equals(empresaId))
             .orElseThrow(
                 () ->
                     new com.controlefinanceiro.common.CategoriaNaoEncontradaException(
                         "Lançamento não encontrado: id=%d, empresa=%d".formatted(id, empresaId)));
 
-    lancamentoRepository.delete(lancamento);
+    lancamentoRepository.delete(Objects.requireNonNull(lancamento, "lancamento"));
   }
 
   /**

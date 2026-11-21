@@ -311,7 +311,7 @@ public class AiService {
     java.text.DecimalFormat formato =
         new java.text.DecimalFormat(
             "#,##0.00",
-            java.text.DecimalFormatSymbols.getInstance(new java.util.Locale("pt", "BR")));
+            java.text.DecimalFormatSymbols.getInstance(java.util.Locale.forLanguageTag("pt-BR")));
     return "R$ " + formato.format(valor);
   }
 

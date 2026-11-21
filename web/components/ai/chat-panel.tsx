@@ -23,7 +23,7 @@ import type {
 } from "@/lib/ai/types"
 import { useCategorias } from "./use-categorias"
 import { Markdown } from "./markdown"
-import { ArrowRight, Loader2 } from "lucide-react"
+import { ArrowRight, Loader2, X } from "lucide-react"
 
 const MENSAGENS_EXEMPLO = [
   "Gastei R$ 45 no almoço hoje",
@@ -76,7 +76,14 @@ function encontrarCategoriaId(
   return achada ? String(achada.id) : null
 }
 
-export function ChatPanel() {
+export function ChatPanel({
+  onClose,
+  className,
+}: {
+  /** Quando fornecido, mostra um botão de fechar no cabeçalho do painel. */
+  onClose?: () => void
+  className?: string
+}) {
   const [mensagens, setMensagens] = useState<ChatMessage[]>(() => {
   return [
     {
@@ -285,12 +292,22 @@ export function ChatPanel() {
   return (
     // Altura fixa: no mobile o chat ocupa a largura toda abaixo dos
     // graficos; no lg+ vira coluna lateral ao lado deles.
-    <Card className="flex flex-col border border-input bg-card max-h-[90dvh] overflow-hidden">
+    <Card className={cn("flex flex-col border border-input bg-card max-h-[90dvh] overflow-hidden", className)}>
       <CardHeader className="flex items-center justify-between border-b px-4 py-3">
         <div className="flex flex-col gap-0.5">
           <CardTitle className="text-sm font-semibold">PLUTON</CardTitle>
           <p className="text-xs text-muted-foreground">Seu assistente financeiro</p>
         </div>
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Fechar chat"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
       </CardHeader>
 
       <CardContent className="flex-1 min-h-0 p-4 overflow-y-auto relative">

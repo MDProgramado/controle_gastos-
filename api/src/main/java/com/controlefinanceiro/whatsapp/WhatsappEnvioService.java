@@ -121,9 +121,6 @@ public class WhatsappEnvioService {
   @Async
   public void enviarInstrucaoCadastro(String numeroE164, String messageId) {
     try {
-      String texto =
-          "Seu número ainda não está cadastrado no Controle Financeiro. "
-              + "Acesse o site, vá em 'Meu WhatsApp' e cadastre seu número para começar a usar.";
       // TODO: envio real via Meta
       LOG.info(
           "Envio de instrução de cadastro para número {} (messageId={})",

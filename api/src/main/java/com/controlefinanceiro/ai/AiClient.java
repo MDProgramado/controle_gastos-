@@ -304,7 +304,8 @@ public class AiClient {
    */
   private long pausaComRetryAfter(
       RestClientResponseException e, long esperaInicialMs, int tentativa) {
-    String retryAfter = e.getResponseHeaders().getFirst(HttpHeaders.RETRY_AFTER);
+    var headers = e.getResponseHeaders();
+    String retryAfter = headers == null ? null : headers.getFirst(HttpHeaders.RETRY_AFTER);
     if (retryAfter != null) {
       try {
         return Long.parseLong(retryAfter.trim()) * 1000L;
@@ -325,7 +326,7 @@ public class AiClient {
   private List<String> listaDeModelos(String config, String padrao) {
     List<String> lista =
         java.util.Arrays.stream(config.split(","))
-            .map(String::trim)
+            .map(s -> s.trim())
             .filter(s -> !s.isEmpty())
             .filter(s -> !DESATIVA.contains(s.toLowerCase(java.util.Locale.ROOT)))
             .distinct()
@@ -374,8 +375,8 @@ public class AiClient {
     return restClient
         .post()
         .uri("/chat/completions")
-        .contentType(MediaType.APPLICATION_JSON)
-        .body(corpo)
+        .contentType(new MediaType("application", "json"))
+        .body(java.util.Objects.requireNonNull(corpo))
         .retrieve()
         .body(String.class);
   }

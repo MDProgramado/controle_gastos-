@@ -132,7 +132,7 @@ public class AiContextoService {
   }
 
   private String nomeMes(LocalDate data) {
-    return data.getMonth().getDisplayName(TextStyle.FULL, new Locale("pt", "BR"));
+    return data.getMonth().getDisplayName(TextStyle.FULL, Locale.forLanguageTag("pt-BR"));
   }
 
   private BigDecimal normalizar(BigDecimal valor) {
@@ -145,7 +145,8 @@ public class AiContextoService {
   private String formatarMoeda(BigDecimal valor) {
     java.text.DecimalFormat formato =
         new java.text.DecimalFormat(
-            "#,##0.00", java.text.DecimalFormatSymbols.getInstance(new Locale("pt", "BR")));
+            "#,##0.00",
+            java.text.DecimalFormatSymbols.getInstance(Locale.forLanguageTag("pt-BR")));
     return "R$ " + formato.format(normalizar(valor));
   }
 }

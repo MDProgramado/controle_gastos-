@@ -12,6 +12,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -80,22 +81,25 @@ public class WhatsappWebhookService {
   public void processarWebhook(String payload, String signature) {
     try {
       // Parsing simplificado do payload da Meta. Em produção, usar um DTO Jackson bem tipado.
-      @SuppressWarnings("unchecked")
       Map<String, Object> body = parseJson(payload);
 
-      List<Map<String, Object>> entries = (List<Map<String, Object>>) body.get("entry");
+      List<Map<String, Object>> entries = asMapList(body.get("entry"));
       if (entries == null) {
         LOG.warn("Webhook sem 'entry'");
         return;
       }
 
       for (Map<String, Object> entry : entries) {
-        List<Map<String, Object>> changes =
-            (List<Map<String, Object>>) entry.getOrDefault("changes", List.of());
+        List<Map<String, Object>> changes = asMapList(entry.get("changes"));
+        if (changes == null) {
+          continue;
+        }
         for (Map<String, Object> change : changes) {
-          Map<String, Object> value = (Map<String, Object>) change.getOrDefault("value", Map.of());
-          List<Map<String, Object>> messages =
-              (List<Map<String, Object>>) value.getOrDefault("messages", List.of());
+          Map<String, Object> value = asStringMap(change.get("value"));
+          if (value == null) {
+            continue;
+          }
+          List<Map<String, Object>> messages = asMapList(value.get("messages"));
           if (messages == null) {
             continue;
           }
@@ -109,6 +113,44 @@ public class WhatsappWebhookService {
     }
   }
 
+  private List<Map<String, Object>> asMapList(Object value) {
+    if (!(value instanceof List<?> list)) {
+      return null;
+    }
+
+    List<Map<String, Object>> result = new java.util.ArrayList<>();
+    for (Object item : list) {
+      if (!(item instanceof Map<?, ?> map)) {
+        return null;
+      }
+
+      Map<String, Object> typedMap = new java.util.HashMap<>();
+      for (Map.Entry<?, ?> entry : map.entrySet()) {
+        if (!(entry.getKey() instanceof String key)) {
+          return null;
+        }
+        typedMap.put(key, entry.getValue());
+      }
+      result.add(typedMap);
+    }
+    return result;
+  }
+
+  private Map<String, Object> asStringMap(Object value) {
+    if (!(value instanceof Map<?, ?> map)) {
+      return null;
+    }
+
+    Map<String, Object> result = new HashMap<>();
+    for (Map.Entry<?, ?> entry : map.entrySet()) {
+      if (!(entry.getKey() instanceof String key)) {
+        return null;
+      }
+      result.put(key, entry.getValue());
+    }
+    return result;
+  }
+
   private void processarMensagem(Map<String, Object> message) {
     String messageId = (String) message.get("id");
     if (messageId == null || mensagemRepository.existsByMessageId(messageId)) {
@@ -116,11 +158,11 @@ public class WhatsappWebhookService {
     }
 
     String from = (String) message.get("from"); // número remetente
-    Map<String, Object> text = (Map<String, Object>) message.get("text");
+    Map<String, Object> text = asStringMap(message.get("text"));
     String corpo = text == null ? null : (String) text.get("body");
 
     // Verifica se é um clique em botão (confirmação/cancelamento)
-    Map<String, Object> button = (Map<String, Object>) message.get("button");
+    Map<String, Object> button = asStringMap(message.get("button"));
     if (button != null) {
       String payloadBtn = (String) button.get("payload");
       processarConfirmacaoBotao(messageId, from, payloadBtn);
@@ -463,7 +505,7 @@ public class WhatsappWebhookService {
     java.text.DecimalFormat formato =
         new java.text.DecimalFormat(
             "#,##0.00",
-            java.text.DecimalFormatSymbols.getInstance(new java.util.Locale("pt", "BR")));
+            java.text.DecimalFormatSymbols.getInstance(java.util.Locale.forLanguageTag("pt-BR")));
     return "R$ " + formato.format(valor.setScale(2, java.math.RoundingMode.HALF_EVEN));
   }
 
@@ -476,7 +518,6 @@ public class WhatsappWebhookService {
     }
   }
 
-  @SuppressWarnings("unchecked")
   private Map<String, Object> parseJson(String json) {
     try {
       return new com.fasterxml.jackson.databind.ObjectMapper()

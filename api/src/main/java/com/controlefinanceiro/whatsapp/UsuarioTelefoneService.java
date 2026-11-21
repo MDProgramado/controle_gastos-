@@ -14,6 +14,7 @@ import java.security.SecureRandom;
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -79,7 +80,7 @@ public class UsuarioTelefoneService {
     // Verifica se o admin existe e pertence à empresa
     Usuario admin =
         usuarioRepository
-            .findById(adminId)
+          .findById(Objects.requireNonNull(adminId, "adminId"))
             .orElseThrow(() -> new NaoAutorizadoException("Administrador não encontrado"));
     if (!"ADMIN".equals(admin.getRole())) {
       throw new NaoAutorizadoException("Apenas administradores podem vincular telefones");
@@ -91,7 +92,7 @@ public class UsuarioTelefoneService {
     // Verifica se o usuário alvo existe e pertence à mesma empresa
     Usuario usuario =
         usuarioRepository
-            .findById(usuarioId)
+            .findById(Objects.requireNonNull(usuarioId, "usuarioId"))
             .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado"));
     if (!usuario.getEmpresa().getId().equals(empresaId)) {
       throw new AcessoNegadoException("Usuário não pertence a esta empresa");
