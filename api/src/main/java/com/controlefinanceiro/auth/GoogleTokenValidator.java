@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Locale;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -28,6 +29,7 @@ public class GoogleTokenValidator {
 
   private final GoogleIdTokenVerifier verifier;
 
+  @Autowired
   public GoogleTokenValidator(
       @Value("${google.client-id:}") String clientId,
       @Value("${google.connect-timeout-ms:3000}") int connectTimeoutMs,
