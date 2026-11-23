@@ -7,6 +7,7 @@ import com.controlefinanceiro.common.CadastroInvalidoException;
 import com.controlefinanceiro.empresa.Empresa;
 import com.controlefinanceiro.empresa.EmpresaRepository;
 import java.util.Locale;
+import java.util.UUID;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,7 +40,34 @@ public class TenantOnboardingService {
     if (usuarioRepository.findByEmail(emailNormalizado).isPresent()) {
       throw new CadastroInvalidoException();
     }
+    return criarTenant(
+        empresaNome, nome, emailNormalizado, passwordEncoder.encode(senha), null, false);
+  }
 
+  /** D-07/D-09: senha BCrypt aleatória (login por senha impossível) + e-mail já verificado. */
+  @Transactional
+  public TokenResponse onboardingComGoogle(
+      String empresaNome, String nome, String email, String googleSub) {
+    String emailNormalizado = normalizar(email);
+    if (usuarioRepository.findByEmail(emailNormalizado).isPresent()) {
+      throw new CadastroInvalidoException();
+    }
+    return criarTenant(
+        empresaNome,
+        nome,
+        emailNormalizado,
+        passwordEncoder.encode(UUID.randomUUID().toString()),
+        googleSub,
+        true);
+  }
+
+  private TokenResponse criarTenant(
+      String empresaNome,
+      String nome,
+      String emailNormalizado,
+      String senhaHash,
+      String googleSub,
+      boolean emailVerificado) {
     Empresa empresa = new Empresa();
     empresa.setNome(empresaNome.trim());
     empresaRepository.save(empresa);
@@ -47,11 +75,12 @@ public class TenantOnboardingService {
     Usuario usuario = new Usuario();
     usuario.setEmpresa(empresa);
     usuario.setEmail(emailNormalizado);
-    usuario.setNome(nome.trim());
-    usuario.setSenhaHash(passwordEncoder.encode(senha));
+    usuario.setNome(nome == null || nome.isBlank() ? emailNormalizado : nome.trim());
+    usuario.setSenhaHash(senhaHash);
     usuario.setRole("ADMIN");
     usuario.setAtivo(true);
-    usuario.setEmailVerificado(false);
+    usuario.setEmailVerificado(emailVerificado);
+    usuario.setGoogleSub(googleSub);
     usuario.setTokenVersion(0);
     usuarioRepository.save(usuario);
 

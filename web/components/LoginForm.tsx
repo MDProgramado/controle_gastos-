@@ -3,10 +3,11 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/Spinner";
+import { cn } from "@/lib/utils";
 
 type FieldErrors = { email?: string; senha?: string };
 type Falha = "credencial" | "rede" | null;
@@ -20,7 +21,13 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  * Formulário de login controlado (sem RHF/zod — 2 campos, D-05/UI-SPEC).
  * Estados: default · invalid · submitting · erro-credencial · erro-rede.
  */
-export function LoginForm({ sessaoExpirada = false }: { sessaoExpirada?: boolean }) {
+export function LoginForm({
+  sessaoExpirada = false,
+  googleOauthEnabled = false,
+}: {
+  sessaoExpirada?: boolean;
+  googleOauthEnabled?: boolean;
+}) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
@@ -80,6 +87,7 @@ export function LoginForm({ sessaoExpirada = false }: { sessaoExpirada?: boolean
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.trim(), senha }),
+        signal: AbortSignal.timeout(15000),
       });
 
       if (res.ok) {
@@ -179,6 +187,28 @@ export function LoginForm({ sessaoExpirada = false }: { sessaoExpirada?: boolean
           <AlertDescription>{falha === "credencial" ? MSG_CREDENCIAIS : MSG_REDE}</AlertDescription>
         </Alert>
       )}
+
+      <div aria-hidden className="my-2 flex items-center gap-3 text-xs text-muted-foreground">
+        <span className="h-px flex-1 bg-border" />
+        ou
+        <span className="h-px flex-1 bg-border" />
+      </div>
+      <a
+        href={googleOauthEnabled ? "/api/auth/google/start?intencao=LOGIN" : undefined}
+        aria-disabled={googleOauthEnabled ? undefined : true}
+        tabIndex={googleOauthEnabled ? undefined : -1}
+        title={googleOauthEnabled ? undefined : "Google OAuth não configurado"}
+        className={cn(
+          buttonVariants({ variant: "outline" }),
+          "h-11 w-full font-semibold",
+          !googleOauthEnabled && "cursor-not-allowed opacity-50",
+        )}
+      >
+        Entrar com Google
+        {!googleOauthEnabled && (
+          <span className="sr-only">Google OAuth não configurado</span>
+        )}
+      </a>
     </form>
   );
 }

@@ -3,6 +3,7 @@ package com.controlefinanceiro.ai;
 import com.controlefinanceiro.common.ServicoIaIndisponivelException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
@@ -12,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
@@ -91,7 +93,9 @@ public class AiClient {
       @Value("${ai.openrouter.api-key:}") String apiKey,
       @Value("${ai.openrouter.modelo:google/gemma-4-31b-it:free}") String modelo,
       @Value("${ai.openrouter.modelos:}") String modelosConfig,
-      @Value("${ai.openrouter.modelos-reserva:}") String modelosReservaConfig) {
+      @Value("${ai.openrouter.modelos-reserva:}") String modelosReservaConfig,
+      @Value("${ai.openrouter.connect-timeout-ms:3000}") int connectTimeoutMs,
+      @Value("${ai.openrouter.read-timeout-ms:30000}") int readTimeoutMs) {
     this.modelo = modelo;
     this.configurado = apiKey != null && !apiKey.isBlank();
 
@@ -100,9 +104,14 @@ public class AiClient {
     // Último recurso: entra quando a cascata inteira falha.
     this.modelosReserva = listaDeModelos(modelosReservaConfig, null);
 
+    SimpleClientHttpRequestFactory fabrica = new SimpleClientHttpRequestFactory();
+    fabrica.setConnectTimeout(Duration.ofMillis(connectTimeoutMs));
+    fabrica.setReadTimeout(Duration.ofMillis(readTimeoutMs));
+
     this.restClient =
         configurado
             ? RestClient.builder()
+                .requestFactory(fabrica)
                 .baseUrl("https://openrouter.ai/api/v1")
                 .defaultHeader("Authorization", "Bearer " + apiKey)
                 .defaultHeader("HTTP-Referer", "https://controlefinanceiro.app")

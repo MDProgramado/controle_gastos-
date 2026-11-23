@@ -74,7 +74,7 @@ class IsolamentoUsuarioServicosTest {
             mock(CategoriaRepository.class),
             mock(UsuarioRepository.class),
             mock(EntityManager.class))
-        .listar(EMPRESA, USUARIO, null, null, null, null);
+        .listar(EMPRESA, USUARIO, null, null, null, null, 0, 50);
 
     verify(repository)
         .findByEmpresaIdAndUsuarioIdAndFiltros(

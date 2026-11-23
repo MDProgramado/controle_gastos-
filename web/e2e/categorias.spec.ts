@@ -1,50 +1,35 @@
 import { test, expect } from "@playwright/test";
-
-const EMAIL = "admin@controle.com";
-const SENHA = "admin123";
-
-async function login(page: import("@playwright/test").Page) {
-  await page.goto("/login");
-  await page.getByLabel("E-mail").fill(EMAIL);
-  await page.getByLabel("Senha").fill(SENHA);
-  await page.getByRole("button", { name: "Entrar" }).click();
-  await page.waitForURL((url) => url.pathname !== "/login", { timeout: 15000 });
-}
+import { abrirPagina, login } from "./helpers";
 
 test.describe("Categorias", () => {
   test("página de categorias carrega sem erros", async ({ page }) => {
     await login(page);
-    await page.goto("/categorias");
-    await page.waitForTimeout(2000);
+    await abrirPagina(page, "/categorias");
     await expect(page).toHaveURL(/categorias/);
   });
 
   test("lista categorias existentes", async ({ page }) => {
     await login(page);
-    await page.goto("/categorias");
-    await page.waitForTimeout(2000);
-
-    // Deve haver uma lista de categorias ou estado vazio
-    const tabela = page.locator("table");
-    const vazio = page.getByText(/nenhuma categoria/i);
-    await expect(tabela.or(vazio).first()).toBeVisible();
+    await abrirPagina(page, "/categorias");
+    await expect(
+      page.getByRole("heading", { name: "Categorias", level: 1 }),
+    ).toBeVisible();
   });
 
   test("criar nova categoria", async ({ page }) => {
     await login(page);
-    await page.goto("/categorias");
-    await page.waitForTimeout(2000);
+    await abrirPagina(page, "/categorias");
 
-    const btnCriar = page.getByRole("button", { name: /\+?\s*Nova categoria/i });
-    if ((await btnCriar.count()) > 0) {
-      await btnCriar.click();
-      await page.waitForTimeout(1000);
+    const btnCriar = page.getByRole("button", { name: /Nova categoria/i });
+    await expect(btnCriar).toBeVisible();
+    await btnCriar.click();
 
-      await page.getByLabel("Nome").fill("Categoria Teste E2E");
-      await page.getByLabel("Tipo").click();
-      await page.getByRole("option", { name: /entrada/i }).click();
-      await page.getByRole("button", { name: /salvar/i }).click();
-      await page.waitForTimeout(2000);
-    }
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+    await dialog.getByLabel("Nome").fill("Categoria Teste E2E");
+    await dialog.getByLabel("Tipo").click();
+    await page.getByRole("option", { name: /entrada/i }).click();
+    await dialog.getByRole("button", { name: /salvar/i }).click();
+    await expect(page.getByText("Categoria Teste E2E")).toBeVisible();
   });
 });

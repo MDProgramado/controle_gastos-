@@ -31,6 +31,7 @@ public class DashboardService {
   @Transactional(readOnly = true)
   public DashboardResponse obterDashboard(
       Long empresaId, Long usuarioId, Integer ano, Integer mes) {
+    validarAnoMes(ano, mes);
     LocalDate dataInicio = LocalDate.of(ano, mes, 1);
     LocalDate dataFim = dataInicio.withDayOfMonth(dataInicio.lengthOfMonth());
 
@@ -67,6 +68,15 @@ public class DashboardService {
         calcularPercentual(totalSaidas, totalSaidasAnt),
         calcularPercentual(saldo, saldoAnt),
         categorias);
+  }
+
+  private static void validarAnoMes(Integer ano, Integer mes) {
+    if (ano == null || ano < 1900 || ano > 2100) {
+      throw new IllegalArgumentException("ano deve estar entre 1900 e 2100");
+    }
+    if (mes == null || mes < 1 || mes > 12) {
+      throw new IllegalArgumentException("mês deve estar entre 1 e 12");
+    }
   }
 
   private String calcularPercentual(BigDecimal atual, BigDecimal anterior) {

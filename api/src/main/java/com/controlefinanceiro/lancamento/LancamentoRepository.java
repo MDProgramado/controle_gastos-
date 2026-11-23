@@ -40,16 +40,16 @@ public interface LancamentoRepository extends JpaRepository<Lancamento, Long> {
 
   @Query(
       "select l from Lancamento l where l.empresa.id = :empresaId and l.usuario.id = :usuarioId"
-          + " and (:ano is null or extract(year from l.data) = :ano)"
-          + " and (:mes is null or extract(month from l.data) = :mes)"
+          + " and (:dataInicio is null or l.data >= :dataInicio)"
+          + " and (:dataFim is null or l.data < :dataFim)"
           + " and (:tipo is null or l.tipo = :tipo)"
           + " and (:categoriaId is null or l.categoria.id = :categoriaId)"
           + " order by l.data desc")
   Page<Lancamento> findByEmpresaIdAndUsuarioIdAndFiltros(
       @Param("empresaId") Long empresaId,
       @Param("usuarioId") Long usuarioId,
-      @Param("ano") Integer ano,
-      @Param("mes") Integer mes,
+      @Param("dataInicio") java.time.LocalDate dataInicio,
+      @Param("dataFim") java.time.LocalDate dataFim,
       @Param("tipo") String tipo,
       @Param("categoriaId") Long categoriaId,
       Pageable pageable);

@@ -21,6 +21,15 @@ import type {
   ChatMessage,
   PropostaLancamento,
 } from "@/lib/ai/types"
+import {
+  atualizarPropostaPorMensagem,
+  criarPropostasEditaveis,
+  marcarPropostasConfirmadas,
+  propostasDaMensagem,
+  valorPropostaParaApi,
+  type PropostaEditavel,
+  type PropostasPorMensagem,
+} from "@/lib/chat"
 import { useCategorias } from "./use-categorias"
 import { Markdown } from "./markdown"
 import { ArrowRight, Loader2, X } from "lucide-react"
@@ -30,27 +39,11 @@ const MENSAGENS_EXEMPLO = [
   "Quanto gastei com alimentação este mês?",
 ]
 
-/** Proposta em edição (valores como string para o input controlado). */
-type PropostaEditavel = {
-  id: string;
-  tipo: "ENTRADA" | "SAIDA";
-  valor: string;
-  data: string;
-  categoriaId: string | null;
-  categoriaSugerida?: string;
-  descricao?: string;
-  confirmada: boolean;
-};
-
 function formatarMoeda(valor: number): string {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
     currency: "BRL",
   }).format(valor)
-}
-
-function agoraISO(): string {
-  return new Date().toISOString().slice(0, 10)
 }
 
 /** Normaliza texto para comparar nomes ignorando acentos e caixa. */
@@ -99,7 +92,7 @@ export function ChatPanel({
   const [erro, setErro] = useState<string | null>(null)
   const [mensagemErro, setMensagemErro] = useState<string | null>(null)
   const [valorInput, setValorInput] = useState("")
-  const [propostas, setPropostas] = useState<PropostaEditavel[]>([])
+  const [propostasPorMensagem, setPropostasPorMensagem] = useState<PropostasPorMensagem>({})
   const { categorias } = useCategorias()
 
   // Sessão estável do chat: o backend guarda a memória da conversa por sessionId. Sem ele, cada
@@ -137,7 +130,6 @@ export function ChatPanel({
       setMensagens((atual) => [...atual.slice(-49), msgUsuario])
       setDigitando(true)
       setErro(null)
-      setPropostas([])
 
       try {
         const resposta = await enviarMensagem({
@@ -154,24 +146,19 @@ export function ChatPanel({
         }
 
         if (resposta.intent === "lancamento") {
-          const lista = resposta.propostas?.length
-            ? resposta.propostas
-            : [resposta.proposta]
+          const lista = (
+            resposta.propostas?.length ? resposta.propostas : [resposta.proposta]
+          ).filter((p): p is PropostaLancamento => Boolean(p))
           msgIA.lancamentoProposta = lista[0]
           msgIA.lancamentoPropostas = lista
-          setPropostas(
-            lista.map((p, indice) => ({
-              id: `prop-${Date.now()}-${indice}`,
-              tipo: p.tipo,
-              valor: String(p.valor),
-              data: p.data || agoraISO(),
-              categoriaId:
-                p.categoriaId ?? encontrarCategoriaId(p.categoriaSugerida, categorias),
-              categoriaSugerida: p.categoriaSugerida,
-              descricao: p.descricao,
-              confirmada: false,
-            })),
-          )
+          setPropostasPorMensagem((atual) => ({
+            ...atual,
+            ...criarPropostasEditaveis(
+              msgIA.id,
+              lista,
+              (sugestao) => encontrarCategoriaId(sugestao, categorias) ?? undefined,
+            ),
+          }))
         } else if (resposta.intent === "consulta") {
           msgIA.consultaDados = resposta.dados
         } else if (resposta.intent === "esclarecimento") {
@@ -220,37 +207,43 @@ export function ChatPanel({
 
   // --- Confirmação de lançamento ---
 
-  const atualizarProposta = (id: string, mudancas: Partial<PropostaEditavel>) => {
-    setPropostas((atual) =>
-      atual.map((p) => (p.id === id ? { ...p, ...mudancas } : p)),
+  const atualizarProposta = (
+    mensagemId: string,
+    id: string,
+    mudancas: Partial<PropostaEditavel>,
+  ) => {
+    setPropostasPorMensagem((atual) =>
+      atualizarPropostaPorMensagem(atual, mensagemId, id, mudancas),
     )
   }
 
-  const confirmarPropostas = async (ids: string[]) => {
-    const alvos = propostas.filter((p) => ids.includes(p.id))
+  const confirmarPropostas = async (mensagemId: string, ids: string[]) => {
+    const alvos = (propostasPorMensagem[mensagemId] ?? []).filter((p) =>
+      ids.includes(p.id),
+    )
     if (alvos.length === 0) return
 
-    const invalidas = alvos.filter(
-      (p) => !parseFloat(p.valor.replace(",", ".")) || !p.categoriaId,
-    )
-    if (invalidas.length > 0) return
+    const valores = alvos.map((p) => valorPropostaParaApi(p.valor))
+    if (valores.some((valor) => valor === null) || alvos.some((p) => !p.categoriaId)) {
+      setErro("Confira valor e categoria de todos os lançamentos antes de confirmar.")
+      return
+    }
 
     setDigitando(true)
     try {
-      // Uma única transação (tudo-ou-nada): ou entra tudo, ou nada é gravado.
       await confirmarLancamentos(
-        alvos.map((p) => ({
+        alvos.map((p, indice) => ({
           tipo: p.tipo,
-          valor: parseFloat(p.valor.replace(",", ".")),
+          valor: valores[indice] as number,
           data: p.data,
-          categoriaId: p.categoriaId,
+          categoriaId: p.categoriaId as string,
           categoriaSugerida: p.categoriaSugerida,
           descricao: p.descricao,
         })),
       )
 
-      setPropostas((atual) =>
-        atual.map((p) => (ids.includes(p.id) ? { ...p, confirmada: true } : p)),
+      setPropostasPorMensagem((atual) =>
+        marcarPropostasConfirmadas(atual, mensagemId, ids),
       )
 
       setMensagens((atual) => [
@@ -276,9 +269,13 @@ export function ChatPanel({
     }
   }
 
-  const lidarCancelarLancamento = () => {
+  const lidarCancelarLancamento = (mensagemId: string) => {
     setMensagens((atual) => [
-      ...atual.slice(-49),
+      ...atual.slice(-49).map((m) =>
+        m.id === mensagemId
+          ? { ...m, lancamentoProposta: undefined, lancamentoPropostas: undefined }
+          : m,
+      ),
       {
         id: `msg-${Date.now()}`,
         role: "assistant",
@@ -286,7 +283,11 @@ export function ChatPanel({
         criadoEm: new Date(),
       },
     ])
-    setPropostas([])
+    setPropostasPorMensagem((atual) => {
+      const copia = { ...atual }
+      delete copia[mensagemId]
+      return copia
+    })
   }
 
   return (
@@ -330,9 +331,7 @@ export function ChatPanel({
         <div className="flex flex-col gap-3 mb-4">
           {mensagens.map((m) => {
             const isUser = m.role === "user"
-            const listaPropostas =
-              m.lancamentoPropostas ??
-              (m.lancamentoProposta ? [m.lancamentoProposta] : [])
+            const listaPropostas = propostasDaMensagem(m)
             const ehLancamento = listaPropostas.length > 0
 
             return (
@@ -418,7 +417,7 @@ export function ChatPanel({
             mensagens[0].role === "assistant" &&
             !digitando &&
             !erro &&
-            propostas.length === 0 && (
+            Object.keys(propostasPorMensagem).length === 0 && (
               <div className="flex w-full max-w-full min-w-0 flex-col gap-2 text-sm text-muted-foreground">
                 <p>Diga algo como:</p>
                 <div className="flex flex-wrap gap-2">
@@ -478,7 +477,8 @@ export function ChatPanel({
     mensagem: ChatMessage,
     lista: PropostaLancamento[],
   ) {
-    const editaveis = propostas.filter((p) => !p.confirmada)
+    const estados = propostasPorMensagem[mensagem.id] ?? []
+    const editaveis = estados.filter((p) => !p.confirmada)
     const total = lista.length
     return (
       <div className="bg-card rounded-lg p-4 border border-border shadow-sm w-full">
@@ -493,8 +493,8 @@ export function ChatPanel({
 
         <div className="flex flex-col gap-4">
           {lista.map((proposta, indice) => {
-            // O estado "propostas" guarda exatamente as propostas desta mensagem, na mesma ordem.
-            const estado = propostas[indice]
+            // Cada mensagem mantém o estado das próprias propostas, na mesma ordem.
+            const estado = estados[indice]
             if (!estado) {
               return (
                 <div
@@ -522,7 +522,7 @@ export function ChatPanel({
                 >
                   <span className="text-muted-foreground">
                     {estado.tipo === "ENTRADA" ? "+" : "-"}{" "}
-                    {formatarMoeda(parseFloat(estado.valor.replace(",", ".")) || 0)} ·{" "}
+                    {formatarMoeda(valorPropostaParaApi(estado.valor) ?? 0)} ·{" "}
                     {estado.data} · {nomeCategoria} — registrado
                   </span>
                 </div>
@@ -531,7 +531,7 @@ export function ChatPanel({
 
             const ehEntrada = estado.tipo === "ENTRADA"
             const corValor = ehEntrada ? "text-positive" : "text-destructive"
-            const valorNumerico = parseFloat(estado.valor.replace(",", "."))
+            const valorNumerico = valorPropostaParaApi(estado.valor) ?? 0
             const podeConfirmar =
               valorNumerico > 0 && estado.categoriaId !== null
 
@@ -559,7 +559,7 @@ export function ChatPanel({
                   <div className="flex items-center gap-2 mt-1">
                     <button
                       onClick={() =>
-                        atualizarProposta(estado.id, { tipo: "ENTRADA" })
+                        atualizarProposta(mensagem.id, estado.id, { tipo: "ENTRADA" })
                       }
                       className={cn(
                         "flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors",
@@ -572,7 +572,7 @@ export function ChatPanel({
                     </button>
                     <button
                       onClick={() =>
-                        atualizarProposta(estado.id, { tipo: "SAIDA" })
+                        atualizarProposta(mensagem.id, estado.id, { tipo: "SAIDA" })
                       }
                       className={cn(
                         "flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors",
@@ -592,11 +592,11 @@ export function ChatPanel({
                     <Input
                       type="text"
                       value={estado.valor}
-                      onChange={(e) =>
-                        atualizarProposta(estado.id, {
-                          valor: e.target.value.replace(",", "."),
-                        })
-                      }
+                        onChange={(e) =>
+                          atualizarProposta(mensagem.id, estado.id, {
+                            valor: e.target.value,
+                          })
+                        }
                       className="h-9 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring"
                     />
                   </div>
@@ -606,7 +606,7 @@ export function ChatPanel({
                       type="date"
                       value={estado.data}
                       onChange={(e) =>
-                        atualizarProposta(estado.id, { data: e.target.value })
+                        atualizarProposta(mensagem.id, estado.id, { data: e.target.value })
                       }
                       className="h-9 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring"
                     />
@@ -620,7 +620,7 @@ export function ChatPanel({
                   <Select
                     value={estado.categoriaId ?? ""}
                     onValueChange={(valor) =>
-                      atualizarProposta(estado.id, {
+                      atualizarProposta(mensagem.id, estado.id, {
                         categoriaId: valor || null,
                       })
                     }
@@ -653,7 +653,7 @@ export function ChatPanel({
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => confirmarPropostas([estado.id])}
+                      onClick={() => confirmarPropostas(mensagem.id, [estado.id])}
                       disabled={!podeConfirmar || digitando}
                       className="text-xs"
                     >
@@ -671,7 +671,7 @@ export function ChatPanel({
             type="button"
             variant="outline"
             size="sm"
-            onClick={lidarCancelarLancamento}
+            onClick={() => lidarCancelarLancamento(mensagem.id)}
             className="text-xs"
           >
             Cancelar
@@ -681,14 +681,17 @@ export function ChatPanel({
             variant="default"
             size="sm"
             onClick={() =>
-              confirmarPropostas(editaveis.map((e) => e.id))
+              confirmarPropostas(
+                mensagem.id,
+                editaveis.map((e) => e.id),
+              )
             }
             disabled={
               digitando ||
               editaveis.length === 0 ||
               editaveis.some(
                 (e) =>
-                  !parseFloat(e.valor.replace(",", ".")) || !e.categoriaId,
+                  valorPropostaParaApi(e.valor) === null || !e.categoriaId,
               )
             }
             className="text-xs"

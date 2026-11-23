@@ -86,6 +86,14 @@ public class CategoriaService {
                     new CategoriaNaoEncontradaException(
                         "Categoria não encontrada: id=%d, empresa=%d".formatted(id, empresaId)));
 
+    if (!categoria.getTipo().equals(request.tipo())
+        && categoriaRepository.existeLancamento(id, empresaId)) {
+      throw new CategoriaTipoIncompativelException(
+          "Não é possível alterar o tipo de categoria com lançamentos. A categoria '%s' possui"
+              + " lançamentos e seu tipo permanece '%s'."
+                  .formatted(categoria.getNome(), categoria.getTipo()));
+    }
+
     categoria.setNome(request.nome());
     categoria.setTipo(request.tipo());
     categoria.setPessoal(request.pessoal());

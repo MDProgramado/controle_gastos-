@@ -20,6 +20,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/lancamentos")
 public class LancamentoController {
 
+  private static final int TAMANHO_MAXIMO = 100;
+
   private final LancamentoService lancamentoService;
 
   public LancamentoController(LancamentoService lancamentoService) {
@@ -62,7 +64,12 @@ public class LancamentoController {
       @RequestParam(required = false) Integer ano,
       @RequestParam(required = false) Integer mes,
       @RequestParam(required = false) String tipo,
-      @RequestParam(required = false) Long categoriaId) {
+      @RequestParam(required = false) Long categoriaId,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "50") int size) {
+    if (page < 0) {
+      throw new IllegalArgumentException("page deve ser maior ou igual a zero");
+    }
     return ResponseEntity.ok(
         lancamentoService.listar(
             TenantContext.getEmpresaId(),
@@ -70,7 +77,9 @@ public class LancamentoController {
             ano,
             mes,
             tipo,
-            categoriaId));
+            categoriaId,
+            page,
+            Math.min(size, TAMANHO_MAXIMO)));
   }
 
   @GetMapping("/{id}")

@@ -105,6 +105,7 @@ export function LinhaLote({
               onCorrigirCampo(linha.id, "tipo")
               onChange(linha.id, {
                 tipo: valor as TipoLancamento,
+                categoriaId: null,
               })
             }}
             disabled={loading}

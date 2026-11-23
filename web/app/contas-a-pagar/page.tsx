@@ -1,5 +1,8 @@
 import { Suspense } from "react";
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { getMe } from "@/lib/api";
+import { API_TIMEOUT_MS } from "@/lib/bff-helpers";
 import {
   Sidebar,
   SidebarContent,
@@ -23,6 +26,7 @@ async function getContasAPagar(): Promise<ContaAPagarItem[]> {
         Authorization: `Bearer ${token}`,
       },
       cache: "no-store",
+      signal: AbortSignal.timeout(API_TIMEOUT_MS),
     });
 
     if (!res.ok) return [];
@@ -37,7 +41,12 @@ async function ListaContasAPagar() {
   return <ContasAPagarClient contasIniciais={contas} />;
 }
 
-export default function ContasAPagarPage() {
+export default async function ContasAPagarPage() {
+  const usuario = await getMe();
+  if (!usuario) {
+    redirect("/login?expirada=1");
+  }
+
   return (
     <Sidebar>
       <SkipLink />
@@ -47,7 +56,10 @@ export default function ContasAPagarPage() {
           <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
             <Header titulo="Contas a Pagar" />
 
-            <main className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
+            <main
+              id="main-content"
+              className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6"
+            >
               <div className="mx-auto flex w-full max-w-7xl flex-col gap-7 lg:gap-[2.618rem]">
                 <h1 className="text-lg font-semibold text-foreground mb-6">
                   Contas a Pagar

@@ -25,6 +25,8 @@ import org.springframework.web.multipart.MultipartFile;
 @RequestMapping("/api/importacoes")
 public class ImportacaoController {
 
+  private static final int TAMANHO_MAXIMO = 100;
+
   private final ImportacaoService importacaoService;
 
   public ImportacaoController(ImportacaoService importacaoService) {
@@ -52,11 +54,14 @@ public class ImportacaoController {
   public ResponseEntity<Page<ImportacaoService.DocumentoResumo>> listar(
       @RequestParam(defaultValue = "0") int pagina,
       @RequestParam(defaultValue = "20") int tamanho) {
+    if (pagina < 0) {
+      throw new IllegalArgumentException("pagina deve ser maior ou igual a zero");
+    }
     Page<ImportacaoService.DocumentoResumo> historico =
         importacaoService.listar(
             TenantContext.getEmpresaId(),
             UsuarioContext.getUsuarioId(),
-            PageRequest.of(pagina, tamanho));
+            PageRequest.of(pagina, Math.min(tamanho, TAMANHO_MAXIMO)));
     return ResponseEntity.ok(historico);
   }
 

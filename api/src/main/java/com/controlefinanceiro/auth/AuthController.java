@@ -20,14 +20,17 @@ public class AuthController {
   private final AuthService authService;
   private final TenantOnboardingService tenantOnboardingService;
   private final ConviteService conviteService;
+  private final GoogleAuthService googleAuthService;
 
   public AuthController(
       AuthService authService,
       TenantOnboardingService tenantOnboardingService,
-      ConviteService conviteService) {
+      ConviteService conviteService,
+      GoogleAuthService googleAuthService) {
     this.authService = authService;
     this.tenantOnboardingService = tenantOnboardingService;
     this.conviteService = conviteService;
+    this.googleAuthService = googleAuthService;
   }
 
   @PostMapping("/login")
@@ -40,6 +43,12 @@ public class AuthController {
     return ResponseEntity.ok(
         tenantOnboardingService.onboarding(
             request.empresaNome(), request.nome(), request.email(), request.senha()));
+  }
+
+  /** Fase 4 (D-01): delega validação e autenticação ao serviço; devolve somente o JWT próprio. */
+  @PostMapping("/google")
+  public ResponseEntity<TokenResponse> google(@Valid @RequestBody GoogleRequest request) {
+    return ResponseEntity.ok(googleAuthService.autenticarComToken(request));
   }
 
   @PostMapping("/convites/aceitar")

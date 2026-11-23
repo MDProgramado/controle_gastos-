@@ -77,7 +77,7 @@ public class WhatsappWebhookService {
    * @param payload corpo JSON do webhook da Meta
    * @param signature valor do header X-Hub-Signature-256
    */
-  @Async
+  @Async(WhatsappAsyncConfig.EXECUTOR_NAME)
   @Transactional
   public void processarWebhook(String payload, String signature) {
     try {

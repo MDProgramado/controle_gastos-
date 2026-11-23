@@ -10,6 +10,9 @@ public interface AiMemoriaMensagemRepository extends JpaRepository<AiMemoriaMens
 
   List<AiMemoriaMensagem> findBySessaoIdOrderByIdAsc(Long sessaoId);
 
+  /** Últimas 20 mensagens para o prompt — ordem invertida no {@link AiMemoryStore}. */
+  List<AiMemoriaMensagem> findTop20BySessaoIdOrderByIdDesc(Long sessaoId);
+
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query("delete from AiMemoriaMensagem m where m.sessao.id = :sessaoId")
   void deleteBySessaoId(@Param("sessaoId") Long sessaoId);

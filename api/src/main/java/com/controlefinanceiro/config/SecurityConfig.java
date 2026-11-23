@@ -46,6 +46,7 @@ public class SecurityConfig {
                         "/api/auth/login",
                         "/api/auth/registro",
                         "/api/auth/convites/aceitar",
+                        "/api/auth/google",
                         "/api/health")
                     .permitAll()
                     // Webhook público da Meta (validação via X-Hub-Signature-256, não JWT)

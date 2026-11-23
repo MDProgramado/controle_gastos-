@@ -10,11 +10,16 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/Spinner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { DeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog";
+import { formatarBRL } from "@/lib/format";
+import { centavosDeString, normalizarValorParaApi } from "@/lib/money";
+import type { ResultadoCriacaoLote } from "@/lib/lancamentos";
+
+const ZERO = BigInt(0);
 
 type LancamentoData = {
   id: number;
   tipo: string;
-  valor: number;
+  valor: string;
   data: string;
   descricao: string;
   categoriaNome: string;
@@ -37,21 +42,21 @@ type LancamentosPageClientProps = {
     request: {
       categoriaId: number;
       tipo: string;
-      valor: number;
+      valor: string;
       data: string;
       descricao?: string;
     },
-  ) => Promise<LancamentoData | null>;
+  ) => Promise<{ id: number } | null>;
   onEditar: (
     id: number,
     request: {
       categoriaId: number;
       tipo: string;
-      valor: number;
+      valor: string;
       data: string;
       descricao?: string;
     },
-  ) => Promise<LancamentoData | null>;
+  ) => Promise<{ id: number } | null>;
   onExcluir: (id: number) => Promise<boolean>;
   onCriarLote: (
     linhas: Array<{
@@ -61,7 +66,7 @@ type LancamentosPageClientProps = {
       data: string;
       descricao?: string;
     }>,
-  ) => Promise<boolean>;
+  ) => Promise<ResultadoCriacaoLote>;
 };
 
 export function LancamentosPageClient({
@@ -102,10 +107,6 @@ export function LancamentosPageClient({
     setLoteAberto(true);
   }, []);
 
-  const fecharLote = React.useCallback(() => {
-    setLoteAberto(false);
-  }, []);
-
   const resetForm = React.useCallback(() => {
     setModo("criar");
     setEditandoLancamento(null);
@@ -123,15 +124,6 @@ export function LancamentosPageClient({
     setEditandoLancamento(l);
     setFormAberto(true);
   }, []);
-
-  // 4. Conversão segura de valor monetário
-  const parseValorMonetario = React.useCallback(
-    (valorRaw: string | number): number => {
-      if (typeof valorRaw === "number") return valorRaw;
-      return Number.parseFloat(valorRaw.replace(/\./g, "").replace(",", "."));
-    },
-    [],
-  );
 
   // Mapeia categorias para o formato esperado pelo diálogo (id como string)
   const categoriasParaDialog = React.useMemo(() => {
@@ -215,7 +207,6 @@ export function LancamentosPageClient({
     };
   }, [editandoLancamento, categorias]);
 
-  // 4. handleCriar com parseValorMonetario e router.refresh()
   const handleCriar = React.useCallback(
     async (dados: {
       descricao: string;
@@ -224,13 +215,18 @@ export function LancamentosPageClient({
       categoriaId: string;
       data: string;
     }): Promise<void> => {
+      const valor = normalizarValorParaApi(dados.valor);
+      if (valor === null) {
+        setError("Informe um valor maior que zero, com até 2 casas decimais.");
+        return;
+      }
       setLoading(true);
       setError(null);
       try {
         const resultado = await onCriar({
           categoriaId: Number(dados.categoriaId),
           tipo: dados.tipo,
-          valor: parseValorMonetario(dados.valor),
+          valor,
           data: dados.data,
           descricao: dados.descricao,
         });
@@ -244,10 +240,9 @@ export function LancamentosPageClient({
         setLoading(false);
       }
     },
-    [onCriar, resetForm, router, parseValorMonetario],
+    [onCriar, resetForm, router],
   );
 
-  // 4. handleEditar com parseValorMonetario e router.refresh()
   const handleEditar = React.useCallback(
     async (dados: {
       descricao: string;
@@ -257,13 +252,18 @@ export function LancamentosPageClient({
       data: string;
     }): Promise<void> => {
       if (!editandoLancamento) return;
+      const valor = normalizarValorParaApi(dados.valor);
+      if (valor === null) {
+        setError("Informe um valor maior que zero, com até 2 casas decimais.");
+        return;
+      }
       setLoading(true);
       setError(null);
       try {
         const resultado = await onEditar(editandoLancamento.id, {
           categoriaId: Number(dados.categoriaId),
           tipo: dados.tipo,
-          valor: parseValorMonetario(dados.valor),
+          valor,
           data: dados.data,
           descricao: dados.descricao,
         });
@@ -277,7 +277,7 @@ export function LancamentosPageClient({
         setLoading(false);
       }
     },
-    [onEditar, editandoLancamento, resetForm, router, parseValorMonetario],
+    [onEditar, editandoLancamento, resetForm, router],
   );
 
   // 4. handleExcluirConfirmar com router.refresh()
@@ -299,7 +299,6 @@ export function LancamentosPageClient({
     }
   }, [onExcluir, excluirId, router]);
 
-  // 4. handleCriarLote com router.refresh()
   const handleCriarLote = React.useCallback(
     async (
       linhas: Array<{
@@ -309,18 +308,14 @@ export function LancamentosPageClient({
         data: string;
         descricao?: string;
       }>,
-    ): Promise<boolean> => {
+    ): Promise<ResultadoCriacaoLote> => {
       setLoading(true);
-      setError(null);
       try {
         const resultado = await onCriarLote(linhas);
-        if (resultado) {
+        if (resultado.ok) {
           router.refresh();
-          return true;
-        } else {
-          setError("Erro ao salvar lote. Tente novamente.");
-          return false;
         }
+        return resultado;
       } finally {
         setLoading(false);
       }
@@ -328,25 +323,16 @@ export function LancamentosPageClient({
     [onCriarLote, router],
   );
 
-  // Resumo real do mês (soma dos lançamentos recebidos)
   const resumo = React.useMemo(() => {
-    let entradas = 0;
-    let saidas = 0;
+    let entradas = ZERO;
+    let saidas = ZERO;
     for (const l of lancamentosIniciais) {
-      if (l.tipo === "ENTRADA") entradas += l.valor;
-      else saidas += Math.abs(l.valor);
+      const centavos = centavosDeString(l.valor) ?? ZERO;
+      if (l.tipo === "ENTRADA") entradas += centavos;
+      else saidas += centavos < ZERO ? -centavos : centavos;
     }
     return { entradas, saidas, saldo: entradas - saidas };
   }, [lancamentosIniciais]);
-
-  const resumoFmt = React.useMemo(
-    () =>
-      new Intl.NumberFormat("pt-BR", {
-        style: "currency",
-        currency: "BRL",
-      }),
-    [],
-  );
 
   return (
     <div className="space-y-6">
@@ -403,7 +389,7 @@ export function LancamentosPageClient({
           </span>
           <div className="mt-1.5 flex items-baseline justify-between gap-3">
             <p className="t-stat text-2xl font-semibold tabular-nums text-positive">
-              {resumoFmt.format(resumo.entradas)}
+              {formatarBRL(resumo.entradas)}
             </p>
             <button
               type="button"
@@ -421,7 +407,7 @@ export function LancamentosPageClient({
           </span>
           <div className="mt-1.5 flex items-baseline justify-between gap-3">
             <p className="t-stat text-2xl font-semibold tabular-nums text-destructive">
-              {resumoFmt.format(resumo.saidas)}
+              {formatarBRL(resumo.saidas)}
             </p>
             <button
               type="button"
@@ -440,10 +426,10 @@ export function LancamentosPageClient({
           <div className="mt-1.5 flex items-baseline justify-between gap-3">
             <p
               className={`t-stat text-2xl font-semibold tabular-nums ${
-                resumo.saldo >= 0 ? "text-positive" : "text-destructive"
+                resumo.saldo >= ZERO ? "text-positive" : "text-destructive"
               }`}
             >
-              {resumoFmt.format(resumo.saldo)}
+              {formatarBRL(resumo.saldo)}
             </p>
             <button
               type="button"
@@ -552,14 +538,12 @@ export function LancamentosPageClient({
         lancamento={lancamentoParaForm}
       />
 
-      {/* Sheet de lote */}
-      {loteAberto && (
-        <LoteSheet
-          onClose={fecharLote}
-          onSubmit={handleCriarLote}
-          categorias={categorias}
-        />
-      )}
+      <LoteSheet
+        open={loteAberto}
+        onOpenChange={setLoteAberto}
+        onSubmit={handleCriarLote}
+        categorias={categorias}
+      />
 
       {/* Dialog de exclusão */}
       <DeleteConfirmationDialog

@@ -44,6 +44,22 @@ class SanitizadorTextoTest {
   }
 
   @Test
+  @DisplayName("falha em qualquer máscara remove o texto em vez de devolver dado sensível")
+  void falhaNaMascaraNaoDevolveTextoOriginal() {
+    String resultado =
+        SanitizadorTexto.sanitizar(
+            "CPF 123.456.789-00",
+            texto -> {
+              throw new IllegalStateException("regex quebrada");
+            },
+            texto -> texto,
+            texto -> texto);
+
+    assertThat(resultado).isEqualTo("[dados removidos]");
+    assertThat(resultado).doesNotContain("123.456.789-00");
+  }
+
+  @Test
   @DisplayName("CPF e cartão na mesma frase são mascarados")
   void cpfECartaoNaMesmaFraseSaoMascarados() {
     String resultado =

@@ -135,7 +135,7 @@ class ImportacaoServiceTest {
     when(faturaRepository.save(any(ImportacaoFatura.class))).thenAnswer(inv -> inv.getArgument(0));
 
     when(categoriaRepository.findByEmpresaId(EMPRESA_ID)).thenReturn(List.of());
-    when(mapeadorCategoria.mapear(any(), any(), any()))
+    when(mapeadorCategoria.mapear(any(), any(), anyList()))
         .thenReturn(new MapeadorCategoria.ResultadoMapeamento(9L, "Outros", false));
   }
 
@@ -279,7 +279,7 @@ class ImportacaoServiceTest {
   @Test
   @DisplayName("categoria sem correspondência → alerta REVISAR_CATEGORIA no item (D-25)")
   void categoriaDesconhecidaGeraAlerta() throws IOException {
-    when(mapeadorCategoria.mapear(any(), any(), any()))
+    when(mapeadorCategoria.mapear(any(), any(), anyList()))
         .thenReturn(new MapeadorCategoria.ResultadoMapeamento(9L, "Outros", true));
     when(pdfTextoExtractor.extrair(any())).thenReturn("fatura cartão");
     when(iaExtracaoService.extrair(anyString(), anyList(), anyString()))

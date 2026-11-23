@@ -5,6 +5,8 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ImportacaoProvider } from "@/contexts/ImportacaoContext";
 
+export const instant = false;
+
 export const metadata: Metadata = {
   title: "Controle Financeiro",
   description: "Controle de entradas e saídas da empresa",

@@ -80,7 +80,7 @@ public class UsuarioTelefoneService {
     // Verifica se o admin existe e pertence à empresa
     Usuario admin =
         usuarioRepository
-          .findById(Objects.requireNonNull(adminId, "adminId"))
+            .findById(Objects.requireNonNull(adminId, "adminId"))
             .orElseThrow(() -> new NaoAutorizadoException("Administrador não encontrado"));
     if (!"ADMIN".equals(admin.getRole())) {
       throw new NaoAutorizadoException("Apenas administradores podem vincular telefones");

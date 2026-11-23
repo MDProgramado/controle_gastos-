@@ -167,7 +167,8 @@ public class ImportacaoService {
     }
 
     Usuario usuario = usuario(empresaId, usuarioId);
-    List<String> categoriasDoTenant = nomesDeCategorias(empresaId);
+    List<Categoria> categorias = categoriaRepository.findByEmpresaId(empresaId);
+    List<String> nomesDasCategorias = nomesDeCategorias(categorias);
 
     List<DocumentoAnalise> documentos = new ArrayList<>();
     List<ImportacaoItem> itensDoLote = new ArrayList<>();
@@ -178,7 +179,7 @@ public class ImportacaoService {
       String nome = nomeDoArquivo(arquivo);
       try {
         DocumentoAnalise resultado =
-            analisarArquivo(arquivo, empresaId, usuarioId, usuario, categoriasDoTenant);
+            analisarArquivo(arquivo, empresaId, usuarioId, usuario, categorias, nomesDasCategorias);
         documentos.add(resultado);
         if ("ANALISADO".equals(resultado.status())) {
           itensDoLote.addAll(
@@ -657,7 +658,8 @@ public class ImportacaoService {
       Long empresaId,
       Long usuarioId,
       Usuario usuario,
-      List<String> categoriasDoTenant)
+      List<Categoria> categorias,
+      List<String> nomesDasCategorias)
       throws IOException {
     validar(arquivo);
 
@@ -705,9 +707,9 @@ public class ImportacaoService {
     String tipoDocumento = ClassificadorDocumento.classificar(nome, texto);
 
     IaExtracaoService.ResultadoExtracao extracao =
-        iaExtracaoService.extrair(sanitizado, categoriasDoTenant, String.valueOf(empresaId));
+        iaExtracaoService.extrair(sanitizado, nomesDasCategorias, String.valueOf(empresaId));
 
-    List<ImportacaoItem> itens = construirItens(empresaId, usuario, extracao, tipoDocumento);
+    List<ImportacaoItem> itens = construirItens(usuario, extracao, tipoDocumento, categorias);
     ImportacaoFatura fatura = construirFatura(empresaId, usuario, extracao, tipoDocumento);
 
     // D-09: dedupe contra lancamento (chave_dedupe) e itens de staging IMPORTADO.
@@ -764,10 +766,10 @@ public class ImportacaoService {
   /* ============================ construção de entidades ============================ */
 
   private List<ImportacaoItem> construirItens(
-      Long empresaId,
       Usuario usuario,
       IaExtracaoService.ResultadoExtracao extracao,
-      String tipoDocumento) {
+      String tipoDocumento,
+      List<Categoria> categoriasDoTenant) {
     List<ImportacaoItem> itens = new ArrayList<>();
     for (IaExtracaoService.ItemExtraido extraido : extracao.itens()) {
       // Origem da IA vs classificação do documento: quando divergem, vale a classificação local
@@ -775,7 +777,8 @@ public class ImportacaoService {
       String origem = tipoDocumento.equals("CARTAO") ? "CARTAO" : "EXTRATO";
 
       MapeadorCategoria.ResultadoMapeamento mapeamento =
-          mapeadorCategoria.mapear(extraido.categoria(), tipoDoItem(extraido.tipo()), empresaId);
+          mapeadorCategoria.mapear(
+              extraido.categoria(), tipoDoItem(extraido.tipo()), categoriasDoTenant);
 
       ImportacaoItem item = new ImportacaoItem();
       item.setUsuario(usuario);
@@ -933,8 +936,8 @@ public class ImportacaoService {
     return tipoIA; // RECEITA/DESPESA_PAGA/A_PAGAR — MapeadorCategoria converte
   }
 
-  private List<String> nomesDeCategorias(Long empresaId) {
-    return categoriaRepository.findByEmpresaId(empresaId).stream()
+  private List<String> nomesDeCategorias(List<Categoria> categorias) {
+    return categorias.stream()
         .filter(categoria -> categoria.isAtivo())
         .map(categoria -> categoria.getNome())
         .toList();

@@ -3,7 +3,7 @@
 **Phase:** 06-multi-tenant
 **Source:** `MULT_TENANT.md` (aprovado 2026-11-21)
 **Granularity:** 7 planos (um por Fase 0–6) · 2–3 tasks por plano
-**Status:** Planned
+**Status:** In progress (5/7 waves: 06-01..06-05 concluídas)
 **Criado:** 2026-11-21
 
 <objective>

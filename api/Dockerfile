@@ -3,7 +3,8 @@ WORKDIR /app
 COPY pom.xml .
 RUN mvn -B dependency:go-offline
 COPY src ./src
-RUN mvn -B clean package -DskipTests
+# Testes unitários + spotless no build; surefire exclui *IntegrationTest/*MigrationTest (sem Docker)
+RUN mvn -B clean verify
 
 FROM eclipse-temurin:21-jre
 WORKDIR /app

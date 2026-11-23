@@ -4,6 +4,7 @@ import com.controlefinanceiro.categoria.Categoria;
 import com.controlefinanceiro.categoria.CategoriaRepository;
 import com.controlefinanceiro.common.CategoriaNaoEncontradaException;
 import com.controlefinanceiro.common.CategoriaTipoIncompativelException;
+import com.controlefinanceiro.common.LancamentoNaoEncontradoException;
 import com.controlefinanceiro.common.LinhaInvalidaException;
 import com.controlefinanceiro.common.LoteDemasiadoGrandeException;
 import com.controlefinanceiro.common.MonetarioException;
@@ -13,6 +14,8 @@ import com.controlefinanceiro.usuario.Usuario;
 import com.controlefinanceiro.usuario.UsuarioRepository;
 import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -47,13 +50,7 @@ public class LancamentoService {
 
   @Transactional
   public LancamentoResponse criar(Long empresaId, Long usuarioId, LancamentoRequest request) {
-    validarValor(request.valor());
-    Categoria categoria = categoria(empresaId, request.categoriaId());
-    validarIntegridadeCategoriaTipo(categoria, request.tipo());
-
-    Lancamento lancamento = novoLancamento(empresaId, usuarioId, categoria, request);
-    lancamento.setOrigem("MANUAL");
-    return new LancamentoResponse(lancamentoRepository.save(lancamento));
+    return salvar(empresaId, usuarioId, request, null, null, "MANUAL");
   }
 
   @Transactional
@@ -63,20 +60,13 @@ public class LancamentoService {
       LancamentoRequest request,
       String canal,
       String messageIdOrigem) {
-    validarValor(request.valor());
-    Categoria categoria = categoria(empresaId, request.categoriaId());
-    validarIntegridadeCategoriaTipo(categoria, request.tipo());
-
-    Lancamento lancamento = novoLancamento(empresaId, usuarioId, categoria, request);
-    lancamento.setCanal(canal);
-    lancamento.setMessageIdOrigem(messageIdOrigem);
-    return new LancamentoResponse(lancamentoRepository.save(lancamento));
+    return salvar(empresaId, usuarioId, request, canal, messageIdOrigem, null);
   }
 
   @Transactional
   public LancamentoResponse editar(
       Long id, Long empresaId, Long usuarioId, LancamentoRequest request) {
-    validarValor(request.valor());
+    validarRequest(request);
 
     Lancamento lancamento =
         lancamentoRepository
@@ -88,7 +78,7 @@ public class LancamentoService {
 
     lancamento.setCategoria(categoria);
     lancamento.setTipo(request.tipo());
-    lancamento.setValor(request.valor());
+    lancamento.setValor(normalizarValor(request.valor()));
     lancamento.setData(request.data());
     lancamento.setDescricao(request.descricao());
 
@@ -115,12 +105,40 @@ public class LancamentoService {
 
   @Transactional(readOnly = true)
   public LancamentoPage listar(
-      Long empresaId, Long usuarioId, Integer ano, Integer mes, String tipo, Long categoriaId) {
+      Long empresaId,
+      Long usuarioId,
+      Integer ano,
+      Integer mes,
+      String tipo,
+      Long categoriaId,
+      int pagina,
+      int tamanho) {
     Page<Lancamento> page =
         lancamentoRepository.findByEmpresaIdAndUsuarioIdAndFiltros(
-            empresaId, usuarioId, ano, mes, tipo, categoriaId, PageRequest.of(0, 50));
+            empresaId,
+            usuarioId,
+            dataInicio(ano, mes),
+            dataFim(ano, mes),
+            tipo,
+            categoriaId,
+            PageRequest.of(pagina, tamanho));
     return new LancamentoPage(
         page.getContent().stream().map(LancamentoResponse::new).toList(), page.getTotalElements());
+  }
+
+  private static LocalDate dataInicio(Integer ano, Integer mes) {
+    if (ano == null) {
+      return null;
+    }
+    return LocalDate.of(ano, mes == null ? 1 : mes, 1);
+  }
+
+  private static LocalDate dataFim(Integer ano, Integer mes) {
+    LocalDate inicio = dataInicio(ano, mes);
+    if (inicio == null) {
+      return null;
+    }
+    return mes == null ? inicio.plusYears(1) : inicio.plusMonths(1);
   }
 
   @Transactional
@@ -145,6 +163,24 @@ public class LancamentoService {
     return criados;
   }
 
+  private LancamentoResponse salvar(
+      Long empresaId,
+      Long usuarioId,
+      LancamentoRequest request,
+      String canal,
+      String messageIdOrigem,
+      String origem) {
+    validarRequest(request);
+    Categoria categoria = categoria(empresaId, request.categoriaId());
+    validarIntegridadeCategoriaTipo(categoria, request.tipo());
+
+    Lancamento lancamento = novoLancamento(empresaId, usuarioId, categoria, request);
+    lancamento.setOrigem(origem);
+    lancamento.setCanal(canal);
+    lancamento.setMessageIdOrigem(messageIdOrigem);
+    return new LancamentoResponse(lancamentoRepository.save(lancamento));
+  }
+
   private Lancamento novoLancamento(
       Long empresaId, Long usuarioId, Categoria categoria, LancamentoRequest request) {
     Usuario usuario =
@@ -157,7 +193,7 @@ public class LancamentoService {
     lancamento.setUsuario(usuario);
     lancamento.setCategoria(categoria);
     lancamento.setTipo(request.tipo());
-    lancamento.setValor(request.valor());
+    lancamento.setValor(normalizarValor(request.valor()));
     lancamento.setData(request.data());
     lancamento.setDescricao(request.descricao());
     return lancamento;
@@ -173,9 +209,22 @@ public class LancamentoService {
                         .formatted(categoriaId, empresaId)));
   }
 
-  private CategoriaNaoEncontradaException naoEncontrado(Long id, Long empresaId) {
-    return new CategoriaNaoEncontradaException(
+  private LancamentoNaoEncontradoException naoEncontrado(Long id, Long empresaId) {
+    return new LancamentoNaoEncontradoException(
         "Lançamento não encontrado: id=%d, empresa=%d".formatted(id, empresaId));
+  }
+
+  private void validarRequest(LancamentoRequest request) {
+    if (request.valor() == null) {
+      throw new MonetarioException("valor é obrigatório");
+    }
+    if (request.tipo() == null) {
+      throw new IllegalArgumentException("tipo é obrigatório");
+    }
+    if (request.data() == null) {
+      throw new IllegalArgumentException("data é obrigatória");
+    }
+    validarValor(request.valor());
   }
 
   /** Valida valor monetário: escala <= 2 e positivo (LAN-04, LAN-07). */
@@ -188,6 +237,10 @@ public class LancamentoService {
     if (valor.signum() <= 0) {
       throw new MonetarioException("Valor deve ser positivo. Valor informado: %s".formatted(valor));
     }
+  }
+
+  private BigDecimal normalizarValor(BigDecimal valor) {
+    return valor.setScale(2, RoundingMode.HALF_EVEN);
   }
 
   /** Valida integridade categoria×tipo (CAT-04). */

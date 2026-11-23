@@ -2,6 +2,8 @@ package com.controlefinanceiro.ai;
 
 import com.controlefinanceiro.common.UsuarioContext;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -105,11 +107,18 @@ public class AiMemoryStore {
     }
     return sessaoRepository
         .findByEmpresaIdAndUsuarioIdAndSessionId(id(empresaId), id(usuarioId), sessionId)
-        .map(entidade -> mensagemRepository.findBySessaoIdOrderByIdAsc(entidade.getId()))
-        .orElseGet(List::of)
-        .stream()
-        .map(mensagem -> new AiMessage(mensagem.getPapel(), mensagem.getConteudo()))
-        .toList();
+        .map(entidade -> historico(entidade.getId()))
+        .orElseGet(List::of);
+  }
+
+  private List<AiMessage> historico(Long sessaoId) {
+    List<AiMessage> mensagens = new ArrayList<>();
+    for (AiMemoriaMensagem mensagem :
+        mensagemRepository.findTop20BySessaoIdOrderByIdDesc(sessaoId)) {
+      mensagens.add(new AiMessage(mensagem.getPapel(), mensagem.getConteudo()));
+    }
+    Collections.reverse(mensagens);
+    return mensagens;
   }
 
   @Transactional
@@ -147,10 +156,7 @@ public class AiMemoryStore {
 
   private AiSession carregar(AiMemoriaSessao entidade) {
     AiSession sessao = new AiSession(entidade.getSessionId(), entidade.getEmpresaId().toString());
-    for (AiMemoriaMensagem mensagem :
-        mensagemRepository.findBySessaoIdOrderByIdAsc(entidade.getId())) {
-      sessao.adicionar(new AiMessage(mensagem.getPapel(), mensagem.getConteudo()));
-    }
+    historico(entidade.getId()).forEach(sessao::adicionar);
     return sessao;
   }
 }

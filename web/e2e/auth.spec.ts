@@ -1,15 +1,5 @@
 import { test, expect } from "@playwright/test";
-
-const EMAIL = "admin@controle.com";
-const SENHA = "admin123";
-
-async function login(page: import("@playwright/test").Page) {
-  await page.goto("/login");
-  await page.getByLabel("E-mail").fill(EMAIL);
-  await page.getByLabel("Senha").fill(SENHA);
-  await page.getByRole("button", { name: "Entrar" }).click();
-  await page.waitForURL((url) => url.pathname !== "/login", { timeout: 15000 });
-}
+import { EMAIL, login } from "./helpers";
 
 test.describe("Autenticação", () => {
   test("carrega a tela de login com copy correta", async ({ page }) => {

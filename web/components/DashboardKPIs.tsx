@@ -1,25 +1,26 @@
-"use client"
-
 import type { ReactNode } from "react"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
+import { formatarBRL } from "@/lib/format"
 
 export const MONETARY = new Intl.NumberFormat("pt-BR", {
   style: "currency",
   currency: "BRL",
 })
 
+const ZERO = BigInt(0)
+
 type DashboardKPIsProps = {
-  totalEntradas: number
-  totalSaidas: number
-  saldo: number
-  variacaoEntradas: number
-  variacaoSaidas: number
+  totalEntradas: bigint
+  totalSaidas: bigint
+  saldo: bigint
+  variacaoEntradas: bigint
+  variacaoSaidas: bigint
   percentualEntradas: string
   percentualSaidas: string
-  totalEntradasMesAnterior: number
-  totalSaidasMesAnterior: number
-  saldoMesAnterior: number
+  totalEntradasMesAnterior: bigint
+  totalSaidasMesAnterior: bigint
+  saldoMesAnterior: bigint
 }
 
 function percentualNum(p: string): number {
@@ -45,7 +46,7 @@ export function DashboardKPIs({
   totalSaidasMesAnterior,
   saldoMesAnterior,
 }: DashboardKPIsProps) {
-  const saldoPositivo = saldo >= 0
+  const saldoPositivo = saldo >= ZERO
 
   const stats = [
     {
@@ -53,7 +54,7 @@ export function DashboardKPIs({
       valor: saldo,
       classe: saldoPositivo ? "text-positive" : "text-destructive",
       badge: null as ReactNode,
-      legenda: `Saldo do mês anterior: ${MONETARY.format(saldoMesAnterior)}`,
+      legenda: `Saldo do mês anterior: ${formatarBRL(saldoMesAnterior)}`,
       destaque: true,
     },
     {
@@ -65,15 +66,15 @@ export function DashboardKPIs({
         <Badge
           variant="success"
           className={`text-xs font-semibold ${
-            variacaoEntradas >= 0
+            variacaoEntradas >= ZERO
               ? "text-positive bg-positive/10"
               : "text-destructive bg-destructive/10"
           }`}
         >
-          {variacaoEntradas >= 0 ? "▲" : "▼"} {percentualNum(percentualEntradas)}%
+          {variacaoEntradas >= ZERO ? "▲" : "▼"} {percentualNum(percentualEntradas)}%
         </Badge>
       ),
-      legenda: `Mês anterior: ${MONETARY.format(totalEntradasMesAnterior)}`,
+      legenda: `Mês anterior: ${formatarBRL(totalEntradasMesAnterior)}`,
     },
     {
       label: "Saídas",
@@ -83,15 +84,15 @@ export function DashboardKPIs({
         <Badge
           variant="destructive"
           className={`text-xs font-semibold ${
-            variacaoSaidas <= 0
+            variacaoSaidas <= ZERO
               ? "text-positive bg-positive/10"
               : "text-destructive bg-destructive/10"
           }`}
         >
-          {variacaoSaidas <= 0 ? "▼" : "▲"} {percentualNum(percentualSaidas)}%
+          {variacaoSaidas <= ZERO ? "▼" : "▲"} {percentualNum(percentualSaidas)}%
         </Badge>
       ),
-      legenda: `Mês anterior: ${MONETARY.format(totalSaidasMesAnterior)}`,
+      legenda: `Mês anterior: ${formatarBRL(totalSaidasMesAnterior)}`,
       destaque: false,
     },
   ]
@@ -129,7 +130,7 @@ export function DashboardKPIs({
               s.classe,
             )}
           >
-            {MONETARY.format(s.valor)}
+            {formatarBRL(s.valor)}
           </p>
           <p className="mt-1.5 text-sm text-muted-foreground">{s.legenda}</p>
         </div>

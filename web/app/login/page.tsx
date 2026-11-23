@@ -1,7 +1,7 @@
-import { Card } from "@/components/ui/card";
 import { LoginForm } from "@/components/LoginForm";
 import { SkipLink } from "@/components/SkipLink";
-import Image from "next/image";
+import { Card } from "@/components/ui/card";
+import { googleOAuthPronto } from "@/lib/google-oauth-server";
 
 // Cache Components (Next 16): o banner depende de searchParams (request time) —
 // a rota bloqueia no servidor em vez de entrar no shell estático (docs oficiais).
@@ -14,10 +14,11 @@ export const instant = false;
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ expirada?: string }>;
+  searchParams: Promise<{ expirada?: string; erro?: string }>;
 }) {
-  const { expirada } = await searchParams;
+  const { expirada, erro } = await searchParams;
   const sessaoExpirada = expirada === "1";
+  const googleOauthEnabled = googleOAuthPronto();
 
   return (
     <>
@@ -31,13 +32,6 @@ export default async function LoginPage({
           <h1 className="text-[28px] leading-[1.2] font-semibold text-foreground">
             Pluton - Seu assistente pessoal
           </h1>
-          {/* <Image 
-          src="/ogum.svg"
-          alt="logo"
-          width={100}
-          height={100}
-          className="mx-auto my-4"
-          /> */}
           <p className="mt-1 text-base text-muted-foreground">Entre com seu e-mail e senha.</p>
         </header>
 
@@ -50,7 +44,18 @@ export default async function LoginPage({
               Sua sessão expirou. Entre novamente.
             </div>
           )}
-          <LoginForm sessaoExpirada={sessaoExpirada} />
+          {erro === "google" && (
+            <div
+              role="alert"
+              className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm leading-snug text-destructive"
+            >
+              Não foi possível entrar com Google. Tente novamente.
+            </div>
+          )}
+          <LoginForm
+            sessaoExpirada={sessaoExpirada}
+            googleOauthEnabled={googleOauthEnabled}
+          />
         </Card>
       </div>
       </main>
