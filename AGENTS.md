@@ -3,7 +3,7 @@
 
 **Controle Financeiro**
 
-Aplicação de controle financeiro (entradas e saídas) para uma empresa cliente — no início single-tenant, com `empresa_id` em todas as tabelas para suportar multiusuário/multiempresa no futuro. Web em Next.js (App Router, TypeScript) consumindo uma API Spring Boot (Java 21), publicada na Vercel (web) e Render (API + PostgreSQL).
+Aplicação de controle financeiro (entradas e saídas) multiusuário/multiempresa: `empresa_id` em todas as tabelas e isolamento por `usuario_id` dentro da empresa. Web em Next.js (App Router, TypeScript) consumindo uma API Spring Boot (Java 21), publicada na Vercel (web) e Render (API + PostgreSQL).
 
 **Core Value:** Saldo, entradas e saídas corretos ao centavo — números confiáveis por mês, que o cliente confere contra SQL direto e compara com sua contabilidade sem surpresas.
 
@@ -18,6 +18,40 @@ Aplicação de controle financeiro (entradas e saídas) para uma empresa cliente
 - **Deploy**: API no Render (Postgres pago com backup), web na Vercel
 - **Escopo de IA**: restrito à fase 4 (OpenRouter)
 <!-- GSD:project-end -->
+
+## Decisões multi-tenant (implementação atual)
+
+Substituem decisões antigas de single-tenant que ainda apareciam em planos:
+
+- **Auth**: Google é OIDC/OAuth — o ID token é validado no servidor (`GoogleTokenValidator`, `email_verified` obrigatório) e a API emite JWT próprio (`sub`=e-mail, `empresa_id`, `usuario_id`). Nunca aceitar token Google como sessão da API.
+- **Cadastro self-service**: cria `Empresa` + usuário `ADMIN` + categorias padrão em uma única transação (`TenantOnboardingService`). Convite entra na empresa existente (`ConviteService`).
+- **Isolamento**: por `usuario_id` dentro da empresa, inclusive para `ADMIN` — `LancamentoRepository` filtra `empresa_id AND usuario_id`; `TenantContext`/`UsuarioContext` vêm do JWT.
+- **Papel ADMIN**: gerencia apenas usuários/contas da empresa (`UsuarioController`), não vê dados financeiros de outros usuários.
+- **E-mail globalmente único**: login Google com e-mail já cadastrado entra na empresa existente; `google_sub` não pode ser reivindicado por outra conta.
+- **BFF web**: Authorization Code + PKCE + `state` em cookie httpOnly (`google_oauth`) e sessão em cookie httpOnly `sess`; nenhum token Google no browser.
+- **Categorias**: "Renda extra" não é tipo especial — é categoria ENTRADA comum ("Outras receitas"/seed V2). Migrações V1–V10 aplicadas; não há plano de migration pendente.
+- **Débito residual conhecido**: rate limit do BFF é process-local (`web/lib/rate-limit.ts`, `Map` em memória — não compartilhado entre instâncias Vercel) e `conviteToken` ainda viaja por query string no start do OAuth.
+
+## Quality gates (verificação obrigatória)
+
+Rodar da pasta `api/` (PowerShell):
+
+```powershell
+.\mvnw.cmd "-Dspotless.check.skip=true" test   # unitários; surefire exclui *IntegrationTest/*MigrationTest (sem Docker)
+.\mvnw.cmd -q spotless:check                    # formatação
+```
+
+Rodar da pasta `web/`:
+
+```powershell
+npm run lint
+npx tsc --noEmit
+npx playwright test e2e/frontend-fixes.spec.ts e2e/google-oauth.spec.ts  # specs unitárias, sem servidor
+```
+
+Testes Docker-backed (Testcontainers, Postgres 16): `.\mvnw.cmd test "-Dsurefire.excludes="` — exige Docker ativo; não roda em CI sem serviço Docker. Não há base compartilhada de Testcontainers: cada `*IntegrationTest` declara seu próprio `@Container @ServiceConnection` (débito técnico conhecido).
+
+CI: `.github/workflows/ci.yml` (Java 21 + Node 22) roda os gates acima em PR/push para `main`, sem segredos de deploy. Build da API no Render (`api/Dockerfile`) executa `mvn clean verify` (unitários + spotless) antes de empacotar.
 
 ## Regras de Fluxo e Skills do Projeto
 

@@ -10,6 +10,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { agruparCategorias, formatarBRL, type CategoriaTotal } from "@/lib/format"
+import { centavosAssinadosDeString } from "@/lib/money"
 
 const COLORS = [
   "var(--chart-1)",
@@ -19,16 +21,9 @@ const COLORS = [
   "var(--chart-5)",
 ]
 
-const MONETARY = new Intl.NumberFormat("pt-BR", {
-  style: "currency",
-  currency: "BRL",
-})
+const ZERO = BigInt(0)
 
-type CategoriaGasto = {
-  id: number
-  nome: string
-  total: string
-}
+type CategoriaGasto = CategoriaTotal
 
 type DonutChartProps = {
   categorias: CategoriaGasto[]
@@ -39,25 +34,15 @@ export function DonutChart({
   categorias,
   totalSaidas,
 }: DonutChartProps) {
-  const totalSaidasNum = Number(totalSaidas) || 0
-  const ordenadas = [...categorias].sort(
-    (a, b) => Number(b.total) - Number(a.total)
-  )
-  const top5 = ordenadas.slice(0, 5)
-  const outrosTotal = ordenadas
-    .slice(5)
-    .reduce((sum, c) => sum + Number(c.total), 0)
+  const totalSaidasCentavos =
+    centavosAssinadosDeString(totalSaidas) ?? ZERO
+  const agrupadas = agruparCategorias(categorias)
 
-  const pieData = [
-    ...top5.map((c, i) => ({
-      name: c.nome,
-      value: Number(c.total),
-      fill: COLORS[i % COLORS.length],
-    })),
-    ...(outrosTotal > 0
-      ? [{ name: "Outros", value: outrosTotal, fill: "var(--muted-foreground)" }]
-      : []),
-  ]
+  const pieData = agrupadas.map((c, i) => ({
+    name: c.nome,
+    value: c.centavos,
+    fill: c.id === "outros" ? "var(--muted-foreground)" : COLORS[i % COLORS.length],
+  }))
 
   return (
     <Card className="h-full">
@@ -90,7 +75,7 @@ export function DonutChart({
           </div>
           <div className="flex flex-col items-center justify-center pt-4 text-center">
             <span className="text-xl font-bold text-foreground">
-              {MONETARY.format(totalSaidasNum)}
+              {formatarBRL(totalSaidasCentavos)}
             </span>
             <span className="text-xs text-muted-foreground">
               Total de saídas

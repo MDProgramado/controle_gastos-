@@ -1,7 +1,10 @@
 package com.controlefinanceiro.importacao;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.controlefinanceiro.categoria.Categoria;
@@ -135,6 +138,16 @@ class MapeadorCategoriaTest {
     // (nenhuma categoria SAIDA contém "salario") → fallback
     assertThat(resultado.categoriaId()).isEqualTo(9L);
     assertThat(resultado.necessitaRevisao()).isTrue();
+  }
+
+  @Test
+  @DisplayName("sobrecarga com lista reutiliza o pool e não consulta o repositório")
+  void mapearComListaNaoConsultaRepositorio() {
+    MapeadorCategoria.ResultadoMapeamento resultado =
+        mapeador.mapear("alimentacao", "SAIDA", CATEGORIAS);
+
+    assertThat(resultado.categoriaId()).isEqualTo(1L);
+    verify(repository, never()).findByEmpresaId(any());
   }
 
   @Test

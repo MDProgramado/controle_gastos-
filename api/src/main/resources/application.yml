@@ -52,11 +52,20 @@ importacao:
 jwt:
   secret: ${JWT_SECRET:}
 
+# Fase 4 (D-01): Client ID do OAuth Client Web — valor público, sem segredo.
+# GoogleTokenValidator falha rápido se ausente; o client secret vive somente no BFF (Vercel).
+google:
+  client-id: ${GOOGLE_CLIENT_ID:}
+  connect-timeout-ms: ${GOOGLE_CONNECT_TIMEOUT_MS:3000}
+  read-timeout-ms: ${GOOGLE_READ_TIMEOUT_MS:3000}
+
 # Configuração da IA (fase 4 — OpenRouter + Gemma 4 31B Instruct).
 # A chave da API deve ser definida via env var OPENROUTER_API_KEY.
 ai:
   openrouter:
     api-key: ${OPENROUTER_API_KEY:}
+    connect-timeout-ms: ${OPENROUTER_CONNECT_TIMEOUT_MS:3000}
+    read-timeout-ms: ${OPENROUTER_READ_TIMEOUT_MS:30000}
     modelo: ${AI_OPENROUTER_MODELO:google/gemma-4-31b-it:free}
     # Cascata de modelos gratuitos (separados por vírgula), usada com route=fallback:
     #   primário   -> google/gemma-4-31b-it:free
@@ -77,3 +86,13 @@ ai:
     max-tokens-extracao: ${AI_OPENROUTER_MAX_TOKENS_EXTRACAO:8000}
     tentativas-extracao: ${AI_OPENROUTER_TENTATIVAS_EXTRACAO:3}
     espera-inicial-ms-extracao: ${AI_OPENROUTER_ESPERA_INICIAL_MS_EXTRACAO:1500}
+
+# WhatsApp (Meta Cloud API). Segredos somente via env var; ausência de token/secret
+# desliga o envio e faz o webhook responder 503 (nunca aceita requisição sem validação).
+whatsapp:
+  verify:
+    token: ${WHATSAPP_VERIFY_TOKEN:}
+  app:
+    secret: ${WHATSAPP_APP_SECRET:}
+  connect-timeout-ms: ${WHATSAPP_CONNECT_TIMEOUT_MS:3000}
+  read-timeout-ms: ${WHATSAPP_READ_TIMEOUT_MS:15000}

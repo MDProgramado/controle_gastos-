@@ -8,72 +8,61 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 /**
- * Repositório de lançamento (padrão P1; segue {@link
- * com.controlefinanceiro.categoria.CategoriaRepository}). Filtra por empresa_id (tenant, R3) e usa
- * os índices existentes idx_lanc_empresa_data e idx_lanc_empresa_cat.
+ * Repositório de lançamento. Toda consulta financeira é escalonada por empresa_id (tenant, R3) e
+ * usuario_id (isolamento por usuário), usando os índices (empresa, usuario, data/categoria).
  */
 public interface LancamentoRepository extends JpaRepository<Lancamento, Long> {
 
-  /**
-   * Lançamentos de uma empresa entre duas datas (inclusive). Usa o índice idx_lanc_empresa_data.
-   *
-   * @param empresaId tenant do token (via TenantContext, nunca do body)
-   */
   @Query(
-      "select l from Lancamento l where l.empresa.id = :empresaId and l.data between :dataInicio and :dataFim order by l.data desc")
-  List<Lancamento> findByEmpresaIdAndDataBetween(
+      "select l from Lancamento l where l.empresa.id = :empresaId and l.usuario.id = :usuarioId"
+          + " and l.data between :dataInicio and :dataFim order by l.data desc")
+  List<Lancamento> findByEmpresaIdAndUsuarioIdAndDataBetween(
       @Param("empresaId") Long empresaId,
+      @Param("usuarioId") Long usuarioId,
       @Param("dataInicio") java.time.LocalDate dataInicio,
       @Param("dataFim") java.time.LocalDate dataFim);
 
-  /**
-   * Lançamentos de uma empresa por tipo. Usa o índice idx_lanc_empresa_data.
-   *
-   * @param empresaId tenant do token (via TenantContext, nunca do body)
-   */
   @Query(
-      "select l from Lancamento l where l.empresa.id = :empresaId and l.tipo = :tipo order by l.data desc")
-  List<Lancamento> findByEmpresaIdAndTipo(
-      @Param("empresaId") Long empresaId, @Param("tipo") String tipo);
+      "select l from Lancamento l where l.empresa.id = :empresaId and l.usuario.id = :usuarioId"
+          + " and l.tipo = :tipo order by l.data desc")
+  List<Lancamento> findByEmpresaIdAndUsuarioIdAndTipo(
+      @Param("empresaId") Long empresaId,
+      @Param("usuarioId") Long usuarioId,
+      @Param("tipo") String tipo);
 
-  /**
-   * Lançamentos de uma empresa por categoria. Usa o índice idx_lanc_empresa_cat.
-   *
-   * @param empresaId tenant do token (via TenantContext, nunca do body)
-   */
   @Query(
-      "select l from Lancamento l where l.empresa.id = :empresaId and l.categoria.id = :categoriaId order by l.data desc")
-  List<Lancamento> findByEmpresaIdAndCategoriaId(
-      @Param("empresaId") Long empresaId, @Param("categoriaId") Long categoriaId);
+      "select l from Lancamento l where l.empresa.id = :empresaId and l.usuario.id = :usuarioId"
+          + " and l.categoria.id = :categoriaId order by l.data desc")
+  List<Lancamento> findByEmpresaIdAndUsuarioIdAndCategoriaId(
+      @Param("empresaId") Long empresaId,
+      @Param("usuarioId") Long usuarioId,
+      @Param("categoriaId") Long categoriaId);
 
-  /**
-   * Lançamentos de uma empresa com filtros opcionais de mês, ano, tipo e categoria. Paginação para
-   * suporte a listagem grande.
-   *
-   * @param empresaId tenant do token (via TenantContext, nunca do body)
-   */
   @Query(
-      "select l from Lancamento l where l.empresa.id = :empresaId"
-          + " and (:ano is null or extract(year from l.data) = :ano)"
-          + " and (:mes is null or extract(month from l.data) = :mes)"
+      "select l from Lancamento l where l.empresa.id = :empresaId and l.usuario.id = :usuarioId"
+          + " and (:dataInicio is null or l.data >= :dataInicio)"
+          + " and (:dataFim is null or l.data < :dataFim)"
           + " and (:tipo is null or l.tipo = :tipo)"
           + " and (:categoriaId is null or l.categoria.id = :categoriaId)"
           + " order by l.data desc")
-  Page<Lancamento> findByEmpresaIdAndFiltros(
+  Page<Lancamento> findByEmpresaIdAndUsuarioIdAndFiltros(
       @Param("empresaId") Long empresaId,
-      @Param("ano") Integer ano,
-      @Param("mes") Integer mes,
+      @Param("usuarioId") Long usuarioId,
+      @Param("dataInicio") java.time.LocalDate dataInicio,
+      @Param("dataFim") java.time.LocalDate dataFim,
       @Param("tipo") String tipo,
       @Param("categoriaId") Long categoriaId,
       Pageable pageable);
 
-  /**
-   * Chaves de dedupe já gravadas na empresa (fase 5, D-09): a importação compara a chave de cada
-   * item extraído contra estas para marcar lançamento repetido.
-   *
-   * @param empresaId tenant do token (via TenantContext, nunca do body)
-   */
   @Query(
-      "select l.chaveDedupe from Lancamento l where l.empresa.id = :empresaId and l.chaveDedupe is not null")
-  List<String> findChavesDedupeByEmpresaId(@Param("empresaId") Long empresaId);
+      "select l from Lancamento l where l.id = :id and l.empresa.id = :empresaId"
+          + " and l.usuario.id = :usuarioId")
+  java.util.Optional<Lancamento> findByIdAndEmpresaIdAndUsuarioId(
+      @Param("id") Long id, @Param("empresaId") Long empresaId, @Param("usuarioId") Long usuarioId);
+
+  @Query(
+      "select l.chaveDedupe from Lancamento l where l.empresa.id = :empresaId"
+          + " and l.usuario.id = :usuarioId and l.chaveDedupe is not null")
+  List<String> findChavesDedupeByEmpresaIdAndUsuarioId(
+      @Param("empresaId") Long empresaId, @Param("usuarioId") Long usuarioId);
 }

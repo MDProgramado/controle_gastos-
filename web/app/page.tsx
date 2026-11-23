@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Plus, ArrowUpRight, Sparkles, ShieldCheck, AlertTriangle } from "lucide-react";
 import { getMe, getDashboard } from "@/lib/api";
+import { centavosAssinadosDeString } from "@/lib/money";
+import { progressoPercentual } from "@/lib/format";
 import {
   Sidebar,
   SidebarContent,
@@ -21,7 +23,11 @@ import { KitBoot } from "@/components/KitBoot";
 export const instant = false;
 
 const MESES = 6;
+const ZERO = BigInt(0);
 
+function centavos(valor: string | undefined): bigint {
+  return centavosAssinadosDeString(valor ?? "") ?? ZERO;
+}
 
 interface PageProps {
   searchParams: Promise<{
@@ -70,16 +76,22 @@ export default async function Home({ searchParams }: PageProps) {
         .toLocaleString("pt-BR", { month: "short" })
         .replace(".", "")
         .toUpperCase(),
-      entradas: Number(dashboards[i]?.totalEntradas ?? 0),
-      saidas: Number(dashboards[i]?.totalSaidas ?? 0),
+      entradas: centavos(dashboards[i]?.totalEntradas),
+      saidas: centavos(dashboards[i]?.totalSaidas),
     }))
     .reverse();
 
-  // Indicadores de UX para feedback imediato
-  const entradas = Number(dados.totalEntradas ?? 0);
-  const saidas = Number(dados.totalSaidas ?? 0);
+  const totalEntradas = centavos(dados.totalEntradas);
+  const totalSaidas = centavos(dados.totalSaidas);
+  const saldo = centavos(dados.saldo);
+  const variacaoEntradas = centavos(dados.variacaoEntradas);
+  const variacaoSaidas = centavos(dados.variacaoSaidas);
+  const variacaoSaldo = centavos(dados.variacaoSaldo);
+
   const taxaComprometimento =
-    entradas > 0 ? Math.min(Math.round((saidas / entradas) * 100), 100) : 0;
+    totalEntradas > ZERO
+      ? Math.round(progressoPercentual(totalSaidas, totalEntradas))
+      : 0;
   const alertaComprometimento = taxaComprometimento >= 80;
 
   return (
@@ -165,7 +177,7 @@ export default async function Home({ searchParams }: PageProps) {
                   </h2>
 
                   {/* Feedback visual de comprometimento da renda (Redução de carga cognitiva) */}
-                  {entradas > 0 && (
+                  {totalEntradas > ZERO && (
                     <div className="flex items-center gap-3 rounded-lg border border-border/60 bg-card/60 px-3 py-1.5 text-xs">
                       <span className="flex items-center gap-1.5 text-muted-foreground">
                         {alertaComprometimento ? (
@@ -196,23 +208,18 @@ export default async function Home({ searchParams }: PageProps) {
                 </div>
 
                 <DashboardKPIs
-                  totalEntradas={Number(dados.totalEntradas)}
-                  totalSaidas={Number(dados.totalSaidas)}
-                  saldo={Number(dados.saldo)}
-                  variacaoEntradas={Number(dados.variacaoEntradas)}
-                  variacaoSaidas={Number(dados.variacaoSaidas)}
+                  totalEntradas={totalEntradas}
+                  totalSaidas={totalSaidas}
+                  saldo={saldo}
+                  variacaoEntradas={variacaoEntradas}
+                  variacaoSaidas={variacaoSaidas}
                   percentualEntradas={dados.percentualEntradas}
                   percentualSaidas={dados.percentualSaidas}
                   totalEntradasMesAnterior={
-                    Number(dados.totalEntradas) -
-                    Number(dados.variacaoEntradas)
+                    totalEntradas - variacaoEntradas
                   }
-                  totalSaidasMesAnterior={
-                    Number(dados.totalSaidas) - Number(dados.variacaoSaidas)
-                  }
-                  saldoMesAnterior={
-                    Number(dados.saldo) - Number(dados.variacaoSaldo)
-                  }
+                  totalSaidasMesAnterior={totalSaidas - variacaoSaidas}
+                  saldoMesAnterior={saldo - variacaoSaldo}
                 />
               </section>
 

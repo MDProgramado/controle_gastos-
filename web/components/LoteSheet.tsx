@@ -1,8 +1,8 @@
 "use client"
 
 import * as React from "react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Sheet } from "@/components/ui/sheet"
-import { SheetTrigger } from "@/components/ui/sheet"
 import { SheetContent } from "@/components/ui/sheet"
 import { SheetHeader } from "@/components/ui/sheet"
 import { SheetTitle } from "@/components/ui/sheet"
@@ -14,6 +14,8 @@ import { SelectValue } from "@/components/ui/select"
 import { SelectContent } from "@/components/ui/select"
 import { SelectItem } from "@/components/ui/select"
 import { Spinner } from "@/components/Spinner"
+import { normalizarValorParaApi, validarValorLote } from "@/lib/money"
+import type { ResultadoCriacaoLote } from "@/lib/lancamentos"
 import { LinhaLote as LinhaLoteRow } from "@/components/LoteLinha"
 import type {
   CampoLote,
@@ -32,13 +34,8 @@ export function validarCampo(
       return linha.categoriaId ? null : "Selecione uma categoria"
     case "tipo":
       return linha.tipo ? null : "Selecione o tipo"
-    case "valor": {
-      if (!linha.valor.trim()) return "Informe um valor maior que zero"
-      if (!/^-?\d+(\.\d{1,2})?$/.test(linha.valor.trim()))
-        return "Valor inválido"
-      if (parseFloat(linha.valor) <= 0) return "Informe um valor maior que zero"
-      return null
-    }
+    case "valor":
+      return validarValorLote(linha.valor)
     case "data":
       return linha.data ? null : "Informe a data"
   }
@@ -57,7 +54,8 @@ export function validarLinha(
 }
 
 interface LoteSheetProps {
-  onClose: () => void
+  open: boolean
+  onOpenChange: (aberto: boolean) => void
   onSubmit: (
     linhas: Array<{
       categoriaId: number
@@ -66,12 +64,13 @@ interface LoteSheetProps {
       data: string
       descricao?: string
     }>,
-  ) => Promise<boolean>
+  ) => Promise<ResultadoCriacaoLote>
   categorias: CategoriaOption[]
 }
 
 export function LoteSheet({
-  onClose,
+  open,
+  onOpenChange,
   onSubmit,
   categorias,
 }: LoteSheetProps) {
@@ -93,6 +92,7 @@ export function LoteSheet({
    * exiba a mensagem.
    */
   const [erros, setErros] = React.useState<Record<string, ErroLinha>>({})
+  const [erroGeral, setErroGeral] = React.useState<string | null>(null)
 
   const removerLinha = (id: string) => {
     setLinhas(linhas.filter((l) => l.id !== id))
@@ -115,7 +115,7 @@ export function LoteSheet({
    * categoria e valor preenchidos para o lote ser salvo.
    */
   const linhaInvalida = (l: LinhaLote) =>
-    l.categoriaId === null || !l.valor.trim()
+    l.categoriaId === null || validarValorLote(l.valor) !== null
 
   const podeSalvar =
     linhas.length > 0 && linhas.every((l) => !linhaInvalida(l))
@@ -161,41 +161,67 @@ export function LoteSheet({
   }
 
   async function handleSubmit() {
-    // Valida todas as linhas e mostra o erro no campo que falhou.
     const novosErros: Record<string, ErroLinha> = {}
     for (const l of linhas) {
       const erro = validarLinha(l)
       if (erro) novosErros[l.id] = erro
     }
     setErros(novosErros)
+    setErroGeral(null)
     if (Object.keys(novosErros).length > 0) return
+
+    const linhasParaApi: Array<{
+      categoriaId: number
+      tipo: string
+      valor: string
+      data: string
+      descricao?: string
+    }> = []
+
+    for (const l of linhas) {
+      const valor = normalizarValorParaApi(l.valor)
+      if (valor === null || l.categoriaId === null) {
+        setErros((atuais) => ({
+          ...atuais,
+          [l.id]: { campo: "valor", mensagem: "Valor inválido" },
+        }))
+        return
+      }
+      linhasParaApi.push({
+        categoriaId: l.categoriaId,
+        tipo: l.tipo,
+        valor,
+        data: l.data,
+        descricao: l.descricao || undefined,
+      })
+    }
 
     setLoading(true)
     try {
-      const resultado = await onSubmit(
-        linhas.map((l) => ({
-          categoriaId: l.categoriaId!,
-          tipo: l.tipo,
-          valor: l.valor,
-          data: l.data,
-          descricao: l.descricao || undefined,
-        })),
-      )
-      if (resultado) {
-        onClose()
+      const resultado = await onSubmit(linhasParaApi)
+      if (!resultado.ok) {
+        setErroGeral(resultado.mensagem)
+        if (resultado.indiceLinha !== undefined) {
+          const linha = linhas[resultado.indiceLinha]
+          if (linha) {
+            setErros((atuais) => ({
+              ...atuais,
+              [linha.id]: { campo: "valor", mensagem: resultado.mensagem },
+            }))
+          }
+        }
+        return
       }
+      onOpenChange(false)
+    } catch {
+      setErroGeral("Não foi possível salvar o lote. Tente novamente.")
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <Sheet>
-      <SheetTrigger asChild>
-        <button className="h-11 px-4 py-2 rounded-lg border border-input bg-transparent px-4 py-1 text-base focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50">
-          Lançar em lote
-        </button>
-      </SheetTrigger>
+    <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="max-h-[90dvh] overflow-y-auto w-full md:max-w-[600px]">
         <SheetHeader>
           <SheetTitle>Lançar em lote</SheetTitle>
@@ -267,6 +293,11 @@ export function LoteSheet({
 
         {/* Rodape fixo no fim do conteudo */}
         <div className="border-t border-border px-6 py-4">
+          {erroGeral ? (
+            <Alert variant="destructive" role="alert" className="mb-3">
+              <AlertDescription>{erroGeral}</AlertDescription>
+            </Alert>
+          ) : null}
           {!podeSalvar && !loading ? (
             <p className="mb-2 text-sm text-muted-foreground">
               Preencha categoria e valor em todas as linhas.

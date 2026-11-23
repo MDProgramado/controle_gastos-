@@ -86,8 +86,6 @@ function SairButton({ collapsed }: { collapsed?: boolean }) {
   return (
     <button
       onClick={async () => {
-        document.cookie =
-          "sess=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT"
         try {
           await fetch("/api/auth/logout", { method: "POST" })
         } catch {

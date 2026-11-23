@@ -43,6 +43,22 @@ services:
         sync: false
       - key: SPRING_DATASOURCE_PASSWORD
         sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false # valor público do OAuth Client Web; o secret fica só no BFF (Vercel)
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: WHATSAPP_API_URL
+        sync: false # ex.: https://graph.facebook.com/v21.0 (sem segredo)
+      - key: WHATSAPP_PHONE_NUMBER_ID
+        sync: false
+      - key: WHATSAPP_ACCESS_TOKEN
+        sync: false
+      - key: WHATSAPP_TEMPLATE_CODIGO
+        sync: false
+      - key: WHATSAPP_VERIFY_TOKEN
+        sync: false
+      - key: WHATSAPP_APP_SECRET
+        sync: false
 
 # Um banco por ambiente (D-08) — hoje apenas o banco de produção existe.
 databases:

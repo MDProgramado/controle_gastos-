@@ -2,6 +2,7 @@ package com.controlefinanceiro.whatsapp;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import java.nio.charset.StandardCharsets;
 import javax.crypto.Mac;
@@ -69,13 +70,42 @@ class WhatsAppWebhookControllerTest {
   }
 
   @Test
-  void webhookComSegredoVazioRetorna401MesmoComAssinaturaValida() throws Exception {
+  void webhookComSegredoVazioRetorna503MesmoComAssinaturaValida() throws Exception {
     controller.setAppSecret("");
 
     String payload = "{\"object\":\"whatsapp_business_account\",\"entry\":[]}";
-    // Não importa a assinatura - com appSecret vazio o controller retorna 401 antes de validar
     ResponseEntity<?> resposta = controller.receber("sha256=qualquercoisa", payload);
 
-    assertThat(resposta.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    assertThat(resposta.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+    verifyNoInteractions(mockService);
+  }
+
+  @Test
+  void verificacaoSemTokenConfiguradoRetorna503() {
+    controller.setVerifyToken("");
+
+    ResponseEntity<?> resposta = controller.verificar("subscribe", "", "challenge-123");
+
+    assertThat(resposta.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+  }
+
+  @Test
+  void verificacaoComTokenInvalidoRetorna403() {
+    controller.setVerifyToken("token-configurado");
+
+    ResponseEntity<?> resposta = controller.verificar("subscribe", "token-errado", "challenge-123");
+
+    assertThat(resposta.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+  }
+
+  @Test
+  void verificacaoComTokenCorretoRetornaChallenge() {
+    controller.setVerifyToken("token-configurado");
+
+    ResponseEntity<?> resposta =
+        controller.verificar("subscribe", "token-configurado", "challenge-123");
+
+    assertThat(resposta.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(resposta.getBody()).isEqualTo("challenge-123");
   }
 }

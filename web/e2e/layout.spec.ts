@@ -1,21 +1,11 @@
 import { test, expect } from "@playwright/test";
-
-const EMAIL = "admin@controle.com";
-const SENHA = "admin123";
+import { abrirPagina, login, MES_ATUAL } from "./helpers";
 
 const VIEWPORTS = [
   { name: "360px (mobile)", width: 360, height: 800 },
   { name: "768px (tablet)", width: 768, height: 1024 },
   { name: "1440px (desktop)", width: 1440, height: 900 },
 ];
-
-async function login(page: import("@playwright/test").Page) {
-  await page.goto("/login");
-  await page.getByLabel("E-mail").fill(EMAIL);
-  await page.getByLabel("Senha").fill(SENHA);
-  await page.getByRole("button", { name: "Entrar" }).click();
-  await page.waitForURL((url) => url.pathname !== "/login", { timeout: 15000 });
-}
 
 for (const vp of VIEWPORTS) {
   test.describe(`Layout — ${vp.name}`, () => {
@@ -25,29 +15,28 @@ for (const vp of VIEWPORTS) {
       await page.setViewportSize({ width: vp.width, height: vp.height });
       await login(page);
 
-      // Dashboard
-      await page.goto("/");
-      await page.waitForTimeout(2000);
-      await expect(page.locator("main").getByRole("heading", { name: "Visão geral" })).toBeVisible();
+      await abrirPagina(page, "/");
+      await expect(
+        page.locator("main").getByRole("heading", { name: "Visão geral" }),
+      ).toBeVisible();
+      expect(
+        await page.getByRole("button", { name: "Sair" }).count(),
+      ).toBeLessThanOrEqual(1);
 
-      // Um único "Sair" (no desktop está sempre visível; no mobile fica dentro do Sheet fechado)
-      const sairCount = await page.getByRole("button", { name: "Sair" }).count();
-      expect(sairCount).toBeLessThanOrEqual(1);
-
-      // Lançamentos
-      await page.goto("/lancamentos?mes=2026-11");
-      await page.waitForTimeout(2000);
+      await abrirPagina(page, `/lancamentos?mes=${MES_ATUAL}`);
       await expect(page.getByRole("button", { name: /\+ Novo lançamento/ })).toBeVisible();
       await expect(page.getByRole("button", { name: "Lançar em lote" })).toBeVisible();
+      expect(
+        await page.getByRole("button", { name: "Sair" }).count(),
+      ).toBeLessThanOrEqual(1);
 
-      const sairCount2 = await page.getByRole("button", { name: "Sair" }).count();
-      expect(sairCount2).toBeLessThanOrEqual(1);
-
-      // Categorias
-      await page.goto("/categorias");
-      await page.waitForTimeout(2000);
-      const sairCount3 = await page.getByRole("button", { name: "Sair" }).count();
-      expect(sairCount3).toBeLessThanOrEqual(1);
+      await abrirPagina(page, "/categorias");
+      await expect(
+        page.getByRole("heading", { name: "Categorias", level: 1 }),
+      ).toBeVisible();
+      expect(
+        await page.getByRole("button", { name: "Sair" }).count(),
+      ).toBeLessThanOrEqual(1);
     });
 
     test("sidebar mobile abre como Sheet (não ocupa largura do conteúdo)", async ({
@@ -56,17 +45,12 @@ for (const vp of VIEWPORTS) {
       if (vp.name.includes("360px")) {
         await page.setViewportSize({ width: vp.width, height: vp.height });
         await login(page);
-        await page.goto("/");
-        await page.waitForTimeout(2000);
+        await abrirPagina(page, "/");
 
-        // Botão hambúrguer deve estar visível em mobile
         const btnMenu = page.getByRole("button", { name: "Abrir menu" });
-        if ((await btnMenu.count()) > 0) {
-          await btnMenu.click();
-          await page.waitForTimeout(1000);
-          // Sheet deve abrir
-          await expect(page.getByRole("dialog", { name: "PLUTON" })).toBeVisible();
-        }
+        await expect(btnMenu).toBeVisible();
+        await btnMenu.click();
+        await expect(page.getByRole("dialog", { name: "PLUTON" })).toBeVisible();
       }
     });
   });
@@ -87,26 +71,14 @@ test.describe("Console sem erros em todas as rotas", () => {
     });
 
     await login(page);
-
-    // Navegar por todas as páginas
-    await page.goto("/");
-    await page.waitForTimeout(2000);
-
-    await page.goto("/lancamentos?mes=2026-11");
-    await page.waitForTimeout(2000);
-
-    await page.goto("/categorias");
-    await page.waitForTimeout(2000);
+    await abrirPagina(page, "/");
+    await abrirPagina(page, `/lancamentos?mes=${MES_ATUAL}`);
+    await abrirPagina(page, "/categorias");
 
     await page.goto("/login");
-    await page.waitForTimeout(1000);
+    await expect(page).toHaveURL(/\/login/);
 
-    console.log("ERROS DE CONSOLE:", errors.length);
-    console.log("PAGE ERRORS:", pageErrors.length);
-    errors.forEach((e) => console.log("  ERROR:", e));
-    pageErrors.forEach((e) => console.log("  PAGE ERROR:", e));
-
-    expect(errors.length).toBe(0);
-    expect(pageErrors.length).toBe(0);
+    expect(errors).toEqual([]);
+    expect(pageErrors).toEqual([]);
   });
 });

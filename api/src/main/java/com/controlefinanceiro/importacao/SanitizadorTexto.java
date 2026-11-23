@@ -1,5 +1,6 @@
 package com.controlefinanceiro.importacao;
 
+import java.util.function.UnaryOperator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -13,6 +14,8 @@ public final class SanitizadorTexto {
 
   private SanitizadorTexto() {}
 
+  private static final String TEXTO_REMOVIDO = "[dados removidos]";
+
   private static final Pattern CPF = Pattern.compile("\\b\\d{3}\\.\\d{3}\\.\\d{3}-\\d{2}\\b");
   private static final Pattern CNPJ =
       Pattern.compile("\\b\\d{2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2}\\b");
@@ -23,20 +26,29 @@ public final class SanitizadorTexto {
   /**
    * Retorna o texto com dados sensíveis substituídos por máscara.
    *
-   * <p>Qualquer problema de padrão devolve o texto original — a sanitização nunca derruba o fluxo
-   * de importação.
+   * <p>Qualquer problema de padrão remove o conteúdo — a sanitização nunca derruba o fluxo nem
+   * devolve dados sensíveis.
    */
   public static String sanitizar(String texto) {
+    return sanitizar(
+        texto,
+        conteudo -> CPF.matcher(conteudo).replaceAll("***.***.***-**"),
+        conteudo -> CNPJ.matcher(conteudo).replaceAll("**.***.***/****-**"),
+        SanitizadorTexto::mascararCartoes);
+  }
+
+  static String sanitizar(
+      String texto,
+      UnaryOperator<String> cpf,
+      UnaryOperator<String> cnpj,
+      UnaryOperator<String> cartao) {
     if (texto == null) {
       return null;
     }
     try {
-      String resultado = CPF.matcher(texto).replaceAll("***.***.***-**");
-      resultado = CNPJ.matcher(resultado).replaceAll("**.***.***/****-**");
-      resultado = mascararCartoes(resultado);
-      return resultado;
-    } catch (Exception e) {
-      return texto;
+      return cartao.apply(cnpj.apply(cpf.apply(texto)));
+    } catch (RuntimeException e) {
+      return TEXTO_REMOVIDO;
     }
   }
 

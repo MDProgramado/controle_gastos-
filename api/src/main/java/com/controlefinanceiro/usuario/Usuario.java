@@ -45,6 +45,15 @@ public class Usuario {
   @Column(nullable = false, length = 16)
   private String role;
 
+  @Column(name = "google_sub", length = 255)
+  private String googleSub;
+
+  @Column(name = "email_verificado", nullable = false)
+  private boolean emailVerificado;
+
+  @Column(name = "token_version", nullable = false)
+  private int tokenVersion;
+
   @Column(nullable = false)
   private boolean ativo;
 
@@ -104,6 +113,30 @@ public class Usuario {
 
   public void setRole(String role) {
     this.role = role;
+  }
+
+  public String getGoogleSub() {
+    return googleSub;
+  }
+
+  public void setGoogleSub(String googleSub) {
+    this.googleSub = googleSub;
+  }
+
+  public boolean isEmailVerificado() {
+    return emailVerificado;
+  }
+
+  public void setEmailVerificado(boolean emailVerificado) {
+    this.emailVerificado = emailVerificado;
+  }
+
+  public int getTokenVersion() {
+    return tokenVersion;
+  }
+
+  public void setTokenVersion(int tokenVersion) {
+    this.tokenVersion = tokenVersion;
   }
 
   public boolean isAtivo() {

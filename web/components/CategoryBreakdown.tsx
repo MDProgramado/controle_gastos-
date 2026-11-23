@@ -1,32 +1,22 @@
-"use client";
-
-import * as React from "react";
-
 import { Card } from "@/components/ui/card";
 import { CardContent } from "@/components/ui/card";
 import { CardHeader } from "@/components/ui/card";
 import { CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { DonutChart } from "@/components/DonutChart";
+import {
+  agruparCategorias,
+  formatarBRL,
+  formatarPercentual,
+  progressoPercentual,
+  type CategoriaTotal,
+} from "@/lib/format";
+import { centavosAssinadosDeString } from "@/lib/money";
 
-const MONETARY = new Intl.NumberFormat("pt-BR", {
-  style: "currency",
-  currency: "BRL",
-});
+const ZERO = BigInt(0);
 
-const PERCENTUAL = new Intl.NumberFormat("pt-BR", {
-  style: "percent",
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
-
-type CategoriaGasto = {
-  id: number;
-  nome: string;
-  total: string;
-};
+type CategoriaGasto = CategoriaTotal;
 
 type CategoryBreakdownProps = {
   categorias: CategoriaGasto[];
@@ -37,17 +27,11 @@ export function CategoryBreakdown({
   categorias,
   totalSaidas,
 }: CategoryBreakdownProps) {
-  const totalSaidasNum = Number(totalSaidas) || 0;
+  const totalSaidasCentavos =
+    centavosAssinadosDeString(totalSaidas) ?? ZERO;
+  const agrupadas = agruparCategorias(categorias);
 
-  const ordenadas = [...categorias].sort(
-    (a, b) => Number(b.total) - Number(a.total),
-  );
-  const top5 = ordenadas.slice(0, 5);
-  const outrosTotal = ordenadas
-    .slice(5)
-    .reduce((sum, c) => sum + Number(c.total), 0);
-
-  const hasData = totalSaidasNum > 0 && categorias.length > 0;
+  const hasData = totalSaidasCentavos > ZERO && categorias.length > 0;
 
   if (!hasData) {
     return (
@@ -67,27 +51,13 @@ export function CategoryBreakdown({
     );
   }
 
-  const rows = top5.map((categoria) => {
-    const percentual =
-      totalSaidasNum > 0 ? Number(categoria.total) / totalSaidasNum : 0;
-    return {
-      id: categoria.id,
-      nome: categoria.nome,
-      total: MONETARY.format(Number(categoria.total)),
-      percentual: PERCENTUAL.format(percentual),
-      progressValue: percentual * 100,
-    };
-  });
-
-  const outrosRow =
-    outrosTotal > 0
-      ? {
-          nome: "Outros",
-          total: MONETARY.format(outrosTotal),
-          percentual: PERCENTUAL.format(outrosTotal / totalSaidasNum),
-          progressValue: (outrosTotal / totalSaidasNum) * 100,
-        }
-      : null;
+  const rows = agrupadas.map((categoria) => ({
+    id: categoria.id,
+    nome: categoria.nome,
+    total: formatarBRL(categoria.centavos),
+    percentual: formatarPercentual(categoria.centavos, totalSaidasCentavos),
+    progressValue: progressoPercentual(categoria.centavos, totalSaidasCentavos),
+  }));
 
   return (
     <Card className="@container w-full min-w-0">
@@ -146,28 +116,6 @@ export function CategoryBreakdown({
                           </td>
                         </tr>
                       ))}
-                      {outrosRow && (
-                        <tr key="outros" className="border-b border-border/50">
-                          <td className="truncate px-2 py-3 @min-[640px]:px-4">
-                            Outros
-                          </td>
-                          <td className="whitespace-nowrap px-2 py-3 text-right @min-[640px]:px-4">
-                            {outrosRow.total}
-                          </td>
-                          <td className="px-2 py-3 text-right @min-[640px]:px-4">
-                            <div className="flex items-center gap-2">
-                              <span className="inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium bg-destructive/10 text-destructive">
-                                {outrosRow.percentual}
-                              </span>
-                              <Progress
-                                value={outrosRow.progressValue}
-                                className="hidden h-1 min-w-[24px] flex-1 @min-[640px]:block"
-                                style={{ transform: "none" }}
-                              />
-                            </div>
-                          </td>
-                        </tr>
-                      )}
                     </tbody>
                   </table>
                 </div>

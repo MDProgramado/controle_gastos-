@@ -63,6 +63,7 @@ class ImportacaoConfirmacaoTest {
   private Categoria entrada;
   private Categoria saida;
   private Empresa empresa;
+  private Usuario usuario;
 
   @BeforeEach
   void setup() {
@@ -97,16 +98,17 @@ class ImportacaoConfirmacaoTest {
     SecurityContextHolder.getContext()
         .setAuthentication(
             new UsernamePasswordAuthenticationToken(
-                new UsuarioAuth(EMAIL, EMPRESA_ID, "ADMIN"), null, List.of()));
+                new UsuarioAuth(EMAIL, EMPRESA_ID, 7L, 0, "ADMIN"), null, List.of()));
 
     empresa = new Empresa();
     empresa.setId(EMPRESA_ID);
     empresa.setNome("Empresa X");
-    Usuario usuario = new Usuario();
+    usuario = new Usuario();
     usuario.setId(7L);
     usuario.setEmail(EMAIL);
     usuario.setEmpresa(empresa);
     when(usuarioRepository.findByEmail(EMAIL)).thenReturn(Optional.of(usuario));
+    when(usuarioRepository.findByIdAndEmpresaId(7L, EMPRESA_ID)).thenReturn(Optional.of(usuario));
 
     entrada = categoria(10L, "Rendimentos e reembolsos", "ENTRADA");
     saida = categoria(1L, "Alimentação", "SAIDA");
@@ -143,7 +145,8 @@ class ImportacaoConfirmacaoTest {
               }
               return f;
             });
-    when(lancamentoRepository.findChavesDedupeByEmpresaId(EMPRESA_ID)).thenReturn(List.of());
+    when(lancamentoRepository.findChavesDedupeByEmpresaIdAndUsuarioId(EMPRESA_ID, 7L))
+        .thenReturn(List.of());
   }
 
   /** Contador para ids de lançamento no stub de save. */
@@ -291,7 +294,8 @@ class ImportacaoConfirmacaoTest {
     String chave =
         Deduplicador.gerarChaveDedupe(
             "SAIDA", despesa.getData(), despesa.getValor(), "Alimentação");
-    when(lancamentoRepository.findChavesDedupeByEmpresaId(EMPRESA_ID)).thenReturn(List.of(chave));
+    when(lancamentoRepository.findChavesDedupeByEmpresaIdAndUsuarioId(EMPRESA_ID, 7L))
+        .thenReturn(List.of(chave));
 
     ImportacaoService.ResultadoConfirmacao resultado =
         service.confirmar(
@@ -361,7 +365,8 @@ class ImportacaoConfirmacaoTest {
   @Test
   @DisplayName("confirmar documento de outra empresa → 404 (R3)")
   void confirmarOutraEmpresaLanca404() {
-    when(documentoRepository.findByIdAndEmpresaId(999L, EMPRESA_ID)).thenReturn(Optional.empty());
+    when(documentoRepository.findByIdAndEmpresaIdAndUsuarioId(999L, EMPRESA_ID, 7L))
+        .thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> service.confirmar(999L, new ConfirmarRequest(List.of())))
         .isInstanceOf(ImportacaoNaoEncontradaException.class);
@@ -371,7 +376,8 @@ class ImportacaoConfirmacaoTest {
   @DisplayName("confirmar documento DESCARTADO → 409")
   void confirmarDescartadoLanca409() {
     ImportacaoDocumento doc = documento(100L, "DESCARTADO");
-    when(documentoRepository.findByIdAndEmpresaId(100L, EMPRESA_ID)).thenReturn(Optional.of(doc));
+    when(documentoRepository.findByIdAndEmpresaIdAndUsuarioId(100L, EMPRESA_ID, 7L))
+        .thenReturn(Optional.of(doc));
 
     assertThatThrownBy(() -> service.confirmar(100L, new ConfirmarRequest(List.of())))
         .isInstanceOf(ImportacaoEstadoInvalidoException.class);
@@ -388,8 +394,10 @@ class ImportacaoConfirmacaoTest {
 
   private void prepararDocumento(Long id, List<ImportacaoItem> itens) {
     ImportacaoDocumento doc = documento(id, "ANALISADO");
-    when(documentoRepository.findByIdAndEmpresaId(id, EMPRESA_ID)).thenReturn(Optional.of(doc));
-    when(itemRepository.findByDocumentoId(id)).thenReturn(itens);
+    when(documentoRepository.findByIdAndEmpresaIdAndUsuarioId(id, EMPRESA_ID, 7L))
+        .thenReturn(Optional.of(doc));
+    when(itemRepository.findByDocumentoIdAndEmpresaIdAndUsuarioId(id, EMPRESA_ID, 7L))
+        .thenReturn(itens);
     when(documentoRepository.save(any(ImportacaoDocumento.class)))
         .thenAnswer(
             inv -> {
@@ -404,7 +412,8 @@ class ImportacaoConfirmacaoTest {
     fatura.setTotal(new BigDecimal(total));
     fatura.setDataVencimento(LocalDate.of(2026, 12, 10));
     fatura.setMesReferencia(LocalDate.of(2026, 11, 1));
-    when(faturaRepository.findByDocumentoId(100L)).thenReturn(fatura);
+    when(faturaRepository.findByDocumentoIdAndEmpresaIdAndUsuarioId(100L, EMPRESA_ID, 7L))
+        .thenReturn(fatura);
   }
 
   private static ImportacaoItem item(
@@ -425,6 +434,7 @@ class ImportacaoConfirmacaoTest {
     ImportacaoDocumento doc = new ImportacaoDocumento();
     doc.setId(id);
     doc.setEmpresa(empresa);
+    doc.setUsuario(usuario);
     doc.setNomeArquivo("fatura.pdf");
     doc.setTipoDocumento("EXTRATO");
     doc.setHashSha256("hash-" + id);

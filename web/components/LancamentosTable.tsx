@@ -3,6 +3,8 @@
 import { Pencil, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { formatarBRL } from "@/lib/format";
+import { centavosDeString } from "@/lib/money";
 import {
   Table,
   TableBody,
@@ -12,10 +14,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+const ZERO = BigInt(0);
+
 export interface LancamentoItem {
   id: string;
   descricao: string;
-  valor: number;
+  valor: string;
   tipo: "ENTRADA" | "SAIDA";
   data: string;
   categoriaId?: string;
@@ -31,11 +35,6 @@ interface LancamentosTableProps {
   onEdit: (lancamento: LancamentoItem) => void;
   onDelete: (lancamento: LancamentoItem) => void;
 }
-
-const formatadorMoeda = new Intl.NumberFormat("pt-BR", {
-  style: "currency",
-  currency: "BRL",
-});
 
 function formatarDataBr(dataIso: string): string {
   const apenasData = dataIso.slice(0, 10);
@@ -120,7 +119,7 @@ export function LancamentosTable({
                       }`}
                     >
                       {isEntrada ? "+ " : "- "}
-                      {formatadorMoeda.format(item.valor)}
+                      {formatarBRL(centavosDeString(item.valor) ?? ZERO)}
                     </TableCell>
                     <TableCell className="px-4 py-3.5 text-right">
                       <div className="flex justify-end gap-1">
@@ -178,7 +177,7 @@ export function LancamentosTable({
                     }`}
                   >
                     {isEntrada ? "+ " : "- "}
-                    {formatadorMoeda.format(item.valor)}
+                    {formatarBRL(centavosDeString(item.valor) ?? ZERO)}
                   </span>
                 </div>
 

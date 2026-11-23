@@ -4,6 +4,7 @@ import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { validarValorLote } from "@/lib/money";
 import {
   Dialog,
   DialogContent,
@@ -41,7 +42,7 @@ export interface LancamentoFormValues {
 export interface LancamentoParaEdicao {
   id: string;
   descricao: string;
-  valor: number;
+  valor: string;
   tipo: "ENTRADA" | "SAIDA";
   categoriaId: string;
   data: string;
@@ -52,10 +53,7 @@ const lancamentoSchema = z.object({
   valor: z
     .string()
     .min(1, "Informe o valor.")
-    .refine((val) => {
-      const normalizado = Number.parseFloat(val.replace(/\./g, "").replace(",", "."));
-      return !Number.isNaN(normalizado) && normalizado > 0;
-    }, "Informe um valor numérico maior que zero."),
+    .refine((val) => validarValorLote(val) === null, "Informe um valor numérico maior que zero."),
   tipo: z.enum(["ENTRADA", "SAIDA"]),
   categoriaId: z.string().min(1, "Selecione uma categoria."),
   data: z.string().min(1, "Informe a data."),
@@ -111,7 +109,7 @@ export function LancamentoFormDialog({
     if (lancamento) {
       reset({
         descricao: lancamento.descricao,
-        valor: lancamento.valor.toFixed(2).replace(".", ","),
+        valor: lancamento.valor,
         tipo: lancamento.tipo,
         categoriaId: lancamento.categoriaId,
         data: lancamento.data.slice(0, 10),

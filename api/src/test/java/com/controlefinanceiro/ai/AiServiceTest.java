@@ -6,12 +6,17 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.controlefinanceiro.common.UsuarioAuth;
+import com.controlefinanceiro.common.UsuarioAuthAuthenticationToken;
 import java.util.List;
 import java.util.Map;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 /**
  * Testes de unidade do AiService (fase 4 — IA). Testam a interpretação de intents e a persistência
@@ -31,8 +36,18 @@ class AiServiceTest {
     memoryStore = new AiMemoryStore();
     knowledgeStore = new AiKnowledgeStore();
     contextoService = mock(AiContextoService.class);
-    when(contextoService.montarContexto(any())).thenReturn("");
+    when(contextoService.montarContexto(any(), any())).thenReturn("");
     aiService = new AiService(aiClient, memoryStore, knowledgeStore, contextoService);
+    SecurityContextHolder.getContext()
+        .setAuthentication(
+            new UsuarioAuthAuthenticationToken(
+                new UsuarioAuth("usuario@teste.com", 1L, 7L, 0, "USER"),
+                List.of(new SimpleGrantedAuthority("ROLE_USER"))));
+  }
+
+  @AfterEach
+  void limparContexto() {
+    SecurityContextHolder.clearContext();
   }
 
   @Test
@@ -101,7 +116,7 @@ class AiServiceTest {
   @Test
   @DisplayName("dados reais da empresa vao no prompt enviado a IA")
   void dadosReaisDaEmpresaVaoNoPromptEnviadoIa() {
-    when(contextoService.montarContexto(1L)).thenReturn("Totais por mês: novembro de 2026");
+    when(contextoService.montarContexto(1L, 7L)).thenReturn("Totais por mês: novembro de 2026");
     when(aiClient.completar(any())).thenReturn("CONSULTA|R$ 1.234,56");
 
     aiService.processar("sessao-1", "1", "quanto gastei?");
@@ -162,7 +177,7 @@ class AiServiceTest {
     AiResponse primeira = aiService.processar("sessao-1", "empresa-1", "mensagem um");
     AiResponse segunda = aiService.processar("sessao-1", "empresa-1", "mensagem dois");
 
-    List<AiMessage> historico = aiService.obterHistorico("sessao-1");
+    List<AiMessage> historico = aiService.obterHistorico("sessao-1", "empresa-1");
     assertThat(historico).hasSize(4); // usuário + assistente × 2
     assertThat(historico.get(0).role()).isEqualTo("user");
     assertThat(historico.get(0).content()).isEqualTo("mensagem um");
@@ -174,12 +189,14 @@ class AiServiceTest {
   @Test
   @DisplayName("conhecimento alimentado e recuperado")
   void conhecimentoEhAlimentadoERecuperado() {
-    assertThat(aiService.temConhecimento()).isFalse();
+    assertThat(aiService.temConhecimento("empresa-1")).isFalse();
 
-    aiService.definirConhecimento("Categorias: Alimentação, Transporte, Supermercado.");
+    aiService.definirConhecimento(
+        "empresa-1", "Categorias: Alimentação, Transporte, Supermercado.");
 
-    assertThat(aiService.temConhecimento()).isTrue();
-    assertThat(aiService.obterConhecimento()).contains("Alimentação", "Transporte", "Supermercado");
+    assertThat(aiService.temConhecimento("empresa-1")).isTrue();
+    assertThat(aiService.obterConhecimento("empresa-1"))
+        .contains("Alimentação", "Transporte", "Supermercado");
   }
 
   @Test
@@ -197,9 +214,9 @@ class AiServiceTest {
     when(aiClient.completar(any())).thenReturn("CONSULTA|Resposta");
 
     aiService.processar("sessao-1", "empresa-1", "mensagem um");
-    assertThat(aiService.obterHistorico("sessao-1")).hasSize(2);
+    assertThat(aiService.obterHistorico("sessao-1", "empresa-1")).hasSize(2);
 
-    aiService.limparSessao("sessao-1");
-    assertThat(aiService.obterHistorico("sessao-1")).isEmpty();
+    aiService.limparSessao("sessao-1", "empresa-1");
+    assertThat(aiService.obterHistorico("sessao-1", "empresa-1")).isEmpty();
   }
 }

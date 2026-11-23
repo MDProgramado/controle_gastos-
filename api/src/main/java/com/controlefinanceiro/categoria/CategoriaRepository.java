@@ -43,4 +43,11 @@ public interface CategoriaRepository extends JpaRepository<Categoria, Long> {
       "select count(c) > 0 from Categoria c where c.empresa.id = :empresaId and c.nome = :nome and c.tipo = :tipo")
   boolean existsByEmpresaIdAndNomeAndTipo(
       @Param("empresaId") Long empresaId, @Param("nome") String nome, @Param("tipo") String tipo);
+
+  /** Existe lançamento desta categoria no tenant — impede trocar o tipo da categoria (CAT-04). */
+  @Query(
+      "select count(l) > 0 from Lancamento l where l.categoria.id = :categoriaId and l.empresa.id"
+          + " = :empresaId")
+  boolean existeLancamento(
+      @Param("categoriaId") Long categoriaId, @Param("empresaId") Long empresaId);
 }

@@ -1,4 +1,5 @@
-import { cookies } from "next/headers";
+import { extrairToken } from "@/lib/auth-bff";
+import { setSessionCookie } from "@/lib/session";
 
 const MSG_CREDENCIAIS = "E-mail ou senha inválidos";
 const MSG_CONEXAO = "Não foi possível conectar. Tente novamente em instantes.";
@@ -22,6 +23,7 @@ export async function POST(request: Request) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
       cache: "no-store",
+      signal: AbortSignal.timeout(5000),
     });
   } catch {
     // erro de rede / API_URL inacessível
@@ -41,19 +43,12 @@ export async function POST(request: Request) {
     return Response.json({ erro: "Verifique os dados informados." }, { status: res.status });
   }
 
-  const data = (await res.json()) as { token?: unknown };
-  if (typeof data.token !== "string" || data.token.length === 0) {
+  const accessToken = extrairToken(await res.json());
+  if (!accessToken) {
     return Response.json({ erro: MSG_CONEXAO }, { status: 502 });
   }
 
-  const cookieStore = await cookies(); // Next 16: acesso SOMENTE assíncrono
-  cookieStore.set("sess", data.token, {
-    httpOnly: true,
-    sameSite: "lax",
-    path: "/",
-    secure: process.env.NODE_ENV === "production",
-    maxAge: 8 * 60 * 60, // D-01: 8h, alinhado ao exp do JWT
-  });
+  await setSessionCookie(accessToken);
 
   return Response.json({ ok: true });
 }

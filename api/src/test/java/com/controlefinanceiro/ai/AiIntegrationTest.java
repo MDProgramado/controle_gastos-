@@ -4,6 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
+import com.controlefinanceiro.auth.JwtService;
+import com.controlefinanceiro.empresa.Empresa;
+import com.controlefinanceiro.usuario.Usuario;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -14,6 +17,7 @@ import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -38,6 +42,7 @@ class AiIntegrationTest {
 
   @Autowired private TestRestTemplate rest;
   @Autowired private ObjectMapper mapper;
+  @Autowired private JwtService jwtService;
   @MockBean private AiClient aiClient;
 
   private String tokenAdmin;
@@ -160,6 +165,78 @@ class AiIntegrationTest {
 
     AiResponse dto = mapper.readValue(response.getBody(), AiResponse.class);
     assertThat(dto.intent()).isEqualTo("esclarecimento");
+  }
+
+  @Test
+  void usuarioSemRoleAdminNaoAcessaConhecimentoDaIa() throws Exception {
+    HttpHeaders headers = new HttpHeaders();
+    headers.setBearerAuth(tokenFixado(1L, "USER"));
+    headers.setContentType(MediaType.APPLICATION_JSON);
+
+    assertThat(
+            rest.exchange(
+                    "/api/ai/chat/conhecimento",
+                    HttpMethod.GET,
+                    new HttpEntity<>(headers),
+                    String.class)
+                .getStatusCode())
+        .isEqualTo(HttpStatus.FORBIDDEN);
+    assertThat(
+            rest.exchange(
+                    "/api/ai/chat/conhecimento",
+                    HttpMethod.POST,
+                    new HttpEntity<>("{\"conhecimento\":\"x\"}", headers),
+                    String.class)
+                .getStatusCode())
+        .isEqualTo(HttpStatus.FORBIDDEN);
+    assertThat(
+            rest.exchange(
+                    "/api/ai/chat/conhecimento/limpar",
+                    HttpMethod.POST,
+                    new HttpEntity<>(headers),
+                    String.class)
+                .getStatusCode())
+        .isEqualTo(HttpStatus.FORBIDDEN);
+  }
+
+  @Test
+  void conhecimentoEscopadoPorEmpresa() throws Exception {
+    HttpHeaders adminUm = new HttpHeaders();
+    adminUm.setBearerAuth(tokenFixado(1L, "ADMIN"));
+    adminUm.setContentType(MediaType.APPLICATION_JSON);
+    assertThat(
+            rest.exchange(
+                    "/api/ai/chat/conhecimento",
+                    HttpMethod.POST,
+                    new HttpEntity<>("{\"conhecimento\":\"REGRA DA EMPRESA UM\"}", adminUm),
+                    String.class)
+                .getStatusCode())
+        .isEqualTo(HttpStatus.OK);
+
+    HttpHeaders adminDois = new HttpHeaders();
+    adminDois.setBearerAuth(tokenFixado(2L, "ADMIN"));
+    ResponseEntity<String> resposta =
+        rest.exchange(
+            "/api/ai/chat/conhecimento", HttpMethod.GET, new HttpEntity<>(adminDois), String.class);
+
+    assertThat(resposta.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(resposta.getBody()).doesNotContain("REGRA DA EMPRESA UM");
+
+    rest.exchange(
+        "/api/ai/chat/conhecimento/limpar",
+        HttpMethod.POST,
+        new HttpEntity<>(adminUm),
+        String.class);
+  }
+
+  private String tokenFixado(long empresaId, String role) {
+    Empresa empresa = new Empresa();
+    empresa.setId(empresaId);
+    Usuario usuario = new Usuario();
+    usuario.setEmail("fixture@controle.com");
+    usuario.setEmpresa(empresa);
+    usuario.setRole(role);
+    return jwtService.gerarToken(usuario);
   }
 
   private String login(String email, String senha) throws Exception {

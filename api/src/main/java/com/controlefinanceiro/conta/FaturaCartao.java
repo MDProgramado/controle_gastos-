@@ -2,6 +2,7 @@ package com.controlefinanceiro.conta;
 
 import com.controlefinanceiro.empresa.Empresa;
 import com.controlefinanceiro.importacao.model.ImportacaoDocumento;
+import com.controlefinanceiro.usuario.Usuario;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -34,6 +35,11 @@ public class FaturaCartao {
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(name = "empresa_id", nullable = false)
   private Empresa empresa;
+
+  /** Usuário dono da fatura (isolamento financeiro por usuário). */
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @JoinColumn(name = "usuario_id", nullable = false)
+  private Usuario usuario;
 
   /** Documento de importação que originou a fatura (NOT NULL no schema). */
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -75,6 +81,14 @@ public class FaturaCartao {
 
   public void setEmpresa(Empresa empresa) {
     this.empresa = empresa;
+  }
+
+  public Usuario getUsuario() {
+    return usuario;
+  }
+
+  public void setUsuario(Usuario usuario) {
+    this.usuario = usuario;
   }
 
   public ImportacaoDocumento getDocumento() {

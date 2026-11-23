@@ -1,5 +1,6 @@
 package com.controlefinanceiro.usuario;
 
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -14,4 +15,20 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
    */
   @Query("select u from Usuario u left join fetch u.empresa where u.email = :email")
   Optional<Usuario> findByEmail(@Param("email") String email);
+
+  @Query(
+      "select u from Usuario u left join fetch u.empresa where u.id = :id and u.empresa.id ="
+          + " :empresaId")
+  Optional<Usuario> findByIdAndEmpresaId(@Param("id") Long id, @Param("empresaId") Long empresaId);
+
+  @Query(
+      "select u from Usuario u left join fetch u.empresa where u.empresa.id = :empresaId and"
+          + " u.email = :email")
+  Optional<Usuario> findByEmpresaIdAndEmail(
+      @Param("empresaId") Long empresaId, @Param("email") String email);
+
+  Optional<Usuario> findByGoogleSub(String googleSub);
+
+  @Query("select u from Usuario u left join fetch u.empresa where u.empresa.id = :empresaId")
+  List<Usuario> findByEmpresaId(@Param("empresaId") Long empresaId);
 }

@@ -148,8 +148,8 @@ public class AnalisadorConsolidado {
     BigDecimal somaCartao =
         doCartao.stream()
             .filter(i -> "DESPESA_PAGA".equals(i.getTipo()) || "A_PAGAR".equals(i.getTipo()))
-            .map(ImportacaoItem::getValor)
-            .reduce(ZERO, BigDecimal::add)
+            .map(i -> i == null || i.getValor() == null ? ZERO : i.getValor())
+            .reduce(ZERO, (total, valor) -> total.add(valor))
             .setScale(2, RoundingMode.HALF_EVEN);
     BigDecimal diferenca = somaCartao.subtract(fatura.getTotal()).abs();
     if (diferenca.compareTo(TOLERANCIA_FATURA) > 0) {
@@ -211,7 +211,7 @@ public class AnalisadorConsolidado {
     for (Map.Entry<String, List<ImportacaoItem>> entrada : porCategoria.entrySet()) {
       List<BigDecimal> valores =
           entrada.getValue().stream()
-              .map(ImportacaoItem::getValor)
+              .map(item -> item.getValor())
               .filter(v -> v != null)
               .sorted()
               .toList();
