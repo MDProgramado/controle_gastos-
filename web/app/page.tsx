@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Plus, ArrowUpRight, Sparkles, ShieldCheck, AlertTriangle } from "lucide-react";
 import { getMe, getDashboard } from "@/lib/api";
-import { centavosAssinadosDeString } from "@/lib/money";
+import { centavosAssinadosDeString, type ValorMonetario } from "@/lib/money";
 import { progressoPercentual } from "@/lib/format";
 import {
   Sidebar,
@@ -25,7 +25,7 @@ export const instant = false;
 const MESES = 6;
 const ZERO = BigInt(0);
 
-function centavos(valor: string | undefined): bigint {
+function centavos(valor: ValorMonetario | undefined): bigint {
   return centavosAssinadosDeString(valor ?? "") ?? ZERO;
 }
 

@@ -12,7 +12,7 @@ import {
   progressoPercentual,
   type CategoriaTotal,
 } from "@/lib/format";
-import { centavosAssinadosDeString } from "@/lib/money";
+import { centavosAssinadosDeString, type ValorMonetario } from "@/lib/money";
 
 const ZERO = BigInt(0);
 
@@ -20,7 +20,7 @@ type CategoriaGasto = CategoriaTotal;
 
 type CategoryBreakdownProps = {
   categorias: CategoriaGasto[];
-  totalSaidas: string;
+  totalSaidas: ValorMonetario;
 };
 
 export function CategoryBreakdown({

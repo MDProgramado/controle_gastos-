@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { API_TIMEOUT_MS } from "./bff-helpers";
+import type { ValorMonetario } from "./money";
 import { resultadoErroLote, type ResultadoCriacaoLote } from "./lancamentos";
 
 function fetchApi(url: string, init: RequestInit = {}): Promise<Response> {
@@ -49,16 +50,16 @@ export async function getMe(): Promise<SessionUser | null> {
 
 /** Shape de `GET /api/dashboard?ano=&mes=` (contrato da API — plano 03-01). */
 export type DashboardData = {
-  totalEntradas: string;
-  totalSaidas: string;
-  saldo: string;
-  variacaoEntradas: string;
-  variacaoSaidas: string;
-  variacaoSaldo: string;
+  totalEntradas: ValorMonetario;
+  totalSaidas: ValorMonetario;
+  saldo: ValorMonetario;
+  variacaoEntradas: ValorMonetario;
+  variacaoSaidas: ValorMonetario;
+  variacaoSaldo: ValorMonetario;
   percentualEntradas: string;
   percentualSaidas: string;
   percentualSaldo: string;
-  categorias: Array<{ id: number; nome: string; total: string }>;
+  categorias: Array<{ id: number; nome: string; total: ValorMonetario }>;
 };
 
 /**
@@ -96,7 +97,7 @@ export async function getDashboard(
 export type LancamentoData = {
   id: number;
   tipo: string;
-  valor: string;
+  valor: ValorMonetario;
   data: string;
   descricao: string;
   categoriaNome: string;

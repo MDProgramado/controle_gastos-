@@ -10,8 +10,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { agruparCategorias, formatarBRL, type CategoriaTotal } from "@/lib/format"
-import { centavosAssinadosDeString } from "@/lib/money"
+import {
+  agruparCategorias,
+  formatarBRL,
+  valoresParaGrafico,
+  type CategoriaTotal,
+} from "@/lib/format"
+import { centavosAssinadosDeString, type ValorMonetario } from "@/lib/money"
 
 const COLORS = [
   "var(--chart-1)",
@@ -27,7 +32,7 @@ type CategoriaGasto = CategoriaTotal
 
 type DonutChartProps = {
   categorias: CategoriaGasto[]
-  totalSaidas: string
+  totalSaidas: ValorMonetario
 }
 
 export function DonutChart({
@@ -38,11 +43,7 @@ export function DonutChart({
     centavosAssinadosDeString(totalSaidas) ?? ZERO
   const agrupadas = agruparCategorias(categorias)
 
-  const pieData = agrupadas.map((c, i) => ({
-    name: c.nome,
-    value: c.centavos,
-    fill: c.id === "outros" ? "var(--muted-foreground)" : COLORS[i % COLORS.length],
-  }))
+  const pieData = valoresParaGrafico(agrupadas, COLORS)
 
   return (
     <Card className="h-full">
@@ -52,7 +53,7 @@ export function DonutChart({
       <CardContent className="pt-0">
         <div className="flex flex-col items-center justify-center py-4">
           {/* Altura fixa: o grafico nao muda de tamanho com o conteudo. */}
-          <div className="relative h-[260px] w-full md:h-[320px]">
+          <div className="relative h-65 w-full md:h-80">
             <Chart className="h-full w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>

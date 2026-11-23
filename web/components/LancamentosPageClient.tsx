@@ -11,7 +11,11 @@ import { Spinner } from "@/components/Spinner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { DeleteConfirmationDialog } from "@/components/DeleteConfirmationDialog";
 import { formatarBRL } from "@/lib/format";
-import { centavosDeString, normalizarValorParaApi } from "@/lib/money";
+import {
+  centavosDeString,
+  normalizarValorParaApi,
+  type ValorMonetario,
+} from "@/lib/money";
 import type { ResultadoCriacaoLote } from "@/lib/lancamentos";
 
 const ZERO = BigInt(0);
@@ -19,7 +23,7 @@ const ZERO = BigInt(0);
 type LancamentoData = {
   id: number;
   tipo: string;
-  valor: string;
+  valor: ValorMonetario;
   data: string;
   descricao: string;
   categoriaNome: string;
@@ -177,7 +181,7 @@ export function LancamentosPageClient({
       return {
         id: String(item.id),
         descricao: item.descricao,
-        valor: item.valor,
+        valor: String(item.valor),
         tipo: item.tipo as "ENTRADA" | "SAIDA",
         data: item.data,
         categoriaId: cat ? String(cat.id) : undefined,
@@ -200,7 +204,7 @@ export function LancamentosPageClient({
     return {
       id: String(editandoLancamento.id),
       descricao: editandoLancamento.descricao,
-      valor: editandoLancamento.valor,
+      valor: String(editandoLancamento.valor),
       tipo: editandoLancamento.tipo as "ENTRADA" | "SAIDA",
       categoriaId: categoriaEncontrada ? String(categoriaEncontrada.id) : "",
       data: editandoLancamento.data,
