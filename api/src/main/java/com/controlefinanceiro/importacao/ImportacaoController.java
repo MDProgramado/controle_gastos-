@@ -1,6 +1,7 @@
 package com.controlefinanceiro.importacao;
 
 import com.controlefinanceiro.common.TenantContext;
+import com.controlefinanceiro.common.UsuarioContext;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -24,6 +25,8 @@ import org.springframework.web.multipart.MultipartFile;
 @RequestMapping("/api/importacoes")
 public class ImportacaoController {
 
+  private static final int TAMANHO_MAXIMO = 100;
+
   private final ImportacaoService importacaoService;
 
   public ImportacaoController(ImportacaoService importacaoService) {
@@ -41,7 +44,9 @@ public class ImportacaoController {
   @PostMapping("/pdf")
   public ResponseEntity<ImportacaoService.ResultadoAnalise> analisar(
       @RequestParam("arquivos") MultipartFile[] arquivos) {
-    return ResponseEntity.ok(importacaoService.analisar(arquivos));
+    return ResponseEntity.ok(
+        importacaoService.analisar(
+            TenantContext.getEmpresaId(), UsuarioContext.getUsuarioId(), arquivos));
   }
 
   /** GET /api/importacoes — histórico de importações da empresa, paginado. */
@@ -49,15 +54,23 @@ public class ImportacaoController {
   public ResponseEntity<Page<ImportacaoService.DocumentoResumo>> listar(
       @RequestParam(defaultValue = "0") int pagina,
       @RequestParam(defaultValue = "20") int tamanho) {
+    if (pagina < 0) {
+      throw new IllegalArgumentException("pagina deve ser maior ou igual a zero");
+    }
     Page<ImportacaoService.DocumentoResumo> historico =
-        importacaoService.listar(PageRequest.of(pagina, tamanho));
+        importacaoService.listar(
+            TenantContext.getEmpresaId(),
+            UsuarioContext.getUsuarioId(),
+            PageRequest.of(pagina, Math.min(tamanho, TAMANHO_MAXIMO)));
     return ResponseEntity.ok(historico);
   }
 
   /** GET /api/importacoes/{id} — detalhe de uma importação (itens + fatura + resumo). */
   @GetMapping("/{id}")
   public ResponseEntity<ImportacaoService.DocumentoDetalhe> detalhar(@PathVariable Long id) {
-    return ResponseEntity.ok(importacaoService.detalhar(id));
+    return ResponseEntity.ok(
+        importacaoService.detalhar(
+            TenantContext.getEmpresaId(), UsuarioContext.getUsuarioId(), id));
   }
 
   /**
@@ -70,7 +83,9 @@ public class ImportacaoController {
   @PostMapping("/{id}/confirmar")
   public ResponseEntity<ImportacaoService.ResultadoConfirmacao> confirmar(
       @PathVariable Long id, @Valid @RequestBody ConfirmarRequest request) {
-    return ResponseEntity.ok(importacaoService.confirmar(id, request));
+    return ResponseEntity.ok(
+        importacaoService.confirmar(
+            TenantContext.getEmpresaId(), UsuarioContext.getUsuarioId(), id, request));
   }
 
   /**
@@ -79,7 +94,7 @@ public class ImportacaoController {
    */
   @DeleteMapping("/{id}")
   public ResponseEntity<Void> descartar(@PathVariable Long id) {
-    importacaoService.descartar(id);
+    importacaoService.descartar(TenantContext.getEmpresaId(), UsuarioContext.getUsuarioId(), id);
     return ResponseEntity.noContent().build();
   }
 }

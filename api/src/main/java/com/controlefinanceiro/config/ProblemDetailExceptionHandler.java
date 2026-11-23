@@ -1,19 +1,27 @@
 package com.controlefinanceiro.config;
 
+import com.controlefinanceiro.auth.GoogleTokenInvalidoException;
+import com.controlefinanceiro.auth.GoogleVerificacaoIndisponivelException;
 import com.controlefinanceiro.common.AcessoNegadoException;
+import com.controlefinanceiro.common.CadastroInvalidoException;
 import com.controlefinanceiro.common.CategoriaDuplicadaException;
 import com.controlefinanceiro.common.CategoriaNaoEncontradaException;
 import com.controlefinanceiro.common.CategoriaTipoIncompativelException;
 import com.controlefinanceiro.common.CodigoVerificacaoCooldownException;
 import com.controlefinanceiro.common.CodigoVerificacaoInvalidoException;
+import com.controlefinanceiro.common.ConviteInvalidoException;
 import com.controlefinanceiro.common.CredenciaisInvalidasException;
+import com.controlefinanceiro.common.LancamentoNaoEncontradoException;
 import com.controlefinanceiro.common.LinhaInvalidaException;
 import com.controlefinanceiro.common.LoteDemasiadoGrandeException;
 import com.controlefinanceiro.common.MonetarioException;
 import com.controlefinanceiro.common.NaoAutorizadoException;
+import com.controlefinanceiro.common.RoleInvalidoException;
 import com.controlefinanceiro.common.ServicoIaIndisponivelException;
 import com.controlefinanceiro.common.TelefoneJaVinculadoException;
 import com.controlefinanceiro.common.TelefoneNaoPertenceAoUsuarioException;
+import com.controlefinanceiro.common.UltimoAdminAtivoException;
+import com.controlefinanceiro.common.UsuarioNaoEncontradoException;
 import com.controlefinanceiro.importacao.ArquivoInvalidoException;
 import com.controlefinanceiro.importacao.ImportacaoEstadoInvalidoException;
 import com.controlefinanceiro.importacao.ImportacaoNaoEncontradaException;
@@ -40,6 +48,48 @@ public class ProblemDetailExceptionHandler {
     return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, ex.getMessage());
   }
 
+  /** ID token Google inválido ou não confiável → 401, sem detalhar qual claim falhou. */
+  @ExceptionHandler(GoogleTokenInvalidoException.class)
+  public ProblemDetail googleTokenInvalido(GoogleTokenInvalidoException ex) {
+    return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, ex.getMessage());
+  }
+
+  /** Falha de I/O ao verificar o ID token Google (JWKS) → 503, sem expor o token. */
+  @ExceptionHandler(GoogleVerificacaoIndisponivelException.class)
+  public ProblemDetail googleVerificacaoIndisponivel(GoogleVerificacaoIndisponivelException ex) {
+    return ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage());
+  }
+
+  /** Cadastro/convite recusado com mensagem genérica → 400 (anti-enumeração). */
+  @ExceptionHandler(CadastroInvalidoException.class)
+  public ProblemDetail cadastroInvalido(CadastroInvalidoException ex) {
+    return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+  }
+
+  /** Convite inexistente, expirado, usado ou com e-mail divergente → 400. */
+  @ExceptionHandler(ConviteInvalidoException.class)
+  public ProblemDetail conviteInvalido(ConviteInvalidoException ex) {
+    return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+  }
+
+  /** Usuário fora da empresa do token → 404 (sem vazar existência entre tenants). */
+  @ExceptionHandler(UsuarioNaoEncontradoException.class)
+  public ProblemDetail usuarioNaoEncontrado(UsuarioNaoEncontradoException ex) {
+    return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+  }
+
+  /** Lançamento fora do tenant/usuário ou inexistente → 404. */
+  @ExceptionHandler(LancamentoNaoEncontradoException.class)
+  public ProblemDetail lancamentoNaoEncontrado(LancamentoNaoEncontradoException ex) {
+    return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+  }
+
+  /** Operação deixaria a empresa sem ADMIN ativo → 409. */
+  @ExceptionHandler(UltimoAdminAtivoException.class)
+  public ProblemDetail ultimoAdminAtivo(UltimoAdminAtivoException ex) {
+    return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+  }
+
   /** Rota autenticada sem token/token inválido/expirado (via SecurityContext) → 401. */
   @ExceptionHandler(NaoAutorizadoException.class)
   public ProblemDetail naoAutorizado(NaoAutorizadoException ex) {
@@ -50,6 +100,12 @@ public class ProblemDetailExceptionHandler {
   @ExceptionHandler(AcessoNegadoException.class)
   public ProblemDetail acessoNegado(AcessoNegadoException ex) {
     return ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, ex.getMessage());
+  }
+
+  /** Role fora do enum ADMIN/USER → 400 ProblemDetail. */
+  @ExceptionHandler(RoleInvalidoException.class)
+  public ProblemDetail roleInvalido(RoleInvalidoException ex) {
+    return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
   }
 
   /** Validação do DTO (@Valid) → 400 listando os campos com problema. */

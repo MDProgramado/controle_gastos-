@@ -6,12 +6,17 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.controlefinanceiro.common.UsuarioAuth;
+import com.controlefinanceiro.common.UsuarioAuthAuthenticationToken;
 import java.util.List;
 import java.util.Map;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 /**
  * Testes de unidade do AiService (fase 4 — IA). Testam a interpretação de intents e a persistência
@@ -31,8 +36,18 @@ class AiServiceTest {
     memoryStore = new AiMemoryStore();
     knowledgeStore = new AiKnowledgeStore();
     contextoService = mock(AiContextoService.class);
-    when(contextoService.montarContexto(any())).thenReturn("");
+    when(contextoService.montarContexto(any(), any())).thenReturn("");
     aiService = new AiService(aiClient, memoryStore, knowledgeStore, contextoService);
+    SecurityContextHolder.getContext()
+        .setAuthentication(
+            new UsuarioAuthAuthenticationToken(
+                new UsuarioAuth("usuario@teste.com", 1L, 7L, 0, "USER"),
+                List.of(new SimpleGrantedAuthority("ROLE_USER"))));
+  }
+
+  @AfterEach
+  void limparContexto() {
+    SecurityContextHolder.clearContext();
   }
 
   @Test
@@ -101,7 +116,7 @@ class AiServiceTest {
   @Test
   @DisplayName("dados reais da empresa vao no prompt enviado a IA")
   void dadosReaisDaEmpresaVaoNoPromptEnviadoIa() {
-    when(contextoService.montarContexto(1L)).thenReturn("Totais por mês: novembro de 2026");
+    when(contextoService.montarContexto(1L, 7L)).thenReturn("Totais por mês: novembro de 2026");
     when(aiClient.completar(any())).thenReturn("CONSULTA|R$ 1.234,56");
 
     aiService.processar("sessao-1", "1", "quanto gastei?");

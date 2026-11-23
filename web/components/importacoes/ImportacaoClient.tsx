@@ -30,6 +30,7 @@ import {
   type CategoriaOption,
 } from "@/components/importacoes/RevisaoItens";
 import { ResultadoConfirmacao } from "@/components/importacoes/ResultadoConfirmacao";
+import { descreverResultadoConfirmacao } from "@/lib/importacao-resultado";
 import { ImportacoesPendentes } from "@/components/importacoes/ImportacoesPendentes";
 import {
   ApiError,
@@ -121,6 +122,8 @@ export function ImportacaoClient({
     lancamentos: number;
     contas: number;
     desmarcados: number;
+    falhas: number;
+    erros: string[];
   } | null>(null);
   const [refreshHistorico, setRefreshHistorico] = React.useState(0);
   const [announce, setAnnounce] = React.useState("");
@@ -273,6 +276,14 @@ export function ImportacaoClient({
     setDocsConfirmados(new Set());
     setEstado("envio");
     setAnnounce("Preparando nova importação.");
+  };
+
+  const revisarPendentes = () => {
+    setResultado(null);
+    setErroConfirmacao(null);
+    setEtapaProgresso("CATEGORIZACAO");
+    setEstado("revisao");
+    setAnnounce("Revise apenas os itens pendentes.");
   };
 
   const somaLoteBytes = arquivos.reduce((total, a) => total + a.file.size, 0);
@@ -572,28 +583,41 @@ export function ImportacaoClient({
 
     let lancamentos = 0;
     let contas = 0;
-    try {
-      for (const [documentoId, itensDoc] of porDocumento) {
-        if (docsConfirmados.has(documentoId)) continue;
+    const erros: string[] = [];
+
+    for (const [documentoId, itensDoc] of porDocumento) {
+      if (docsConfirmados.has(documentoId)) continue;
+      try {
         const resposta = await confirmarImportacao(documentoId, {
           itens: itensDoc,
         });
         lancamentos += resposta.lancamentoIds.length;
         contas += resposta.contaAPagarIds.length;
         setDocsConfirmados((s) => new Set(s).add(documentoId));
+      } catch (e) {
+        if (e instanceof ApiError && e.status === 401) {
+          irParaLogin();
+          return;
+        }
+        erros.push(
+          e instanceof ApiError && e.message
+            ? e.message
+            : `Não foi possível confirmar o documento ${documentoId}.`,
+        );
       }
-    } catch (e) {
-      if (e instanceof ApiError && e.status === 401) {
-        irParaLogin();
-        return;
-      }
-      const mensagem =
-        e instanceof ApiError && e.message
-          ? e.message
-          : "Nenhum lançamento foi gravado. Verifique a importação e tente novamente.";
-      setErroConfirmacao(mensagem);
+    }
+
+    const resumo = descreverResultadoConfirmacao({
+      lancamentos,
+      contas,
+      falhas: erros.length,
+      erros,
+    });
+
+    if (lancamentos + contas === 0) {
+      setErroConfirmacao(resumo.descricao);
       setEstado("revisao");
-      setAnnounce(mensagem);
+      setAnnounce(resumo.descricao);
       return;
     }
 
@@ -602,10 +626,12 @@ export function ImportacaoClient({
       lancamentos,
       contas,
       desmarcados: itens.length - marcados.length,
+      falhas: erros.length,
+      erros,
     });
     setEstado("resultado");
     setRefreshHistorico((k) => k + 1);
-    setAnnounce("Importação confirmada.");
+    setAnnounce(resumo.titulo);
   };
 
   /* ============================ estados derivados ============================ */
@@ -994,8 +1020,11 @@ export function ImportacaoClient({
             lancamentos={resultado.lancamentos}
             contasAPagar={resultado.contas}
             desmarcados={resultado.desmarcados}
+            falhas={resultado.falhas}
+            erros={resultado.erros}
             tituloRef={resultadoRef}
             onNova={novaImportacao}
+            onRevisarPendentes={revisarPendentes}
           />
 
           <div className="mt-6">

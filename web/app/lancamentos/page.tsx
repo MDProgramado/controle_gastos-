@@ -2,16 +2,14 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import Link from "next/link";
 import { ArrowLeft, Layers } from "lucide-react";
+import { getMe, getLancamentos, type LancamentoData } from "@/lib/api";
+import { API_TIMEOUT_MS } from "@/lib/bff-helpers";
 import {
-  getMe,
-  getLancamentos,
-  type LancamentoData,
-  type LancamentoRequest,
-  criarLancamento,
-  editarLancamento,
-  excluirLancamento,
-  criarLote,
-} from "@/lib/api";
+  actionCriarLancamento,
+  actionCriarLote,
+  actionEditarLancamento,
+  actionExcluirLancamento,
+} from "./actions";
 import { LancamentosPageClient } from "@/components/LancamentosPageClient";
 import {
   Sidebar,
@@ -23,7 +21,7 @@ import { MonthSelector } from "@/components/MonthSelector";
 import { SkipLink } from "@/components/SkipLink";
 import { KitBoot } from "@/components/KitBoot";
 
-type LancamentoDataDisplay = Omit<LancamentoData, "valor"> & { valor: number };
+type LancamentoDataDisplay = LancamentoData;
 
 export const instant = false;
 
@@ -57,55 +55,8 @@ export default async function LancamentosPage({
     fetchCategorias(),
   ]);
 
-  const lancamentos: LancamentoDataDisplay[] = (
-    lancamentosResp?.lancamentos ?? []
-  ).map((l) => ({
-    ...l,
-    valor: Number(l.valor),
-  }));
+  const lancamentos: LancamentoDataDisplay[] = lancamentosResp?.lancamentos ?? [];
   const total = lancamentosResp?.total ?? lancamentos.length;
-
-  async function actionCriarLancamento(
-    request: Omit<LancamentoRequest, "valor"> & { valor: number },
-  ) {
-    "use server";
-    const result = await criarLancamento({
-      ...request,
-      valor: String(request.valor),
-    });
-    return result ? { ...result, valor: Number(result.valor) } : null;
-  }
-
-  async function actionEditarLancamento(
-    id: number,
-    request: Omit<LancamentoRequest, "valor"> & { valor: number },
-  ) {
-    "use server";
-    const result = await editarLancamento(id, {
-      ...request,
-      valor: String(request.valor),
-    });
-    return result ? { ...result, valor: Number(result.valor) } : null;
-  }
-
-  async function actionExcluirLancamento(id: number) {
-    "use server";
-    return excluirLancamento(id);
-  }
-
-  async function actionCriarLote(
-    linhas: Array<{
-      categoriaId: number;
-      tipo: string;
-      valor: string;
-      data: string;
-      descricao?: string;
-    }>,
-  ) {
-    "use server";
-    const result = await criarLote({ linhas });
-    return result !== null;
-  }
 
   const nomeMes = new Date(ano, mes - 1, 1)
     .toLocaleString("pt-BR", { month: "long" })
@@ -247,6 +198,7 @@ async function fetchCategorias(): Promise<
     const res = await fetch(`${process.env.API_URL}/api/categorias`, {
       headers: { Authorization: `Bearer ${token}` },
       cache: "no-store",
+      signal: AbortSignal.timeout(API_TIMEOUT_MS),
     });
     if (!res.ok) return [];
     return (await res.json()) as Array<{

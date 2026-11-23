@@ -101,7 +101,7 @@ class ImportacaoServiceTest {
     SecurityContextHolder.getContext()
         .setAuthentication(
             new UsernamePasswordAuthenticationToken(
-                new UsuarioAuth(EMAIL, EMPRESA_ID, "ADMIN"), null, List.of()));
+                new UsuarioAuth(EMAIL, EMPRESA_ID, 7L, 0, "ADMIN"), null, List.of()));
 
     empresa = new Empresa();
     empresa.setId(EMPRESA_ID);
@@ -111,6 +111,7 @@ class ImportacaoServiceTest {
     usuario.setEmail(EMAIL);
     usuario.setEmpresa(empresa);
     when(usuarioRepository.findByEmail(EMAIL)).thenReturn(Optional.of(usuario));
+    when(usuarioRepository.findByIdAndEmpresaId(7L, EMPRESA_ID)).thenReturn(Optional.of(usuario));
 
     // save devolve a própria entidade com id atribuído (simula IDENTITY).
     when(documentoRepository.save(any(ImportacaoDocumento.class)))
@@ -134,7 +135,7 @@ class ImportacaoServiceTest {
     when(faturaRepository.save(any(ImportacaoFatura.class))).thenAnswer(inv -> inv.getArgument(0));
 
     when(categoriaRepository.findByEmpresaId(EMPRESA_ID)).thenReturn(List.of());
-    when(mapeadorCategoria.mapear(any(), any(), any()))
+    when(mapeadorCategoria.mapear(any(), any(), anyList()))
         .thenReturn(new MapeadorCategoria.ResultadoMapeamento(9L, "Outros", false));
   }
 
@@ -278,7 +279,7 @@ class ImportacaoServiceTest {
   @Test
   @DisplayName("categoria sem correspondência → alerta REVISAR_CATEGORIA no item (D-25)")
   void categoriaDesconhecidaGeraAlerta() throws IOException {
-    when(mapeadorCategoria.mapear(any(), any(), any()))
+    when(mapeadorCategoria.mapear(any(), any(), anyList()))
         .thenReturn(new MapeadorCategoria.ResultadoMapeamento(9L, "Outros", true));
     when(pdfTextoExtractor.extrair(any())).thenReturn("fatura cartão");
     when(iaExtracaoService.extrair(anyString(), anyList(), anyString()))
@@ -313,7 +314,8 @@ class ImportacaoServiceTest {
   @Test
   @DisplayName("mesmo SHA-256 já importado → status DUPLICADO, IA não chamada")
   void arquivoDuplicado() {
-    when(documentoRepository.findByEmpresaIdAndHashSha256(eq(EMPRESA_ID), anyString()))
+    when(documentoRepository.findByEmpresaIdAndUsuarioIdAndHashSha256(
+            eq(EMPRESA_ID), eq(7L), anyString()))
         .thenReturn(new ImportacaoDocumento());
 
     ImportacaoService.ResultadoAnalise resultado =
@@ -381,7 +383,8 @@ class ImportacaoServiceTest {
   @DisplayName("listar devolve página do tenant com resumos")
   void listarPaginaDoTenant() {
     ImportacaoDocumento doc = documento(7L, "ANALISADO");
-    when(documentoRepository.findByEmpresaIdOrderByIdDesc(eq(EMPRESA_ID), any()))
+    when(documentoRepository.findByEmpresaIdAndUsuarioIdOrderByIdDesc(
+            eq(EMPRESA_ID), eq(7L), any()))
         .thenReturn(new PageImpl<>(List.of(doc), PageRequest.of(0, 20), 1));
 
     Page<ImportacaoService.DocumentoResumo> pagina = service.listar(PageRequest.of(0, 20));
@@ -395,7 +398,8 @@ class ImportacaoServiceTest {
   @DisplayName("detalhar devolve documento + itens + fatura + resumo")
   void detalharDocumento() {
     ImportacaoDocumento doc = documento(7L, "ANALISADO");
-    when(documentoRepository.findByIdAndEmpresaId(7L, EMPRESA_ID)).thenReturn(Optional.of(doc));
+    when(documentoRepository.findByIdAndEmpresaIdAndUsuarioId(7L, EMPRESA_ID, 7L))
+        .thenReturn(Optional.of(doc));
 
     ImportacaoItem item = new ImportacaoItem();
     item.setId(500L);
@@ -406,8 +410,10 @@ class ImportacaoServiceTest {
     item.setCategoriaNome("Alimentação");
     item.setCategoriaId(1L);
     item.setOrigem("CARTAO");
-    when(itemRepository.findByDocumentoId(7L)).thenReturn(List.of(item));
-    when(faturaRepository.findByDocumentoId(7L)).thenReturn(null);
+    when(itemRepository.findByDocumentoIdAndEmpresaIdAndUsuarioId(7L, EMPRESA_ID, 7L))
+        .thenReturn(List.of(item));
+    when(faturaRepository.findByDocumentoIdAndEmpresaIdAndUsuarioId(7L, EMPRESA_ID, 7L))
+        .thenReturn(null);
 
     ImportacaoService.DocumentoDetalhe detalhe = service.detalhar(7L);
 
@@ -420,7 +426,8 @@ class ImportacaoServiceTest {
   @Test
   @DisplayName("detalhar documento de outra empresa → 404 (isolamento R3)")
   void detalharDeOutraEmpresaLanca404() {
-    when(documentoRepository.findByIdAndEmpresaId(99L, EMPRESA_ID)).thenReturn(Optional.empty());
+    when(documentoRepository.findByIdAndEmpresaIdAndUsuarioId(99L, EMPRESA_ID, 7L))
+        .thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> service.detalhar(99L))
         .isInstanceOf(ImportacaoNaoEncontradaException.class);
@@ -430,7 +437,8 @@ class ImportacaoServiceTest {
   @DisplayName("descartar importação pendente → status DESCARTADO")
   void descartarPendente() {
     ImportacaoDocumento doc = documento(7L, "ANALISADO");
-    when(documentoRepository.findByIdAndEmpresaId(7L, EMPRESA_ID)).thenReturn(Optional.of(doc));
+    when(documentoRepository.findByIdAndEmpresaIdAndUsuarioId(7L, EMPRESA_ID, 7L))
+        .thenReturn(Optional.of(doc));
 
     service.descartar(7L);
 
@@ -442,7 +450,8 @@ class ImportacaoServiceTest {
   @DisplayName("descartar importação já confirmada → 409 (estado inválido)")
   void descartarConfirmadaLanca409() {
     ImportacaoDocumento doc = documento(7L, "CONFIRMADO");
-    when(documentoRepository.findByIdAndEmpresaId(7L, EMPRESA_ID)).thenReturn(Optional.of(doc));
+    when(documentoRepository.findByIdAndEmpresaIdAndUsuarioId(7L, EMPRESA_ID, 7L))
+        .thenReturn(Optional.of(doc));
 
     assertThatThrownBy(() -> service.descartar(7L))
         .isInstanceOf(ImportacaoEstadoInvalidoException.class);
@@ -452,7 +461,8 @@ class ImportacaoServiceTest {
   @Test
   @DisplayName("descartar inexistente → 404")
   void descartarInexistenteLanca404() {
-    when(documentoRepository.findByIdAndEmpresaId(42L, EMPRESA_ID)).thenReturn(Optional.empty());
+    when(documentoRepository.findByIdAndEmpresaIdAndUsuarioId(42L, EMPRESA_ID, 7L))
+        .thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> service.descartar(42L))
         .isInstanceOf(ImportacaoNaoEncontradaException.class);

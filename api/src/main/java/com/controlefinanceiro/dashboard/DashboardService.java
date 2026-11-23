@@ -1,5 +1,6 @@
 package com.controlefinanceiro.dashboard;
 
+import com.controlefinanceiro.common.UsuarioContext;
 import com.controlefinanceiro.dashboard.dto.CategoryExpense;
 import com.controlefinanceiro.dashboard.dto.DashboardResponse;
 import java.math.BigDecimal;
@@ -9,11 +10,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Serviço de agregação do dashboard. LAN-05: todo cálculo monetário usa BigDecimal, scale=2,
- * HALF_EVEN; nenhum double/float. T-03-02/T-03-03: COALESCE para meses vazios, tratamento de base
- * <= 0 para percentual (sem divisão por zero).
- */
+/** Agregação financeira sempre escalonada por empresa_id e usuario_id do token. */
 @Service
 public class DashboardService {
 
@@ -25,34 +22,35 @@ public class DashboardService {
     this.dashboardRepository = dashboardRepository;
   }
 
-  /**
-   * Obtém o dashboard da empresa autenticada para o mês informado.
-   *
-   * @param empresaId tenant extraído do token via TenantContext (R3)
-   * @param ano ano do mês
-   * @param mes mês (1-12)
-   * @response DashboardResponse com totais, comparação mês anterior e breakdown por categoria
-   */
+  /** Sobrecarga usada por fluxos internos que já possuem apenas o tenant explícito. */
   @Transactional(readOnly = true)
   public DashboardResponse obterDashboard(Long empresaId, Integer ano, Integer mes) {
+    return obterDashboard(empresaId, UsuarioContext.getUsuarioId(), ano, mes);
+  }
+
+  @Transactional(readOnly = true)
+  public DashboardResponse obterDashboard(
+      Long empresaId, Long usuarioId, Integer ano, Integer mes) {
+    validarAnoMes(ano, mes);
     LocalDate dataInicio = LocalDate.of(ano, mes, 1);
     LocalDate dataFim = dataInicio.withDayOfMonth(dataInicio.lengthOfMonth());
 
-    BigDecimal totalEntradas = dashboardRepository.totalEntradas(empresaId, dataInicio, dataFim);
-    BigDecimal totalSaidas = dashboardRepository.totalSaidas(empresaId, dataInicio, dataFim);
+    BigDecimal totalEntradas =
+        dashboardRepository.totalEntradas(empresaId, usuarioId, dataInicio, dataFim);
+    BigDecimal totalSaidas =
+        dashboardRepository.totalSaidas(empresaId, usuarioId, dataInicio, dataFim);
     BigDecimal saldo = totalEntradas.subtract(totalSaidas);
 
     List<CategoryExpense> categorias =
-        dashboardRepository.breakdownSaida(empresaId, dataInicio, dataFim);
+        dashboardRepository.breakdownSaida(empresaId, usuarioId, dataInicio, dataFim);
 
-    // Mês anterior para comparação
     LocalDate mesAnteriorInicio = dataInicio.minusMonths(1);
     LocalDate mesAnteriorFim = mesAnteriorInicio.withDayOfMonth(mesAnteriorInicio.lengthOfMonth());
 
     BigDecimal totalEntradasAnt =
-        dashboardRepository.totalEntradas(empresaId, mesAnteriorInicio, mesAnteriorFim);
+        dashboardRepository.totalEntradas(empresaId, usuarioId, mesAnteriorInicio, mesAnteriorFim);
     BigDecimal totalSaidasAnt =
-        dashboardRepository.totalSaidas(empresaId, mesAnteriorInicio, mesAnteriorFim);
+        dashboardRepository.totalSaidas(empresaId, usuarioId, mesAnteriorInicio, mesAnteriorFim);
     BigDecimal saldoAnt = totalEntradasAnt.subtract(totalSaidasAnt);
 
     BigDecimal variacaoEntradas = totalEntradas.subtract(totalEntradasAnt);
@@ -72,10 +70,15 @@ public class DashboardService {
         categorias);
   }
 
-  /**
-   * Calcula o percentual de variação: (atual - anterior) / anterior * 100. Se a base (anterior) for
-   * <= 0, retorna "—" (sem divisão por zero). Resultado com scale=2, HALF_EVEN.
-   */
+  private static void validarAnoMes(Integer ano, Integer mes) {
+    if (ano == null || ano < 1900 || ano > 2100) {
+      throw new IllegalArgumentException("ano deve estar entre 1900 e 2100");
+    }
+    if (mes == null || mes < 1 || mes > 12) {
+      throw new IllegalArgumentException("mês deve estar entre 1 e 12");
+    }
+  }
+
   private String calcularPercentual(BigDecimal atual, BigDecimal anterior) {
     if (anterior == null || anterior.compareTo(BigDecimal.ZERO) <= 0) {
       return "—";

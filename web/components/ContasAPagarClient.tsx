@@ -30,6 +30,7 @@ export function ContasAPagarClient({ contasIniciais }: ContasAPagarClientProps) 
   const [statusFiltro, setStatusFiltro] = useState<string>("TODOS");
   const [busca, setBusca] = useState("");
   const [pagandoId, setPagandoId] = useState<string | null>(null);
+  const [erroBaixa, setErroBaixa] = useState<string | null>(null);
 
   const contasFiltradas = useMemo(() => {
     return contasIniciais.filter((conta) => {
@@ -65,6 +66,7 @@ export function ContasAPagarClient({ contasIniciais }: ContasAPagarClientProps) 
     }).format(valor);
 
   const handleDarBaixa = async (id: string) => {
+    setErroBaixa(null);
     try {
       setPagandoId(id);
       const res = await fetch(`/api/contas-a-pagar/${id}/pagar`, {
@@ -76,12 +78,22 @@ export function ContasAPagarClient({ contasIniciais }: ContasAPagarClientProps) 
       });
 
       if (!res.ok) {
-        throw new Error("Não foi possível dar baixa na conta.");
+        let mensagem = "Não foi possível dar baixa na conta.";
+        try {
+          const dados = (await res.json()) as { mensagem?: string };
+          if (dados?.mensagem) mensagem = dados.mensagem;
+        } catch {
+          setErroBaixa("Não foi possível dar baixa na conta.");
+          return;
+        }
+        throw new Error(mensagem);
       }
 
       router.refresh();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Erro ao dar baixa.");
+      setErroBaixa(
+        err instanceof Error ? err.message : "Erro ao dar baixa.",
+      );
     } finally {
       setPagandoId(null);
     }
@@ -89,6 +101,15 @@ export function ContasAPagarClient({ contasIniciais }: ContasAPagarClientProps) 
 
   return (
     <div className="space-y-6">
+      {erroBaixa && (
+        <p
+          role="alert"
+          className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive"
+        >
+          {erroBaixa}
+        </p>
+      )}
+
       {/* Cards de Resumo */}
       <div className="grid gap-4 md:grid-cols-3">
         <div className="rounded-xl border border-border bg-card p-5">

@@ -7,6 +7,23 @@
 - Next (/api/ai/chat, /api/categorias), que repassam o Bearer para a API.
  */
 
+import { API_TIMEOUT_MS } from "./bff-helpers";
+
+async function fetchBff(url: string, init: RequestInit = {}): Promise<Response> {
+  try {
+    return await fetch(url, {
+      ...init,
+      cache: "no-store",
+      signal: AbortSignal.timeout(API_TIMEOUT_MS),
+    });
+  } catch (erro) {
+    if (erro instanceof Error && erro.name === "TimeoutError") {
+      throw new Error("Tempo limite ao consultar o servidor. Tente novamente.");
+    }
+    throw erro;
+  }
+}
+
 export type AiChatRequest = {
   mensagem: string;
   historico: Array<{ role: string; content: string }>;
@@ -42,7 +59,7 @@ export async function chatComIA(
   request: AiChatRequest,
 ): Promise<AiChatResponse | null> {
   try {
-    const res = await fetch("/api/ai/chat", {
+    const res = await fetchBff("/api/ai/chat", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -93,7 +110,7 @@ export type CategoriaDisponivel = {
 /** GET /api/categorias — categorias reais do tenant (via BFF). */
 export async function listarCategorias(): Promise<CategoriaDisponivel[]> {
   try {
-    const res = await fetch("/api/categorias", { cache: "no-store" });
+    const res = await fetchBff("/api/categorias", { cache: "no-store" });
     if (!res.ok) return [];
     const dados = (await res.json()) as CategoriaDisponivel[];
     return Array.isArray(dados) ? dados : [];
@@ -105,7 +122,7 @@ export async function listarCategorias(): Promise<CategoriaDisponivel[]> {
 export type LancamentoParaGravar = {
   categoriaId: number;
   tipo: "ENTRADA" | "SAIDA";
-  valor: number;
+  valor: string;
   data: string;
   descricao?: string;
 };
@@ -118,7 +135,7 @@ export async function gravarLancamentos(
   linhas: LancamentoParaGravar[],
 ): Promise<number[] | null> {
   try {
-    const res = await fetch("/api/lancamentos/lote", {
+    const res = await fetchBff("/api/lancamentos/lote", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ linhas }),
@@ -338,7 +355,7 @@ export async function analisarPDFs(
   }
 
   try {
-    const res = await fetch("/api/importacoes", {
+    const res = await fetchBff("/api/importacoes", {
       method: "POST",
       body: form, // o browser gera o multipart com boundary — não setar Content-Type
       cache: "no-store",
@@ -424,7 +441,7 @@ export async function obterImportacaoPendente(
   id: number,
 ): Promise<ImportacaoAnaliseResponse> {
   try {
-    const res = await fetch(`/api/importacoes/${id}`, { cache: "no-store" });
+    const res = await fetchBff(`/api/importacoes/${id}`, { cache: "no-store" });
     const dados: unknown = await res.json().catch(() => null);
 
     if (!res.ok) {
@@ -471,7 +488,7 @@ export async function confirmarImportacao(
   request: ConfirmarRequest,
 ): Promise<ConfirmarResponse> {
   try {
-    const res = await fetch(`/api/importacoes/${id}/confirmar`, {
+    const res = await fetchBff(`/api/importacoes/${id}/confirmar`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(request),
@@ -503,7 +520,7 @@ export async function listarImportacoes(
   tamanho = 20,
 ): Promise<ImportacaoHistorico | null> {
   try {
-    const res = await fetch(`/api/importacoes?pagina=${pagina}&tamanho=${tamanho}`, {
+    const res = await fetchBff(`/api/importacoes?pagina=${pagina}&tamanho=${tamanho}`, {
       cache: "no-store",
     });
     if (!res.ok) return null;
@@ -521,7 +538,7 @@ export async function listarImportacoes(
  */
 export async function descartarImportacao(id: number): Promise<boolean> {
   try {
-    const res = await fetch(`/api/importacoes/${id}`, {
+    const res = await fetchBff(`/api/importacoes/${id}`, {
       method: "DELETE",
       cache: "no-store",
     });

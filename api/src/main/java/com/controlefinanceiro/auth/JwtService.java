@@ -28,8 +28,9 @@ import org.springframework.stereotype.Service;
  * Pitfall 6 — gere com {@code openssl rand -base64 48}); ausente/fraco → fail-fast com mensagem
  * explícita. Em teste, a env var é um fixture óbvio no surefire (D-04 — nunca valor real).
  *
- * <p>Claims: {@code sub}=e-mail, {@code empresa_id} (R3), {@code role} (AUTH-05), {@code
- * iat}=agora, {@code exp}=+8h (D-01 — sem refresh: expirou, refaz login).
+ * <p>Claims: {@code sub}=e-mail, {@code empresa_id} (R3), {@code usuario_id} (D-13), {@code
+ * token_version} (D-14), {@code role} (AUTH-05), {@code iat}=agora, {@code exp}=+8h (D-01 — sem
+ * refresh: expirou, refaz login).
  */
 @Service
 public class JwtService {
@@ -66,6 +67,8 @@ public class JwtService {
         JwtClaimsSet.builder()
             .subject(usuario.getEmail())
             .claim("empresa_id", usuario.getEmpresa().getId())
+            .claim("usuario_id", usuario.getId())
+            .claim("token_version", usuario.getTokenVersion())
             .claim("role", usuario.getRole())
             .issuedAt(agora)
             .expiresAt(agora.plus(VALIDADE.toMillis(), ChronoUnit.MILLIS))

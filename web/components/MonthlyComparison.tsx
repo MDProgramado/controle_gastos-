@@ -1,27 +1,23 @@
-"use client"
-
-import * as React from "react"
-
 import { Card } from "@/components/ui/card"
 import { CardContent } from "@/components/ui/card"
 import { CardHeader } from "@/components/ui/card"
 import { CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { formatarBRL } from "@/lib/format"
 
 export type MonthlyData = {
   mes: string
-  entradas: number
-  saidas: number
+  entradas: bigint
+  saidas: bigint
 }
 
 type MonthlyComparisonProps = {
   meses: MonthlyData[]
 }
 
-const MONETARY = new Intl.NumberFormat("pt-BR", {
-  style: "currency",
-  currency: "BRL",
-})
+const ZERO = BigInt(0)
+const UM = BigInt(1)
+const CEM = BigInt(100)
 
 /**
  * Comparação dos últimos 6 meses com dados REAIS: `app/page.tsx` busca
@@ -29,10 +25,9 @@ const MONETARY = new Intl.NumberFormat("pt-BR", {
  * endpoint de comparação mensal — ver SUMMARY/TODO do backend).
  */
 export function MonthlyComparison({ meses }: MonthlyComparisonProps) {
-  const max = React.useMemo(
-    () => Math.max(1, ...meses.flatMap((m) => [m.entradas, m.saidas])),
-    [meses],
-  )
+  const max = meses
+    .flatMap((m) => [m.entradas, m.saidas])
+    .reduce((maior, valor) => (valor > maior ? valor : maior), UM)
 
   /**
    * Sem lançamentos no período: as barras ficariam com 2% de altura (o mínimo
@@ -40,7 +35,7 @@ export function MonthlyComparison({ meses }: MonthlyComparisonProps) {
    * nada. Nesse caso o card mostra o estado vazio — como o "Gastos por
    * categoria" faz quando não há saídas no mês.
    */
-  const semMovimento = meses.every((m) => m.entradas === 0 && m.saidas === 0)
+  const semMovimento = meses.every((m) => m.entradas === ZERO && m.saidas === ZERO)
 
   if (semMovimento) {
     return (
@@ -78,7 +73,7 @@ export function MonthlyComparison({ meses }: MonthlyComparisonProps) {
           aria-label={meses
             .map(
               (m) =>
-                `${m.mes}: entradas ${MONETARY.format(m.entradas)}, saídas ${MONETARY.format(m.saidas)}`,
+                `${m.mes}: entradas ${formatarBRL(m.entradas)}, saídas ${formatarBRL(m.saidas)}`,
             )
             .join("; ")}
         >
@@ -86,21 +81,21 @@ export function MonthlyComparison({ meses }: MonthlyComparisonProps) {
             <div
               key={m.mes}
               className="flex h-full flex-col justify-end gap-1"
-              title={`${m.mes} — entradas ${MONETARY.format(m.entradas)} / saídas ${MONETARY.format(m.saidas)}`}
+              title={`${m.mes} — entradas ${formatarBRL(m.entradas)} / saídas ${formatarBRL(m.saidas)}`}
             >
               <div className="flex h-full items-end justify-center gap-1">
                 {/* Mês sem valor não desenha barra: um traço de 2% seria lido
                     como "teve movimento". Zero é zero. */}
-                {m.entradas > 0 && (
+                {m.entradas > ZERO && (
                   <div
                     className="w-1/2 max-w-4 bg-positive transition-[height] duration-500"
-                    style={{ height: `${(m.entradas / max) * 100}%` }}
+                    style={{ height: `${Number((m.entradas * CEM) / max)}%` }}
                   />
                 )}
-                {m.saidas > 0 && (
+                {m.saidas > ZERO && (
                   <div
                     className="w-1/2 max-w-4 bg-destructive transition-[height] duration-500"
-                    style={{ height: `${(m.saidas / max) * 100}%` }}
+                    style={{ height: `${Number((m.saidas * CEM) / max)}%` }}
                   />
                 )}
               </div>
@@ -124,9 +119,4 @@ export function MonthlyComparison({ meses }: MonthlyComparisonProps) {
       </CardContent>
     </Card>
   )
-}
-
-/** Formata BRL fora do componente (útil para quem monta os dados). */
-export function formatBRL(value: number): string {
-  return MONETARY.format(value)
 }

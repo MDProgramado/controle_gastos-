@@ -15,7 +15,7 @@ type Action = "excluir" | "desativar" | "descartar";
 
 interface DeleteConfirmationDialogProps {
   isOpen: boolean;
-  onConfirm: () => void;
+  onConfirm: () => void | Promise<void>;
   onClose: () => void;
   action: Action;
   target: string;
@@ -43,6 +43,32 @@ export function DeleteConfirmationDialog({
   target,
   descricao,
 }: DeleteConfirmationDialogProps) {
+  const [confirmando, setConfirmando] = React.useState(false);
+  const [erro, setErro] = React.useState<string | null>(null);
+
+  const handleClose = () => {
+    setErro(null);
+    setConfirmando(false);
+    onClose();
+  };
+
+  const handleConfirm = async () => {
+    setConfirmando(true);
+    setErro(null);
+    try {
+      await onConfirm();
+      handleClose();
+    } catch (e) {
+      setErro(
+        e instanceof Error
+          ? e.message
+          : "Não foi possível concluir a ação. Tente novamente.",
+      );
+    } finally {
+      setConfirmando(false);
+    }
+  };
+
   const confirmLabel =
     action === "excluir" ? "Excluir" : action === "descartar" ? "Descartar" : "Desativar";
   const titulo = action === "descartar" ? "Confirmar descarte" : `Confirmar ${action}`;
@@ -54,7 +80,7 @@ export function DeleteConfirmationDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={(aberto: boolean) => {
-      if (!aberto) onClose();
+      if (!aberto) handleClose();
     }}>
       <DialogTrigger asChild>
         <button style={{ display: "none" }} aria-hidden="true" />
@@ -67,19 +93,29 @@ export function DeleteConfirmationDialog({
         <DialogTitle className="font-semibold">{titulo}</DialogTitle>
         <DialogDescription className="mt-2 text-sm text-foreground">{texto}</DialogDescription>
 
+        {erro && (
+          <p role="alert" className="mt-3 text-sm text-destructive">
+            {erro}
+          </p>
+        )}
+
         <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button
             type="button"
             variant="destructive"
-            onClick={() => {
-              onConfirm();
-              onClose();
-            }}
+            onClick={() => void handleConfirm()}
+            disabled={confirmando}
             className="w-full sm:w-auto"
           >
-            {confirmLabel}
+            {confirmando ? "Aguarde…" : confirmLabel}
           </Button>
-          <Button type="button" variant="ghost" onClick={onClose} className="w-full sm:w-auto">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={handleClose}
+            disabled={confirmando}
+            className="w-full sm:w-auto"
+          >
             Cancelar
           </Button>
         </div>

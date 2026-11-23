@@ -15,6 +15,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -76,7 +77,7 @@ public class WhatsappWebhookService {
    * @param payload corpo JSON do webhook da Meta
    * @param signature valor do header X-Hub-Signature-256
    */
-  @Async
+  @Async(WhatsappAsyncConfig.EXECUTOR_NAME)
   @Transactional
   public void processarWebhook(String payload, String signature) {
     try {
@@ -154,30 +155,17 @@ public class WhatsappWebhookService {
   private void processarMensagem(Map<String, Object> message) {
     String messageId = (String) message.get("id");
     if (messageId == null || mensagemRepository.existsByMessageId(messageId)) {
-      return; // idempotência
+      return;
     }
 
-    String from = (String) message.get("from"); // número remetente
+    String from = (String) message.get("from");
     Map<String, Object> text = asStringMap(message.get("text"));
     String corpo = text == null ? null : (String) text.get("body");
-
-    // Verifica se é um clique em botão (confirmação/cancelamento)
     Map<String, Object> button = asStringMap(message.get("button"));
-    if (button != null) {
-      String payloadBtn = (String) button.get("payload");
-      processarConfirmacaoBotao(messageId, from, payloadBtn);
-      return;
-    }
+    String payloadBtn = button == null ? null : (String) button.get("payload");
 
-    if (corpo == null || corpo.isBlank()) {
-      registrarMensagem(messageId, "REJEITADA");
-      return;
-    }
-
-    // Busca o telefone vinculado
     Optional<UsuarioTelefone> telefoneOpt = telefoneRepository.findByNumeroE164(from);
     if (telefoneOpt.isEmpty()) {
-      // Número não cadastrado: instrução de cadastro única
       envioService.enviarInstrucaoCadastro(from, messageId);
       registrarMensagem(messageId, "NAO_CADASTRADO");
       return;
@@ -189,30 +177,51 @@ public class WhatsappWebhookService {
       registrarMensagem(messageId, "NAO_VERIFICADO");
       return;
     }
+    if (!identidadeValida(telefone)) {
+      rejeitarIdentidade(messageId, from);
+      return;
+    }
+
+    Long empresaId = telefone.getEmpresa().getId();
+    Long usuarioId = telefone.getUsuario().getId();
+
+    if (button != null) {
+      processarConfirmacaoBotao(messageId, from, payloadBtn, empresaId, usuarioId);
+      return;
+    }
+
+    if (corpo == null || corpo.isBlank()) {
+      registrarMensagem(messageId, "REJEITADA");
+      return;
+    }
 
     String texto = corpo.trim();
     if (texto.equalsIgnoreCase("sim")
         || texto.equalsIgnoreCase("não")
         || texto.equalsIgnoreCase("nao")
         || texto.matches("(?i)^(sim|não|nao)\\s+\\d+$")) {
-      processarConfirmacaoTexto(messageId, from, texto);
+      processarConfirmacaoTexto(messageId, from, texto, empresaId, usuarioId);
       return;
     }
 
-    // Interpreta com a mesma IA do chat do site
-    Long empresaId = telefone.getEmpresa().getId();
-    AiResponse resposta = aiService.processar(from, empresaId.toString(), corpo);
+    AiResponse resposta =
+        aiService.processar(from, empresaId.toString(), usuarioId.toString(), texto);
 
     switch (resposta.intent()) {
-      case "lancamento" -> processarPropostaLancamento(messageId, telefone, empresaId, resposta);
-      case "consulta" -> processarConsulta(messageId, telefone, empresaId, resposta);
+      case "lancamento" ->
+          processarPropostaLancamento(messageId, telefone, empresaId, usuarioId, resposta);
+      case "consulta" -> processarConsulta(messageId, telefone, empresaId, usuarioId, resposta);
       case "esclarecimento" -> processarEsclarecimento(messageId, telefone, resposta);
       default -> registrarMensagem(messageId, "REJEITADA");
     }
   }
 
   private void processarPropostaLancamento(
-      String messageId, UsuarioTelefone telefone, Long empresaId, AiResponse resposta) {
+      String messageId,
+      UsuarioTelefone telefone,
+      Long empresaId,
+      Long usuarioId,
+      AiResponse resposta) {
     AiResponse.AiPropostaLancamento proposta = resposta.proposta();
     if (proposta == null || proposta.valor() == null) {
       envioService.enviarTexto(
@@ -276,50 +285,95 @@ public class WhatsappWebhookService {
     registrarMensagem(messageId, "CONFIRMACAO_PENDENTE");
   }
 
-  private void processarConfirmacaoBotao(String messageId, String from, String payloadBtn) {
+  private void processarConfirmacaoBotao(
+      String messageId, String from, String payloadBtn, Long empresaId, Long usuarioId) {
     if (payloadBtn == null) {
       registrarMensagem(messageId, "REJEITADA");
       return;
     }
-
-    if (payloadBtn.startsWith("CONFIRMAR_")) {
-      Long confirmacaoId = Long.parseLong(payloadBtn.substring("CONFIRMAR_".length()));
-      confirmarLancamento(messageId, from, confirmacaoId);
-    } else if (payloadBtn.startsWith("CANCELAR_")) {
-      Long confirmacaoId = Long.parseLong(payloadBtn.substring("CANCELAR_".length()));
-      cancelarLancamento(messageId, from, confirmacaoId);
-    } else {
+    try {
+      if (payloadBtn.startsWith("CONFIRMAR_")) {
+        Long confirmacaoId = Long.parseLong(payloadBtn.substring("CONFIRMAR_".length()));
+        confirmarLancamento(messageId, from, confirmacaoId, empresaId, usuarioId);
+      } else if (payloadBtn.startsWith("CANCELAR_")) {
+        Long confirmacaoId = Long.parseLong(payloadBtn.substring("CANCELAR_".length()));
+        cancelarLancamento(messageId, from, confirmacaoId, empresaId, usuarioId);
+      } else {
+        registrarMensagem(messageId, "REJEITADA");
+      }
+    } catch (NumberFormatException e) {
       registrarMensagem(messageId, "REJEITADA");
     }
   }
 
   @Transactional
   void processarConfirmacaoTexto(String messageId, String from, String texto) {
+    UsuarioTelefone telefone = telefoneRepository.findByNumeroE164(from).orElse(null);
+    if (telefone == null) {
+      registrarMensagem(messageId, "REJEITADA");
+      return;
+    }
+    processarConfirmacaoTexto(
+        messageId, from, texto, telefone.getEmpresa().getId(), telefone.getUsuario().getId());
+  }
+
+  @Transactional
+  void processarConfirmacaoTexto(
+      String messageId, String from, String texto, Long empresaId, Long usuarioId) {
     String[] partes = texto.trim().split("\\s+");
     String acao = partes[0].toLowerCase(java.util.Locale.ROOT);
-    Long confirmacaoId = partes.length > 1 ? Long.parseLong(partes[1]) : null;
+    Long confirmacaoId = null;
+    try {
+      if (partes.length > 1) {
+        confirmacaoId = Long.parseLong(partes[1]);
+      }
+    } catch (NumberFormatException e) {
+      registrarMensagem(messageId, "REJEITADA");
+      return;
+    }
     if ("não".equals(acao) || "nao".equals(acao)) {
-      cancelarLancamento(messageId, from, confirmacaoId);
+      cancelarLancamento(messageId, from, confirmacaoId, empresaId, usuarioId);
     } else {
-      confirmarLancamento(messageId, from, confirmacaoId);
+      confirmarLancamento(messageId, from, confirmacaoId, empresaId, usuarioId);
     }
   }
 
   @Transactional
   void confirmarLancamento(String messageId, String from, Long confirmacaoId) {
+    UsuarioTelefone telefone = telefoneRepository.findByNumeroE164(from).orElse(null);
+    if (telefone == null) {
+      registrarMensagem(messageId, "REJEITADA");
+      return;
+    }
+    confirmarLancamento(
+        messageId,
+        from,
+        confirmacaoId,
+        telefone.getEmpresa().getId(),
+        telefone.getUsuario().getId());
+  }
+
+  @Transactional
+  void confirmarLancamento(
+      String messageId, String from, Long confirmacaoId, Long empresaId, Long usuarioId) {
     Optional<UsuarioTelefone> telefoneOpt = telefoneRepository.findByNumeroE164(from);
     if (telefoneOpt.isEmpty()) {
       registrarMensagem(messageId, "REJEITADA");
       return;
     }
     UsuarioTelefone telefone = telefoneOpt.get();
-    Long empresaId = telefone.getEmpresa().getId();
-    Long usuarioId = telefone.getUsuario().getId();
+    if (!identidadeValida(telefone)
+        || !Objects.equals(usuarioId, telefone.getUsuario().getId())
+        || !Objects.equals(empresaId, telefone.getEmpresa().getId())) {
+      rejeitarIdentidade(messageId, from);
+      return;
+    }
     Long telefoneId = telefone.getId();
     String numeroE164 = telefone.getNumeroE164();
 
     Optional<WhatsappConfirmacaoPendente> pendenciaOpt =
-        buscarPendencia(telefoneId, numeroE164, messageId, confirmacaoId, "sim");
+        buscarPendencia(
+            telefoneId, numeroE164, messageId, confirmacaoId, "sim", empresaId, usuarioId);
     if (pendenciaOpt.isEmpty()) {
       return;
     }
@@ -376,17 +430,40 @@ public class WhatsappWebhookService {
 
   @Transactional
   void cancelarLancamento(String messageId, String from, Long confirmacaoId) {
+    UsuarioTelefone telefone = telefoneRepository.findByNumeroE164(from).orElse(null);
+    if (telefone == null) {
+      registrarMensagem(messageId, "REJEITADA");
+      return;
+    }
+    cancelarLancamento(
+        messageId,
+        from,
+        confirmacaoId,
+        telefone.getEmpresa().getId(),
+        telefone.getUsuario().getId());
+  }
+
+  @Transactional
+  void cancelarLancamento(
+      String messageId, String from, Long confirmacaoId, Long empresaId, Long usuarioId) {
     Optional<UsuarioTelefone> telefoneOpt = telefoneRepository.findByNumeroE164(from);
     if (telefoneOpt.isEmpty()) {
       registrarMensagem(messageId, "REJEITADA");
       return;
     }
     UsuarioTelefone telefone = telefoneOpt.get();
+    if (!identidadeValida(telefone)
+        || !Objects.equals(usuarioId, telefone.getUsuario().getId())
+        || !Objects.equals(empresaId, telefone.getEmpresa().getId())) {
+      rejeitarIdentidade(messageId, from);
+      return;
+    }
     Long telefoneId = telefone.getId();
     String numeroE164 = telefone.getNumeroE164();
 
     Optional<WhatsappConfirmacaoPendente> pendenciaOpt =
-        buscarPendencia(telefoneId, numeroE164, messageId, confirmacaoId, "não");
+        buscarPendencia(
+            telefoneId, numeroE164, messageId, confirmacaoId, "não", empresaId, usuarioId);
     if (pendenciaOpt.isEmpty()) {
       return;
     }
@@ -402,12 +479,18 @@ public class WhatsappWebhookService {
   }
 
   private Optional<WhatsappConfirmacaoPendente> buscarPendencia(
-      Long telefoneId, String numeroE164, String messageId, Long confirmacaoId, String acao) {
+      Long telefoneId,
+      String numeroE164,
+      String messageId,
+      Long confirmacaoId,
+      String acao,
+      Long empresaId,
+      Long usuarioId) {
     if (confirmacaoId != null) {
       Optional<WhatsappConfirmacaoPendente> pendencia =
           confirmacaoRepository.findById(confirmacaoId);
       if (pendencia.isEmpty()
-          || !pendencia.get().getUsuarioTelefone().getId().equals(telefoneId)
+          || !pendenciaPertenceAoUsuario(pendencia.get(), telefoneId, empresaId, usuarioId)
           || !"PENDENTE".equals(pendencia.get().getStatus())) {
         envioService.enviarTexto(
             numeroE164,
@@ -434,18 +517,59 @@ public class WhatsappWebhookService {
       registrarMensagem(messageId, "DUPLICADA");
       return Optional.empty();
     }
-    return confirmacaoRepository.findFirstByUsuarioTelefoneIdAndStatusOrderByCriadoEmDesc(
-        telefoneId, "PENDENTE");
+    Optional<WhatsappConfirmacaoPendente> pendencia =
+        confirmacaoRepository.findFirstByUsuarioTelefoneIdAndStatusOrderByCriadoEmDesc(
+            telefoneId, "PENDENTE");
+    if (pendencia.isPresent()
+        && !pendenciaPertenceAoUsuario(pendencia.get(), telefoneId, empresaId, usuarioId)) {
+      envioService.enviarTexto(
+          numeroE164,
+          "Este lançamento já foi processado ou não pertence a este número.",
+          messageId);
+      registrarMensagem(messageId, "REJEITADA");
+      return Optional.empty();
+    }
+    return pendencia;
+  }
+
+  private boolean pendenciaPertenceAoUsuario(
+      WhatsappConfirmacaoPendente pendencia, Long telefoneId, Long empresaId, Long usuarioId) {
+    UsuarioTelefone telefone = pendencia.getUsuarioTelefone();
+    return telefone != null
+        && Objects.equals(telefoneId, telefone.getId())
+        && telefone.getUsuario() != null
+        && Objects.equals(usuarioId, telefone.getUsuario().getId())
+        && telefone.getEmpresa() != null
+        && Objects.equals(empresaId, telefone.getEmpresa().getId());
+  }
+
+  private boolean identidadeValida(UsuarioTelefone telefone) {
+    return telefone.getUsuario() != null
+        && telefone.getUsuario().isAtivo()
+        && telefone.getUsuario().getEmpresa() != null
+        && telefone.getEmpresa() != null
+        && Objects.equals(
+            telefone.getUsuario().getEmpresa().getId(), telefone.getEmpresa().getId());
+  }
+
+  private void rejeitarIdentidade(String messageId, String from) {
+    envioService.enviarTexto(
+        from, "Este número não está autorizado para esta empresa/usuário.", messageId);
+    registrarMensagem(messageId, "REJEITADA");
   }
 
   private void processarConsulta(
-      String messageId, UsuarioTelefone telefone, Long empresaId, AiResponse resposta) {
-    // Extrai mês da resposta de consulta (formato simples: mês/ano ou usa mês corrente)
+      String messageId,
+      UsuarioTelefone telefone,
+      Long empresaId,
+      Long usuarioId,
+      AiResponse resposta) {
     String consultaTexto = resposta.resposta();
     LocalDate mesRef = extrairMesReferencia(consultaTexto);
 
     DashboardResponse dashboard =
-        dashboardService.obterDashboard(empresaId, mesRef.getYear(), mesRef.getMonthValue());
+        dashboardService.obterDashboard(
+            empresaId, usuarioId, mesRef.getYear(), mesRef.getMonthValue());
 
     String texto =
         String.format(

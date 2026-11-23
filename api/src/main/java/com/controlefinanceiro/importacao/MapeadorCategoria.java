@@ -47,14 +47,21 @@ public class MapeadorCategoria {
    */
   public ResultadoMapeamento mapear(
       String categoriaSugeridaIA, String tipoLancamento, Long empresaId) {
+    return mapear(
+        categoriaSugeridaIA, tipoLancamento, categoriaRepository.findByEmpresaId(empresaId));
+  }
+
+  /** Variante com o pool já carregado — evita uma consulta por item no lote. */
+  public ResultadoMapeamento mapear(
+      String categoriaSugeridaIA, String tipoLancamento, List<Categoria> doTenant) {
     String tipoCategoria = tipoCategoria(tipoLancamento);
     String sugerida = NormalizadorTexto.normalizar(categoriaSugeridaIA);
-    List<Categoria> doTenant = categoriaRepository.findByEmpresaId(empresaId);
+    List<Categoria> categorias = doTenant == null ? List.of() : doTenant;
 
     if (!sugerida.isEmpty()) {
       // 1. casamento exato (normalizado)
       Categoria exata =
-          doTenant.stream()
+          categorias.stream()
               .filter(c -> tipoCategoria.equals(c.getTipo()))
               .filter(c -> NormalizadorTexto.normalizar(c.getNome()).equals(sugerida))
               .findFirst()
@@ -68,7 +75,7 @@ public class MapeadorCategoria {
       if (alvo != null) {
         String alvoFinal = alvo;
         Categoria sinonima =
-            doTenant.stream()
+            categorias.stream()
                 .filter(c -> tipoCategoria.equals(c.getTipo()))
                 .filter(c -> NormalizadorTexto.normalizar(c.getNome()).equals(alvoFinal))
                 .findFirst()
@@ -81,7 +88,7 @@ public class MapeadorCategoria {
       // 3. contenção (ex.: "alimentação em casa" contém "alimentação"); mínimo 4 caracteres
       if (sugerida.length() >= 4) {
         Categoria contendo =
-            doTenant.stream()
+            categorias.stream()
                 .filter(c -> tipoCategoria.equals(c.getTipo()))
                 .filter(
                     c -> {
@@ -100,7 +107,7 @@ public class MapeadorCategoria {
     // 4. fallback do tipo + revisão obrigatória (D-25)
     String nomeFallback = "SAIDA".equals(tipoCategoria) ? FALLBACK_SAIDA : FALLBACK_ENTRADA;
     Categoria fallback =
-        doTenant.stream()
+        categorias.stream()
             .filter(c -> tipoCategoria.equals(c.getTipo()))
             .filter(
                 c ->

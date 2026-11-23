@@ -58,7 +58,11 @@ public class WhatsappWebhookController {
       @RequestParam(name = "hub.verify_token", required = false) String token,
       @RequestParam(name = "hub.challenge", required = false) String challenge) {
 
-    if ("subscribe".equals(mode) && verifyToken != null && verifyToken.equals(token)) {
+    if (verifyToken == null || verifyToken.isBlank()) {
+      return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+          .body("Verificação do WhatsApp não configurada");
+    }
+    if ("subscribe".equals(mode) && verifyToken.equals(token)) {
       return ResponseEntity.ok(challenge);
     }
     return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Token de verificação inválido");
@@ -70,13 +74,17 @@ public class WhatsappWebhookController {
    * @param signature valor do header X-Hub-Signature-256 (formato sha256=<hex>)
    * @param payload corpo bruto da requisição (JSON da Meta)
    * @return 200 sempre que a assinatura for válida (mesmo em caso de erro interno, para a Meta não
-   *     reenviar); 401 se a assinatura for inválida
+   *     reenviar); 401 se a assinatura for inválida; 503 se o app secret não estiver configurado
    */
   @PostMapping("/webhooks/whatsapp")
   public ResponseEntity<?> receber(
       @RequestHeader(name = "X-Hub-Signature-256", required = false) String signature,
       @RequestBody String payload) {
 
+    if (appSecret == null || appSecret.isBlank()) {
+      return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+          .body("Webhook do WhatsApp não configurado");
+    }
     if (!validarAssinatura(signature, payload)) {
       // Assinatura inválida: 401, nada processado
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Assinatura inválida");

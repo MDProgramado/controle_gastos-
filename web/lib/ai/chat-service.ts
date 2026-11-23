@@ -10,8 +10,17 @@ import type {
   ConfirmarLancamentoRequest,
   PropostaLancamento,
 } from "./types";
+import { normalizarValorParaApi } from "@/lib/money";
 
 const DELAY_MS = 400;
+
+function valorParaApi(valor: number): string {
+  const normalizado = normalizarValorParaApi(String(valor));
+  if (!normalizado) {
+    throw new Error("Informe um valor maior que zero.");
+  }
+  return normalizado;
+}
 
 /**
  * Envia uma mensagem para o serviço de IA via API real (POST /api/ai/chat).
@@ -113,7 +122,7 @@ export async function confirmarLancamento(
     {
       categoriaId,
       tipo: req.tipo,
-      valor: req.valor,
+      valor: valorParaApi(req.valor),
       data: req.data,
       descricao: req.descricao,
     },
@@ -141,7 +150,7 @@ export async function confirmarLancamentos(
     return {
       categoriaId,
       tipo: req.tipo,
-      valor: req.valor,
+      valor: valorParaApi(req.valor),
       data: req.data,
       descricao: req.descricao,
     };

@@ -1,6 +1,7 @@
 package com.controlefinanceiro.dashboard;
 
 import com.controlefinanceiro.common.TenantContext;
+import com.controlefinanceiro.common.UsuarioContext;
 import com.controlefinanceiro.dashboard.dto.DashboardResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -28,6 +29,7 @@ public class DashboardController {
   public ResponseEntity<DashboardResponse> obter(
       @RequestParam Integer ano, @RequestParam Integer mes) {
     return ResponseEntity.ok(
-        dashboardService.obterDashboard(TenantContext.getEmpresaId(), ano, mes));
+        dashboardService.obterDashboard(
+            TenantContext.getEmpresaId(), UsuarioContext.getUsuarioId(), ano, mes));
   }
 }

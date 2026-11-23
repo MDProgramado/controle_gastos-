@@ -1,6 +1,7 @@
 package com.controlefinanceiro.lancamento;
 
 import com.controlefinanceiro.common.TenantContext;
+import com.controlefinanceiro.common.UsuarioContext;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
@@ -14,14 +15,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * GET /api/lancamentos — expõe leitura de lançamentos (segue o padrão de {@link
- * com.controlefinanceiro.auth.AuthController}). Controller é fino: só valida formato e delega ao
- * {@link LancamentoService}; nunca contém regra de negócio nem lê tenant (R3).
- */
+/** Controller fino: lê empresa/usuário do token e delega ao serviço; nunca aceita IDs no body. */
 @RestController
 @RequestMapping("/api/lancamentos")
 public class LancamentoController {
+
+  private static final int TAMANHO_MAXIMO = 100;
 
   private final LancamentoService lancamentoService;
 
@@ -29,61 +28,64 @@ public class LancamentoController {
     this.lancamentoService = lancamentoService;
   }
 
-  /** POST /api/lancamentos — cria lançamento. */
   @PostMapping
   public ResponseEntity<LancamentoResponse> criar(@Valid @RequestBody LancamentoRequest request) {
     return ResponseEntity.status(201)
-        .body(lancamentoService.criar(TenantContext.getEmpresaId(), request));
+        .body(
+            lancamentoService.criar(
+                TenantContext.getEmpresaId(), UsuarioContext.getUsuarioId(), request));
   }
 
-  /**
-   * POST /api/lancamentos/lote — cria um lote de até 500 lançamentos em transação tudo-ou-nada
-   * (LOT-01, LOT-02). Em falha de qualquer linha, retorna 400 com o índice da linha inválida e nada
-   * é gravado.
-   */
   @PostMapping("/lote")
   public ResponseEntity<List<LancamentoResponse>> processarLote(
       @Valid @RequestBody LancamentoLoteRequest lote) {
     return ResponseEntity.status(201)
-        .body(lancamentoService.processarLote(TenantContext.getEmpresaId(), lote));
+        .body(
+            lancamentoService.processarLote(
+                TenantContext.getEmpresaId(), UsuarioContext.getUsuarioId(), lote));
   }
 
-  /** PUT /api/lancamentos/{id} — edita lançamento. */
   @PutMapping("/{id}")
   public ResponseEntity<LancamentoResponse> editar(
       @PathVariable Long id, @Valid @RequestBody LancamentoRequest request) {
-    return ResponseEntity.ok(lancamentoService.editar(id, TenantContext.getEmpresaId(), request));
+    return ResponseEntity.ok(
+        lancamentoService.editar(
+            id, TenantContext.getEmpresaId(), UsuarioContext.getUsuarioId(), request));
   }
 
-  /** DELETE /api/lancamentos/{id} — exclui lançamento. */
   @DeleteMapping("/{id}")
   public ResponseEntity<Void> excluir(@PathVariable Long id) {
-    lancamentoService.excluir(id, TenantContext.getEmpresaId());
+    lancamentoService.excluir(id, TenantContext.getEmpresaId(), UsuarioContext.getUsuarioId());
     return ResponseEntity.noContent().build();
   }
 
-  /**
-   * GET /api/lancamentos — lista lançamentos com filtros opcionais de mês, ano, tipo, categoria.
-   */
   @GetMapping
   public ResponseEntity<LancamentoPage> listar(
       @RequestParam(required = false) Integer ano,
       @RequestParam(required = false) Integer mes,
       @RequestParam(required = false) String tipo,
-      @RequestParam(required = false) Long categoriaId) {
+      @RequestParam(required = false) Long categoriaId,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "50") int size) {
+    if (page < 0) {
+      throw new IllegalArgumentException("page deve ser maior ou igual a zero");
+    }
     return ResponseEntity.ok(
-        lancamentoService.listar(TenantContext.getEmpresaId(), ano, mes, tipo, categoriaId));
+        lancamentoService.listar(
+            TenantContext.getEmpresaId(),
+            UsuarioContext.getUsuarioId(),
+            ano,
+            mes,
+            tipo,
+            categoriaId,
+            page,
+            Math.min(size, TAMANHO_MAXIMO)));
   }
 
-  /** GET /api/lancamentos/{id} — busca lançamento por id. */
   @GetMapping("/{id}")
   public ResponseEntity<LancamentoResponse> buscarPorId(@PathVariable Long id) {
-    LancamentoPage pagina =
-        lancamentoService.listar(TenantContext.getEmpresaId(), null, null, null, null);
-    return pagina.lancamentos().stream()
-        .filter(l -> l.id().equals(id))
-        .findFirst()
-        .map(ResponseEntity::ok)
-        .orElse(ResponseEntity.notFound().build());
+    return ResponseEntity.ok(
+        lancamentoService.buscarPorId(
+            id, TenantContext.getEmpresaId(), UsuarioContext.getUsuarioId()));
   }
 }

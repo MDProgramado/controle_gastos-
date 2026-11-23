@@ -7,6 +7,7 @@ import {
   type FormEvent,
 } from "react"
 import { cn } from "@/lib/utils"
+import { mensagemStatusCategoria, podeAlternarStatus } from "@/lib/categorias"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -183,31 +184,20 @@ export function CategoriasClient({
   }
 
   async function toggleStatus(c: CategoriaData) {
-    if (!podeEscrever) return
+    if (!podeEscrever || !podeAlternarStatus(c)) return
     setLoading(true)
     setErro(null)
     try {
-      // Desativar é a única operação disponível via DELETE (soft delete).
-      // Quando o switch é desligado, desativa a categoria.
-      // Quando ligado, apenas atualiza o estado local (sem endpoint de reativação no backend).
-      if (c.ativo) {
-        const ok = await onDesativar(c.id)
-        if (ok) {
-          setCategorias((atual) =>
-            atual.map((cat) =>
-              cat.id === c.id ? { ...cat, ativo: false } : cat,
-            ),
-          )
-          setSucesso("Categoria desativada com sucesso.")
-        } else {
-          setErro("Não foi possível alterar o status da categoria.")
-        }
-      } else {
-        // Sem endpoint de reativação; apenas atualiza o estado local otimisticamente.
+      const ok = await onDesativar(c.id)
+      if (ok) {
         setCategorias((atual) =>
-          atual.map((cat) => (cat.id === c.id ? { ...cat, ativo: true } : cat)),
+          atual.map((cat) =>
+            cat.id === c.id ? { ...cat, ativo: false } : cat,
+          ),
         )
-        setSucesso("Categoria reativada (apenas local).")
+        setSucesso("Categoria desativada com sucesso.")
+      } else {
+        setErro("Não foi possível alterar o status da categoria.")
       }
     } catch {
       setErro("Não foi possível conectar. Tente novamente em instantes.")
@@ -582,8 +572,9 @@ export function CategoriasClient({
             <Switch
               checked={c.ativo}
               onCheckedChange={() => toggleStatus(c)}
-              disabled={loading || !podeEscrever}
-              aria-label={`Alternar status da categoria ${c.nome}`}
+              disabled={loading || !podeEscrever || !podeAlternarStatus(c)}
+              title={podeAlternarStatus(c) ? undefined : mensagemStatusCategoria(c)}
+              aria-label={`${mensagemStatusCategoria(c)} da categoria ${c.nome}`}
             />
           </span>
         </div>
@@ -671,8 +662,9 @@ export function CategoriasClient({
           <Switch
             checked={c.ativo}
             onCheckedChange={() => toggleStatus(c)}
-            disabled={loading || !podeEscreverLocal}
-            aria-label={`Alternar status da categoria ${c.nome}`}
+            disabled={loading || !podeEscreverLocal || !podeAlternarStatus(c)}
+            title={podeAlternarStatus(c) ? undefined : mensagemStatusCategoria(c)}
+            aria-label={`${mensagemStatusCategoria(c)} da categoria ${c.nome}`}
           />
         </td>
         <td className="p-4 text-right">

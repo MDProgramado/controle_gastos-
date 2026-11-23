@@ -1,4 +1,14 @@
 import { cookies } from "next/headers";
+import { API_TIMEOUT_MS } from "./bff-helpers";
+import { resultadoErroLote, type ResultadoCriacaoLote } from "./lancamentos";
+
+function fetchApi(url: string, init: RequestInit = {}): Promise<Response> {
+  return fetch(url, {
+    ...init,
+    cache: "no-store",
+    signal: AbortSignal.timeout(API_TIMEOUT_MS),
+  });
+}
 
 /** Shape de `GET /api/auth/me` (contrato da API — plano 02). */
 export type SessionUser = {
@@ -26,7 +36,7 @@ export async function getMe(): Promise<SessionUser | null> {
   if (!token) return null;
 
   try {
-    const res = await fetch(`${process.env.API_URL}/api/auth/me`, {
+    const res = await fetchApi(`${process.env.API_URL}/api/auth/me`, {
       headers: { Authorization: `Bearer ${token}` },
       cache: "no-store",
     });
@@ -68,7 +78,7 @@ export async function getDashboard(
   if (!token) return null;
 
   try {
-    const res = await fetch(
+    const res = await fetchApi(
       `${process.env.API_URL}/api/dashboard?ano=${ano}&mes=${mes}`,
       {
         headers: { Authorization: `Bearer ${token}` },
@@ -116,7 +126,7 @@ export async function getLancamentos(
   if (!token) return null;
 
   try {
-    const res = await fetch(
+    const res = await fetchApi(
       `${process.env.API_URL}/api/lancamentos?ano=${ano}&mes=${mes}`,
       {
         headers: { Authorization: `Bearer ${token}` },
@@ -143,7 +153,7 @@ export async function criarLancamento(
   if (!token) return null;
 
   try {
-    const res = await fetch(`${process.env.API_URL}/api/lancamentos`, {
+    const res = await fetchApi(`${process.env.API_URL}/api/lancamentos`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -169,7 +179,7 @@ export async function editarLancamento(
   if (!token) return null;
 
   try {
-    const res = await fetch(`${process.env.API_URL}/api/lancamentos/${id}`, {
+    const res = await fetchApi(`${process.env.API_URL}/api/lancamentos/${id}`, {
       method: "PUT",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -198,19 +208,13 @@ export type LoteRequest = {
   linhas: LancamentoLinha[];
 };
 
-/** POST /api/lancamentos/lote — cria lote de lançamentos em transação tudo-ou-nada.
- *  Retorna os lançamentos criados ou null. Em caso de erro em qualquer linha,
- *  nada é gravado (rollback completo).
- */
-export async function criarLote(
-  lote: LoteRequest,
-): Promise<LancamentoData[] | null> {
+export async function criarLote(lote: LoteRequest): Promise<ResultadoCriacaoLote> {
   const cookieStore = await cookies();
   const token = cookieStore.get("sess")?.value;
-  if (!token) return null;
+  if (!token) return { ok: false, mensagem: "Sessão expirada" };
 
   try {
-    const res = await fetch(`${process.env.API_URL}/api/lancamentos/lote`, {
+    const res = await fetchApi(`${process.env.API_URL}/api/lancamentos/lote`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -219,10 +223,16 @@ export async function criarLote(
       body: JSON.stringify(lote),
       cache: "no-store",
     });
-    if (!res.ok) return null;
-    return (await res.json()) as LancamentoData[];
+
+    if (!res.ok) {
+      const corpo = await res.json().catch(() => ({}));
+      return resultadoErroLote(corpo, res.status);
+    }
+
+    const criados = (await res.json()) as LancamentoData[];
+    return { ok: true, criados: Array.isArray(criados) ? criados.length : 0 };
   } catch {
-    return null;
+    return { ok: false, mensagem: "Não foi possível salvar o lote." };
   }
 }
 
@@ -258,7 +268,7 @@ export async function chatComIA(
   if (!token) return null;
 
   try {
-    const res = await fetch(`${process.env.API_URL}/api/ai/chat`, {
+    const res = await fetchApi(`${process.env.API_URL}/api/ai/chat`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -281,7 +291,7 @@ export async function excluirLancamento(id: number): Promise<boolean> {
   if (!token) return false;
 
   try {
-    const res = await fetch(`${process.env.API_URL}/api/lancamentos/${id}`, {
+    const res = await fetchApi(`${process.env.API_URL}/api/lancamentos/${id}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` },
       cache: "no-store",
@@ -319,7 +329,7 @@ export async function getCategorias(): Promise<CategoriaData[] | null> {
   if (!token) return null;
 
   try {
-    const res = await fetch(`${process.env.API_URL}/api/categorias`, {
+    const res = await fetchApi(`${process.env.API_URL}/api/categorias`, {
       headers: { Authorization: `Bearer ${token}` },
       cache: "no-store",
     });
@@ -339,7 +349,7 @@ export async function criarCategoria(
   if (!token) return null;
 
   try {
-    const res = await fetch(`${process.env.API_URL}/api/categorias`, {
+    const res = await fetchApi(`${process.env.API_URL}/api/categorias`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -365,7 +375,7 @@ export async function editarCategoria(
   if (!token) return null;
 
   try {
-    const res = await fetch(`${process.env.API_URL}/api/categorias/${id}`, {
+    const res = await fetchApi(`${process.env.API_URL}/api/categorias/${id}`, {
       method: "PUT",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -388,7 +398,7 @@ export async function desativarCategoria(id: number): Promise<boolean> {
   if (!token) return false;
 
   try {
-    const res = await fetch(`${process.env.API_URL}/api/categorias/${id}`, {
+    const res = await fetchApi(`${process.env.API_URL}/api/categorias/${id}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` },
       cache: "no-store",
@@ -555,7 +565,7 @@ export async function getImportacoes(
   if (!token) return null;
 
   try {
-    const res = await fetch(
+    const res = await fetchApi(
       `${process.env.API_URL}/api/importacoes?pagina=${pagina}&tamanho=${tamanho}`,
       {
         headers: { Authorization: `Bearer ${token}` },
