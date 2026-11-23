@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
 import {
   centavosAssinadosDeString,
@@ -11,6 +13,7 @@ import {
   formatarBRL,
   formatarPercentual,
   progressoPercentual,
+  valoresParaGrafico,
 } from "../lib/format";
 import {
   atualizarPropostaPorMensagem,
@@ -39,6 +42,20 @@ test("parseia valores assinados para saldo e variações", () => {
   expect(centavosAssinadosDeString("+1,00")).toBe(BigInt(100));
   expect(centavosAssinadosDeString("1234.56")).toBe(BigInt(123456));
   expect(centavosAssinadosDeString("0,001")).toBeNull();
+});
+
+test("parseia números retornados pela API sem chamar trim", () => {
+  expect(centavosDeString(1234.56)).toBe(BigInt(123456));
+  expect(centavosDeString(0.01)).toBe(BigInt(1));
+  expect(centavosAssinadosDeString(-2850.5)).toBe(BigInt(-285050));
+  expect(centavosAssinadosDeString(0)).toBeNull();
+});
+
+test("head line do kit usa script externo sem innerHTML", () => {
+  const layout = readFileSync(resolve(process.cwd(), "app/layout.tsx"), "utf8");
+
+  expect(layout).not.toContain("dangerouslySetInnerHTML");
+  expect(layout).toContain('src="/assets/motion/head-line.js"');
 });
 
 test("normaliza valor para a API com exatamente duas casas", () => {
@@ -82,6 +99,39 @@ test("agrupa top 5 e Outros ordenando por centavos", () => {
     "Outros",
   ]);
   expect(agruparCategorias(categorias).at(-1)?.centavos).toBe(BigInt(6000));
+});
+
+test("agrupa categorias com totais numéricos da API", () => {
+  const categorias = [
+    { id: 1, nome: "A", total: 100.5 },
+    { id: 2, nome: "B", total: 90 },
+    { id: 3, nome: "C", total: 0.01 },
+  ];
+
+  expect(
+    agruparCategorias(categorias).map((c) => [c.nome, c.centavos]),
+  ).toEqual([
+    ["A", BigInt(10050)],
+    ["B", BigInt(9000)],
+    ["C", BigInt(1)],
+  ]);
+});
+
+test("converte centavos para number somente no dado do gráfico", () => {
+  const agrupadas = agruparCategorias([
+    { id: 1, nome: "A", total: 100.5 },
+    { id: 2, nome: "B", total: 90 },
+  ]);
+  const dados = valoresParaGrafico(agrupadas, [
+    "var(--chart-1)",
+    "var(--chart-2)",
+  ]);
+
+  expect(dados.map((d) => [d.name, d.value])).toEqual([
+    ["A", 10050],
+    ["B", 9000],
+  ]);
+  expect(dados.every((d) => typeof d.value === "number")).toBe(true);
 });
 
 const HOJE = new Date().toISOString().slice(0, 10);

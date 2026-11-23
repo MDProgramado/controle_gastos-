@@ -1,4 +1,4 @@
-import { centavosDeString } from "./money";
+import { centavosDeString, type ValorMonetario } from "./money";
 
 const ZERO = BigInt(0);
 const DOIS = BigInt(2);
@@ -8,7 +8,7 @@ const DEZ_MIL = BigInt(10000);
 export type CategoriaTotal = {
   id: number;
   nome: string;
-  total: string;
+  total: ValorMonetario;
 };
 
 export type CategoriaAgrupada = {
@@ -71,4 +71,24 @@ export function agruparCategorias(
   }
 
   return top;
+}
+
+export type DadoGraficoCategoria = {
+  name: string;
+  value: number;
+  fill: string;
+};
+
+export function valoresParaGrafico(
+  categorias: CategoriaAgrupada[],
+  cores: string[],
+): DadoGraficoCategoria[] {
+  return categorias.map((categoria, indice) => ({
+    name: categoria.nome,
+    value: Number(categoria.centavos),
+    fill:
+      categoria.id === "outros"
+        ? "var(--muted-foreground)"
+        : cores[indice % cores.length],
+  }));
 }

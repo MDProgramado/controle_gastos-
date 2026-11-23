@@ -1,8 +1,22 @@
+export type ValorMonetario = string | number;
+
 const ZERO = BigInt(0);
 const CEM = BigInt(100);
 
-export function centavosDeString(valor: string): bigint | null {
-  let texto = valor.trim().replace(/\s+/g, "").replace(/^R\$/, "");
+function textoDoValor(valor: ValorMonetario): string | null {
+  if (typeof valor === "number") {
+    return Number.isFinite(valor) ? valor.toString() : null;
+  }
+  return valor;
+}
+
+export function centavosDeString(valor: ValorMonetario): bigint | null {
+  const textoOriginal = textoDoValor(valor);
+  if (textoOriginal === null) {
+    return null;
+  }
+
+  let texto = textoOriginal.trim().replace(/\s+/g, "").replace(/^R\$/, "");
 
   if (!texto) {
     return null;
@@ -34,8 +48,15 @@ export function centavosDeString(valor: string): bigint | null {
   return centavos > ZERO ? centavos : null;
 }
 
-export function centavosAssinadosDeString(valor: string): bigint | null {
-  const texto = valor.trim();
+export function centavosAssinadosDeString(
+  valor: ValorMonetario,
+): bigint | null {
+  const textoOriginal = textoDoValor(valor);
+  if (textoOriginal === null) {
+    return null;
+  }
+
+  const texto = textoOriginal.trim();
   if (!texto) {
     return null;
   }
