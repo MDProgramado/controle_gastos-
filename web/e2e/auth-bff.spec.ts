@@ -56,6 +56,19 @@ test("falha do Google redireciona com 303 e remove o cookie de estado", () => {
   expect(resposta.headers.get("set-cookie")).toContain("google_oauth=");
 });
 
+test("falha do Google com motivo expõe a etapa na URL sem alterar a mensagem", () => {
+  const resposta = googleFalha(
+    { url: "http://localhost:3000/api/auth/google/callback" } as Request,
+    { motivo: "TOKEN" },
+  );
+
+  expect(resposta.status).toBe(303);
+  expect(resposta.headers.get("location")).toBe(
+    "http://localhost:3000/login?erro=google&motivo=TOKEN",
+  );
+  expect(resposta.headers.get("set-cookie")).toContain("google_oauth=");
+});
+
 test("429 no callback preserva o cookie de estado do OAuth", () => {
   const resposta = googleFalha(
     { url: "http://localhost:3000/api/auth/google/callback" } as Request,

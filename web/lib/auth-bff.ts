@@ -4,12 +4,19 @@ type OpcoesFalhaGoogle = {
   erro?: string;
   status?: number;
   manterEstado?: boolean;
+  motivo?: string;
 };
 
 export function googleFalha(request: Request, opcoes: OpcoesFalhaGoogle = {}) {
-  const resposta = opcoes.erro
-    ? NextResponse.json({ erro: opcoes.erro }, { status: opcoes.status ?? 400 })
-    : NextResponse.redirect(new URL("/login?erro=google", request.url), 303);
+  let resposta: NextResponse;
+  if (opcoes.erro) {
+    resposta = NextResponse.json({ erro: opcoes.erro }, { status: opcoes.status ?? 400 });
+  } else {
+    const destino = new URL("/login", request.url);
+    destino.searchParams.set("erro", "google");
+    if (opcoes.motivo) destino.searchParams.set("motivo", opcoes.motivo);
+    resposta = NextResponse.redirect(destino, 303);
+  }
   if (!opcoes.manterEstado) resposta.cookies.delete("google_oauth");
   return resposta;
 }
