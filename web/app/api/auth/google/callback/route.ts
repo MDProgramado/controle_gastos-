@@ -64,14 +64,14 @@ export async function GET(request: NextRequest) {
   if (limitarPorIp(request, "google-callback", LIMITE_MINUTO, JANELA_MS)) {
     return googleFalha(request, { erro: MSG_LIMITE, status: 429, manterEstado: true });
   }
-  if (!googleOAuthPronto()) return googleFalha(request);
+  if (!googleOAuthPronto()) return googleFalha(request, { motivo: "CONFIG" });
 
   const estado = lerEstado((await cookies()).get("google_oauth")?.value);
-  if (!estado) return googleFalha(request);
+  if (!estado) return googleFalha(request, { motivo: "ESTADO" });
 
   const state = request.nextUrl.searchParams.get("state");
   const code = request.nextUrl.searchParams.get("code");
-  if (!state || state !== estado.state || !code) return googleFalha(request);
+  if (!state || state !== estado.state || !code) return googleFalha(request, { motivo: "ESTADO" });
 
   let idToken: string | null = null;
   try {
@@ -88,9 +88,10 @@ export async function GET(request: NextRequest) {
       if (typeof dados.id_token === "string" && dados.id_token) idToken = dados.id_token;
     }
   } catch {
-    return googleFalha(request);
+    return googleFalha(request, { motivo: "TOKEN" });
   }
-  if (!idToken || !process.env.API_URL) return googleFalha(request);
+  if (!idToken) return googleFalha(request, { motivo: "TOKEN" });
+  if (!process.env.API_URL) return googleFalha(request, { motivo: "API_URL" });
 
   let accessToken: string | null = null;
   try {
@@ -109,9 +110,9 @@ export async function GET(request: NextRequest) {
       accessToken = extrairToken(await resposta.json());
     }
   } catch {
-    return googleFalha(request);
+    return googleFalha(request, { motivo: "API" });
   }
-  if (!accessToken) return googleFalha(request);
+  if (!accessToken) return googleFalha(request, { motivo: "API" });
 
   await setSessionCookie(accessToken);
   const sucesso = NextResponse.redirect(new URL("/", request.url), 303);
