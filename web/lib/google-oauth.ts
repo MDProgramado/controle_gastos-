@@ -26,6 +26,10 @@ function aleatorio(bytes: number): string {
   return emBase64Url(valores);
 }
 
+export function googleStartHref(intencao: Exclude<IntencaoGoogle, "CONVITE">): string {
+  return `/api/auth/google/start?intencao=${intencao}`;
+}
+
 export function gerarState(): string {
   return aleatorio(32);
 }

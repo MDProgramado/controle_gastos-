@@ -7,6 +7,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/Spinner";
+import { googleStartHref } from "@/lib/google-oauth";
 import { cn } from "@/lib/utils";
 
 type FieldErrors = { email?: string; senha?: string };
@@ -193,22 +194,36 @@ export function LoginForm({
         ou
         <span className="h-px flex-1 bg-border" />
       </div>
-      <a
-        href={googleOauthEnabled ? "/api/auth/google/start?intencao=LOGIN" : undefined}
-        aria-disabled={googleOauthEnabled ? undefined : true}
-        tabIndex={googleOauthEnabled ? undefined : -1}
-        title={googleOauthEnabled ? undefined : "Google OAuth não configurado"}
-        className={cn(
-          buttonVariants({ variant: "outline" }),
-          "h-11 w-full font-semibold",
-          !googleOauthEnabled && "cursor-not-allowed opacity-50",
-        )}
-      >
-        Entrar com Google
-        {!googleOauthEnabled && (
-          <span className="sr-only">Google OAuth não configurado</span>
-        )}
-      </a>
+      {(
+        [
+          { intencao: "LOGIN", rotulo: "Entrar com Google", variante: "outline", classe: "" },
+          {
+            intencao: "CADASTRO",
+            rotulo: "Criar conta com Google",
+            variante: "ghost",
+            classe: "mt-1",
+          },
+        ] as const
+      ).map(({ intencao, rotulo, variante, classe }) => (
+        <a
+          key={intencao}
+          href={googleOauthEnabled ? googleStartHref(intencao) : undefined}
+          aria-disabled={googleOauthEnabled ? undefined : true}
+          tabIndex={googleOauthEnabled ? undefined : -1}
+          title={googleOauthEnabled ? undefined : "Google OAuth não configurado"}
+          className={cn(
+            buttonVariants({ variant: variante }),
+            "h-11 w-full font-semibold",
+            classe,
+            !googleOauthEnabled && "cursor-not-allowed opacity-50",
+          )}
+        >
+          {rotulo}
+          {!googleOauthEnabled && (
+            <span className="sr-only">Google OAuth não configurado</span>
+          )}
+        </a>
+      ))}
     </form>
   );
 }
