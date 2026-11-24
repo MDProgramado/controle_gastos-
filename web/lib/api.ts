@@ -3,6 +3,7 @@ import { urlApiServidor } from "./api-url";
 import { API_TIMEOUT_MS } from "./bff-helpers";
 import type { ValorMonetario } from "./money";
 import { resultadoErroLote, type ResultadoCriacaoLote } from "./lancamentos";
+import type { Grupo503020 } from "./grupos-503020";
 
 function fetchApi(url: string, init: RequestInit = {}): Promise<Response> {
   return fetch(url, {
@@ -432,6 +433,60 @@ export async function desativarCategoria(id: number): Promise<boolean> {
     return res.status === 204;
   } catch {
     return false;
+  }
+}
+
+export type CategoriaGrupo503020Data = {
+  categoriaId: number;
+  nome: string;
+  tipo: string;
+  grupo: Grupo503020;
+  padrao: boolean;
+};
+
+export async function getGrupos503020(): Promise<CategoriaGrupo503020Data[] | null> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("sess")?.value;
+  if (!token) return null;
+  const apiUrl = urlApiServidor();
+  if (!apiUrl) return null;
+
+  try {
+    const res = await fetchApi(`${apiUrl}/api/categorias/grupos-503020`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as CategoriaGrupo503020Data[];
+  } catch {
+    return null;
+  }
+}
+
+export async function salvarGrupo503020(
+  categoriaId: number,
+  grupo: Grupo503020,
+): Promise<CategoriaGrupo503020Data | null> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("sess")?.value;
+  if (!token) return null;
+  const apiUrl = urlApiServidor();
+  if (!apiUrl) return null;
+
+  try {
+    const res = await fetchApi(`${apiUrl}/api/categorias/grupos-503020/${categoriaId}`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ grupo }),
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as CategoriaGrupo503020Data;
+  } catch {
+    return null;
   }
 }
 

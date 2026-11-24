@@ -19,7 +19,25 @@ public record AiResponse(
     List<AiConsultaDado> dados,
     AiPropostaLancamento proposta,
     List<AiPropostaLancamento> propostas,
-    List<String> opcoes) {
+    List<String> opcoes,
+    List<AiCitacao> citacoes) {
+
+  public AiResponse(
+      String intent,
+      String resposta,
+      List<AiConsultaDado> dados,
+      AiPropostaLancamento proposta,
+      List<AiPropostaLancamento> propostas,
+      List<String> opcoes) {
+    this(intent, resposta, dados, proposta, propostas, opcoes, List.of());
+  }
+
+  public AiResponse comCitacoes(List<AiCitacao> novasCitacoes) {
+    return new AiResponse(intent, resposta, dados, proposta, propostas, opcoes, novasCitacoes);
+  }
+
+  public record AiCitacao(
+      String sourceId, String titulo, String organizacao, String vigencia, String dispositivo) {}
 
   public record AiConsultaDado(String label, BigDecimal valor) {}
 

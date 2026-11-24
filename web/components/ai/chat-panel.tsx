@@ -164,6 +164,7 @@ export function ChatPanel({
         } else if (resposta.intent === "esclarecimento") {
           msgIA.opcoes = resposta.opcoes
         }
+        msgIA.citacoes = resposta.citacoes
 
         setMensagens((atual) => [...atual.slice(-49), msgIA])
       } catch (e) {
@@ -369,6 +370,21 @@ export function ChatPanel({
                             </div>
                           ))}
                         </div>
+                      </div>
+                    )}
+                    {m.citacoes && m.citacoes.length > 0 && (
+                      <div className="mt-3 space-y-1 border-t border-border/60 pt-2 text-xs text-muted-foreground">
+                        {m.citacoes.map((citacao, indice) => (
+                          <div key={`${citacao.sourceId}-${indice}`}>
+                            <span className="font-medium text-foreground">
+                              {citacao.titulo ?? citacao.sourceId}
+                            </span>
+                            {citacao.organizacao ? ` — ${citacao.organizacao}` : ""}
+                            {citacao.vigencia ? `, ${citacao.vigencia}` : ""}
+                            {citacao.dispositivo ? `, ${citacao.dispositivo}` : ""}
+                            {` (${citacao.sourceId})`}
+                          </div>
+                        ))}
                       </div>
                     )}
                     {m.opcoes && m.opcoes.length > 0 && (

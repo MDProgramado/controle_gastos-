@@ -24,6 +24,7 @@ export type ChatMessage = {
   consultaDados?: ConsultaResultado[];
   /** Preenchido apenas quando role === "assistant" e intent === "esclarecimento" */
   opcoes?: string[];
+  citacoes?: Citacao[];
 };
 
 export type ChatRequest = {
@@ -34,6 +35,14 @@ export type ChatRequest = {
 export type ConsultaResultado = {
   label: string;
   valor: number;
+};
+
+export type Citacao = {
+  sourceId: string;
+  titulo: string | null;
+  organizacao: string | null;
+  vigencia: string | null;
+  dispositivo: string | null;
 };
 
 export type PropostaLancamento = {
@@ -52,6 +61,7 @@ export type ChatResponse =
       intent: "consulta";
       resposta: string;
       dados?: ConsultaResultado[];
+      citacoes?: Citacao[];
     }
   | {
       intent: "lancamento";
@@ -60,9 +70,11 @@ export type ChatResponse =
       proposta: PropostaLancamento;
       /** Todos os lançamentos da mensagem (pode ter mais de um). */
       propostas?: PropostaLancamento[];
+      citacoes?: Citacao[];
     }
   | {
       intent: "esclarecimento";
       resposta: string;
       opcoes?: string[];
+      citacoes?: Citacao[];
     };
