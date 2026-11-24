@@ -27,6 +27,12 @@ export function motivoFalhaApi(status: number | null, comStatusHttp: boolean): s
   return `API_${status}`;
 }
 
+export function motivoFalhaApi401(detalhe: unknown): string {
+  if (detalhe === "Token Google inválido") return "API_TOKEN_INVALIDO";
+  if (detalhe === "E-mail ou senha inválidos") return "API_CREDENCIAIS";
+  return "API_401_OUTRO";
+}
+
 export function extrairToken(dados: unknown): string | null {
   if (typeof dados !== "object" || dados === null) return null;
   const objeto = dados as { token?: unknown; accessToken?: unknown };

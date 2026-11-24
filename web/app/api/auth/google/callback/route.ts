@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
-import { extrairToken, googleFalha, motivoFalhaApi } from "@/lib/auth-bff";
+import { extrairToken, googleFalha, motivoFalhaApi, motivoFalhaApi401 } from "@/lib/auth-bff";
 import { type IntencaoGoogle } from "@/lib/google-oauth";
 import { googleOAuthPronto, tokenRequest } from "@/lib/google-oauth-server";
 import { limitarPorIp } from "@/lib/rate-limit";
@@ -96,6 +96,7 @@ export async function GET(request: NextRequest) {
   let accessToken: string | null = null;
   let statusApi: number | null = null;
   let respostaApiOk = false;
+  let detalheApi: unknown = null;
   try {
     const resposta = await fetch(`${process.env.API_URL}/api/auth/google`, {
       method: "POST",
@@ -112,14 +113,23 @@ export async function GET(request: NextRequest) {
     respostaApiOk = resposta.ok;
     if (resposta.ok) {
       accessToken = extrairToken(await resposta.json());
+    } else {
+      try {
+        const dados = (await resposta.json()) as { detail?: unknown };
+        detalheApi = typeof dados.detail === "string" ? dados.detail.trim() : null;
+      } catch {
+        detalheApi = null;
+      }
     }
   } catch {
     return googleFalha(request, { motivo: motivoFalhaApi(null, false) });
   }
   if (!accessToken) {
-    return googleFalha(request, {
-      motivo: motivoFalhaApi(statusApi, statusApi !== null && !respostaApiOk),
-    });
+    const motivo =
+      statusApi === 401
+        ? motivoFalhaApi401(detalheApi)
+        : motivoFalhaApi(statusApi, statusApi !== null && !respostaApiOk);
+    return googleFalha(request, { motivo });
   }
 
   await setSessionCookie(accessToken);
