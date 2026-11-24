@@ -54,6 +54,7 @@ test("falha do Google redireciona com 303 e remove o cookie de estado", () => {
   expect(resposta.status).toBe(303);
   expect(resposta.headers.get("location")).toBe("http://localhost:3000/login?erro=google");
   expect(resposta.headers.get("set-cookie")).toContain("google_oauth=");
+  expect(resposta.headers.get("set-cookie")).toContain("convite_oauth=");
 });
 
 test("falha do Google com motivo expõe a etapa na URL sem alterar a mensagem", () => {
@@ -67,6 +68,7 @@ test("falha do Google com motivo expõe a etapa na URL sem alterar a mensagem", 
     "http://localhost:3000/login?erro=google&motivo=TOKEN",
   );
   expect(resposta.headers.get("set-cookie")).toContain("google_oauth=");
+  expect(resposta.headers.get("set-cookie")).toContain("convite_oauth=");
 });
 
 test("429 no callback preserva o cookie de estado do OAuth", () => {
@@ -130,4 +132,193 @@ test("googleOAuthHabilitado exige flag, clientId e segredo", () => {
     { ...base, NEXT_PUBLIC_GOOGLE_CLIENT_ID: "", GOOGLE_CLIENT_ID: "" },
     () => expect(googleOAuthHabilitado("segredo")).toBe(false),
   );
+});
+
+test("limite determinístico devolve excedeu e reiniciaEm sem depender do relógio", async () => {
+  const { verificarLimite } = await import("../lib/rate-limit");
+  const chave = "janela-deterministica";
+  const agora = 1_700_000_000_000;
+  const req = requisicao({ "x-real-ip": "10.9.0.1" });
+
+  expect(verificarLimite(req, chave, 2, 60_000, agora)).toEqual({
+    excedeu: false,
+    reiniciaEm: agora + 60_000,
+  });
+  expect(verificarLimite(req, chave, 2, 60_000, agora + 1)).toEqual({
+    excedeu: false,
+    reiniciaEm: agora + 60_000,
+  });
+  expect(verificarLimite(req, chave, 2, 60_000, agora + 2)).toEqual({
+    excedeu: true,
+    reiniciaEm: agora + 60_000,
+  });
+});
+
+test("limite determinístico renova a janela depois do vencimento", async () => {
+  const { verificarLimite } = await import("../lib/rate-limit");
+  const chave = "janela-renovada";
+  const agora = 1_700_000_100_000;
+  const req = requisicao({ "x-real-ip": "10.9.0.2" });
+
+  expect(verificarLimite(req, chave, 1, 1_000, agora).excedeu).toBe(false);
+  expect(verificarLimite(req, chave, 1, 1_000, agora + 999).excedeu).toBe(true);
+  expect(verificarLimite(req, chave, 1, 1_000, agora + 1_000)).toEqual({
+    excedeu: false,
+    reiniciaEm: agora + 2_000,
+  });
+});
+
+test("mapa do rate limit vive no globalThis e pode ser reiniciado por ele", async () => {
+  const { CHAVE_REGISTROS_RATE_LIMIT } = await import("../lib/rate-limit");
+  const chave = "singleton-hmr";
+  const req = requisicao({ "x-real-ip": "10.8.0.1" });
+
+  expect(limitarPorIp(req, chave, 1, 60_000)).toBe(false);
+
+  const global = globalThis as Record<string, unknown>;
+  const mapa = global[CHAVE_REGISTROS_RATE_LIMIT];
+  expect(mapa).toBeInstanceOf(Map);
+  expect((mapa as Map<string, unknown>).has(`${chave}:10.8.0.1`)).toBe(true);
+
+  delete global[CHAVE_REGISTROS_RATE_LIMIT];
+  expect(limitarPorIp(req, chave, 1, 60_000)).toBe(false);
+});
+
+test("429 do Google informa Retry-After em segundos quando há reiniciaEm", () => {
+  const resposta = googleFalha(
+    { url: "http://localhost:3000/api/auth/google/callback" } as Request,
+    { erro: "Muitas tentativas.", status: 429, reiniciaEm: 30_000, agora: 0 },
+  );
+
+  expect(resposta.status).toBe(429);
+  expect(resposta.headers.get("retry-after")).toBe("30");
+  expect(resposta.headers.get("set-cookie")).toContain("convite_oauth=");
+});
+
+test("falha sem janela não informa Retry-After", () => {
+  const resposta = googleFalha(
+    { url: "http://localhost:3000/api/auth/google/callback" } as Request,
+    { erro: "Falha", status: 400 },
+  );
+
+  expect(resposta.headers.get("retry-after")).toBeNull();
+});
+
+test("urlApiServidor mantém API_URL em desenvolvimento e produção", async () => {
+  const { urlApiServidor } = await import("../lib/api-url");
+
+  comEnv(
+    { VERCEL_ENV: undefined, API_URL: "http://localhost:8080" },
+    () => expect(urlApiServidor()).toBe("http://localhost:8080"),
+  );
+  comEnv(
+    {
+      VERCEL_ENV: "production",
+      API_URL: "https://api.producao.example/",
+      API_URL_PREVIEW: "https://api.preview.example",
+      API_URL_PRODUCAO: "https://api.producao.example",
+    },
+    () => expect(urlApiServidor()).toBe("https://api.producao.example/"),
+  );
+});
+
+test("preview exige API_URL_PREVIEW configurada", async () => {
+  const { urlApiServidor } = await import("../lib/api-url");
+
+  comEnv(
+    {
+      VERCEL_ENV: "preview",
+      API_URL: "https://api.producao.example",
+      API_URL_PREVIEW: undefined,
+      API_URL_PRODUCAO: "https://api.producao.example",
+    },
+    () => expect(urlApiServidor()).toBeNull(),
+  );
+});
+
+test("preview bloqueia alvo igual à produção mesmo com barra final", async () => {
+  const { urlApiServidor } = await import("../lib/api-url");
+
+  comEnv(
+    {
+      VERCEL_ENV: "preview",
+      API_URL: "https://api.producao.example",
+      API_URL_PREVIEW: "https://api.producao.example/",
+      API_URL_PRODUCAO: "https://api.producao.example",
+    },
+    () => expect(urlApiServidor()).toBeNull(),
+  );
+});
+
+test("preview rejeita API_URL_PREVIEW inválida", async () => {
+  const { urlApiServidor } = await import("../lib/api-url");
+
+  comEnv(
+    {
+      VERCEL_ENV: "preview",
+      API_URL: "https://api.producao.example",
+      API_URL_PREVIEW: "nao-e-url",
+      API_URL_PRODUCAO: "https://api.producao.example",
+    },
+    () => expect(urlApiServidor()).toBeNull(),
+  );
+});
+
+test("preview exige API_URL_PRODUCAO para comparar origens", async () => {
+  const { urlApiServidor } = await import("../lib/api-url");
+
+  comEnv(
+    {
+      VERCEL_ENV: "preview",
+      API_URL: "https://api.producao.example",
+      API_URL_PREVIEW: "https://api.preview.example",
+      API_URL_PRODUCAO: undefined,
+    },
+    () => expect(urlApiServidor()).toBeNull(),
+  );
+});
+
+test("preview rejeita API_URL_PRODUCAO inválida", async () => {
+  const { urlApiServidor } = await import("../lib/api-url");
+
+  comEnv(
+    {
+      VERCEL_ENV: "preview",
+      API_URL: "https://api.producao.example",
+      API_URL_PREVIEW: "https://api.preview.example",
+      API_URL_PRODUCAO: "nao-e-url",
+    },
+    () => expect(urlApiServidor()).toBeNull(),
+  );
+});
+
+test("preview aceita alvo distinto da produção", async () => {
+  const { urlApiServidor } = await import("../lib/api-url");
+
+  comEnv(
+    {
+      VERCEL_ENV: "preview",
+      API_URL: "https://api.producao.example",
+      API_URL_PREVIEW: "https://api.preview.example",
+      API_URL_PRODUCAO: "https://api.producao.example",
+    },
+    () => expect(urlApiServidor()).toBe("https://api.preview.example"),
+  );
+});
+
+test("next.config expõe cabeçalhos de segurança sem iniciar servidor", async () => {
+  const { cabecalhosSeguranca } = await import("../next.config");
+  const valores = new Map<string, string>();
+  for (const cabecalho of cabecalhosSeguranca) {
+    valores.set(cabecalho.key.toLowerCase(), cabecalho.value);
+  }
+
+  expect(valores.get("x-content-type-options")).toBe("nosniff");
+  expect(valores.get("x-frame-options")).toBe("DENY");
+  expect(valores.get("referrer-policy")).toBe("strict-origin-when-cross-origin");
+  expect(valores.get("permissions-policy")).toBe(
+    "camera=(), microphone=(), geolocation=()",
+  );
+  expect(valores.get("strict-transport-security")).toContain("max-age=");
+  expect(valores.has("content-security-policy")).toBe(false);
 });

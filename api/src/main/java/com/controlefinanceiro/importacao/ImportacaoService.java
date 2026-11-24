@@ -3,6 +3,7 @@ package com.controlefinanceiro.importacao;
 import com.controlefinanceiro.categoria.Categoria;
 import com.controlefinanceiro.categoria.CategoriaRepository;
 import com.controlefinanceiro.common.LinhaInvalidaException;
+import com.controlefinanceiro.common.LogRedacao;
 import com.controlefinanceiro.common.ServicoIaIndisponivelException;
 import com.controlefinanceiro.common.TenantContext;
 import com.controlefinanceiro.common.UsuarioContext;
@@ -194,7 +195,8 @@ public class ImportacaoService {
         }
       } catch (ServicoIaIndisponivelException e) {
         errosDeIa++;
-        LOG.warn("IA indisponível ao analisar {}: {}", nome, e.getMessage());
+        LOG.warn(
+            "IA indisponível ao analisar {}: {}", LogRedacao.paraLog(nome), LogRedacao.mensagem(e));
         documentos.add(
             new DocumentoAnalise(
                 nome,
@@ -211,12 +213,12 @@ public class ImportacaoService {
             new DocumentoAnalise(
                 nome, "ERRO", e.getMessage(), null, null, null, null, List.of(), List.of()));
       } catch (PdfDemasiadoGrandeException e) {
-        LOG.warn("PDF demasiado grande {}: {}", nome, e.getMessage());
+        LOG.warn("PDF demasiado grande {}: {}", LogRedacao.paraLog(nome), LogRedacao.mensagem(e));
         documentos.add(
             new DocumentoAnalise(
                 nome, "ERRO", e.getMessage(), null, null, null, null, List.of(), List.of()));
       } catch (IOException e) {
-        LOG.warn("Falha ao ler {}: {}", nome, e.getMessage());
+        LOG.warn("Falha ao ler {}: {}", LogRedacao.paraLog(nome), LogRedacao.mensagem(e));
         documentos.add(
             new DocumentoAnalise(
                 nome,
@@ -858,7 +860,11 @@ public class ImportacaoService {
     documento.setTamanhoBytes(tamanho);
     documento.setStatus(status);
     // modeloUsado: não há coluna — fica no log (D-22 expõe na resposta)
-    LOG.info("Documento {} salvo com status {} (modelo IA: {})", nome, status, modeloUsado);
+    LOG.info(
+        "Documento {} salvo com status {} (modelo IA: {})",
+        LogRedacao.paraLog(nome),
+        status,
+        modeloUsado);
     return documentoRepository.save(documento);
   }
 

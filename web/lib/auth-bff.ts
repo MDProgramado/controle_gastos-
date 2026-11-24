@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
+import { COOKIE_CONVITE_OAUTH } from "./google-convite";
 
 type OpcoesFalhaGoogle = {
   erro?: string;
   status?: number;
   manterEstado?: boolean;
   motivo?: string;
+  reiniciaEm?: number;
+  agora?: number;
 };
 
 export function googleFalha(request: Request, opcoes: OpcoesFalhaGoogle = {}) {
@@ -17,7 +20,15 @@ export function googleFalha(request: Request, opcoes: OpcoesFalhaGoogle = {}) {
     if (opcoes.motivo) destino.searchParams.set("motivo", opcoes.motivo);
     resposta = NextResponse.redirect(destino, 303);
   }
-  if (!opcoes.manterEstado) resposta.cookies.delete("google_oauth");
+  if (opcoes.status === 429 && opcoes.reiniciaEm !== undefined) {
+    const agora = opcoes.agora ?? Date.now();
+    const segundos = Math.max(1, Math.ceil((opcoes.reiniciaEm - agora) / 1000));
+    resposta.headers.set("Retry-After", String(segundos));
+  }
+  if (!opcoes.manterEstado) {
+    resposta.cookies.delete("google_oauth");
+    resposta.cookies.delete(COOKIE_CONVITE_OAUTH);
+  }
   return resposta;
 }
 

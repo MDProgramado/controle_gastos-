@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { googleFalha } from "@/lib/auth-bff";
+import { COOKIE_CONVITE_OAUTH, validarTokenConvite } from "@/lib/google-convite";
 import {
   authorizeUrl,
   derivarChallenge,
@@ -7,12 +8,11 @@ import {
   gerarVerifier,
   type IntencaoGoogle,
 } from "@/lib/google-oauth";
-import { googleOAuthPronto } from "@/lib/google-oauth-server";
-import { limitarPorIp } from "@/lib/rate-limit";
+import { googleOAuthHabilitado } from "@/lib/google-oauth-config";
+import { verificarLimite } from "@/lib/rate-limit";
 
 const LIMITE_MINUTO = 10;
 const JANELA_MS = 60_000;
-const CONVITE_TOKEN = /^[A-Za-z0-9_-]{20,512}$/;
 const MSG_LIMITE = "Muitas tentativas. Tente novamente em instantes.";
 
 function ehIntencao(valor: string | null): valor is IntencaoGoogle {
@@ -20,19 +20,24 @@ function ehIntencao(valor: string | null): valor is IntencaoGoogle {
 }
 
 export async function GET(request: NextRequest) {
-  if (limitarPorIp(request, "google-start", LIMITE_MINUTO, JANELA_MS)) {
-    return googleFalha(request, { erro: MSG_LIMITE, status: 429 });
+  const limite = verificarLimite(request, "google-start", LIMITE_MINUTO, JANELA_MS);
+  if (limite.excedeu) {
+    return googleFalha(request, { erro: MSG_LIMITE, status: 429, reiniciaEm: limite.reiniciaEm });
   }
 
   const intencao = request.nextUrl.searchParams.get("intencao");
   if (!ehIntencao(intencao)) return googleFalha(request, { erro: "Intenção inválida.", status: 400 });
 
-  const conviteToken = request.nextUrl.searchParams.get("conviteToken") ?? "";
-  if (intencao === "CONVITE" && !CONVITE_TOKEN.test(conviteToken)) {
-    return googleFalha(request, { erro: "Token de convite inválido.", status: 400 });
+  let conviteToken = "";
+  if (intencao === "CONVITE") {
+    const token = validarTokenConvite(request.cookies.get(COOKIE_CONVITE_OAUTH)?.value);
+    if (!token) {
+      return googleFalha(request, { erro: "Token de convite inválido.", status: 400 });
+    }
+    conviteToken = token;
   }
 
-  if (!googleOAuthPronto()) return googleFalha(request);
+  if (!googleOAuthHabilitado(process.env.GOOGLE_CLIENT_SECRET ?? "")) return googleFalha(request);
 
   const state = gerarState();
   const verifier = gerarVerifier();
@@ -51,6 +56,7 @@ export async function GET(request: NextRequest) {
       maxAge: 600,
     },
   );
+  if (conviteToken) resposta.cookies.delete(COOKIE_CONVITE_OAUTH);
 
   return resposta;
 }
