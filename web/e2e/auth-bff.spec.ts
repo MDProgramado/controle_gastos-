@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { extrairToken, googleFalha } from "../lib/auth-bff";
+import { extrairToken, googleFalha, motivoFalhaApi } from "../lib/auth-bff";
 import { googleClientId, googleOAuthHabilitado } from "../lib/google-oauth-config";
 import { limitarPorIp } from "../lib/rate-limit";
 
@@ -77,6 +77,13 @@ test("429 no callback preserva o cookie de estado do OAuth", () => {
 
   expect(resposta.status).toBe(429);
   expect(resposta.headers.get("set-cookie")).toBeNull();
+});
+
+test("motivoFalhaApi separa rede, resposta sem token e status HTTP", () => {
+  expect(motivoFalhaApi(null, false)).toBe("API_REDE");
+  expect(motivoFalhaApi(200, false)).toBe("API_SEM_TOKEN");
+  expect(motivoFalhaApi(401, true)).toBe("API_401");
+  expect(motivoFalhaApi(400, true)).toBe("API_400");
 });
 
 test("extrairToken aceita token e accessToken da API", () => {
