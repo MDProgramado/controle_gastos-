@@ -41,12 +41,42 @@ class V12HelpdeskMigrationTest {
 
     assertThat(nullabilidade("helpdesk_ticket", "empresa_id")).isEqualTo("NO");
     assertThat(nullabilidade("helpdesk_ticket", "usuario_id")).isEqualTo("NO");
+    assertThat(nullabilidade("helpdesk_ticket", "criado_em")).isEqualTo("NO");
     assertThat(nullabilidade("helpdesk_ticket", "status")).isEqualTo("NO");
     assertThat(nullabilidade("helpdesk_ticket", "atualizado_em")).isEqualTo("YES");
     assertThat(nullabilidade("helpdesk_mensagem", "ticket_id")).isEqualTo("NO");
     assertThat(nullabilidade("helpdesk_mensagem", "empresa_id")).isEqualTo("NO");
     assertThat(nullabilidade("helpdesk_mensagem", "usuario_id")).isEqualTo("NO");
+    assertThat(nullabilidade("helpdesk_mensagem", "criado_em")).isEqualTo("NO");
     assertThat(nullabilidade("helpdesk_mensagem", "origem")).isEqualTo("NO");
+
+    assertThat(tipo("helpdesk_ticket", "id")).isEqualTo("bigint");
+    assertThat(valorDefault("helpdesk_ticket", "id"))
+        .contains("nextval(")
+        .contains("helpdesk_ticket_id_seq");
+    assertThat(tipo("helpdesk_ticket", "empresa_id")).isEqualTo("bigint");
+    assertThat(tipo("helpdesk_ticket", "usuario_id")).isEqualTo("bigint");
+    assertThat(tipo("helpdesk_ticket", "assunto")).isEqualTo("character varying");
+    assertThat(tamanhoMaximo("helpdesk_ticket", "assunto")).isEqualTo(120);
+    assertThat(tipo("helpdesk_ticket", "descricao")).isEqualTo("text");
+    assertThat(tipo("helpdesk_ticket", "status")).isEqualTo("character varying");
+    assertThat(tamanhoMaximo("helpdesk_ticket", "status")).isEqualTo(20);
+    assertThat(tipo("helpdesk_ticket", "criado_em")).isEqualTo("timestamp with time zone");
+    assertThat(valorDefault("helpdesk_ticket", "criado_em")).isEqualTo("now()");
+    assertThat(tipo("helpdesk_ticket", "atualizado_em")).isEqualTo("timestamp with time zone");
+
+    assertThat(tipo("helpdesk_mensagem", "id")).isEqualTo("bigint");
+    assertThat(valorDefault("helpdesk_mensagem", "id"))
+        .contains("nextval(")
+        .contains("helpdesk_mensagem_id_seq");
+    assertThat(tipo("helpdesk_mensagem", "ticket_id")).isEqualTo("bigint");
+    assertThat(tipo("helpdesk_mensagem", "empresa_id")).isEqualTo("bigint");
+    assertThat(tipo("helpdesk_mensagem", "usuario_id")).isEqualTo("bigint");
+    assertThat(tipo("helpdesk_mensagem", "origem")).isEqualTo("character varying");
+    assertThat(tamanhoMaximo("helpdesk_mensagem", "origem")).isEqualTo(16);
+    assertThat(tipo("helpdesk_mensagem", "conteudo")).isEqualTo("text");
+    assertThat(tipo("helpdesk_mensagem", "criado_em")).isEqualTo("timestamp with time zone");
+    assertThat(valorDefault("helpdesk_mensagem", "criado_em")).isEqualTo("now()");
 
     assertThat(indices()).contains("idx_helpdesk_ticket_empresa_usuario_status");
     String definicaoIndice =
@@ -102,6 +132,13 @@ class V12HelpdeskMigrationTest {
       assertThat(origem).isEqualTo("USER");
     }
 
+    Long mensagemAdminId =
+        criarMensagem(ticketPadrao, empresaId, usuarioId, "ADMIN", "Resposta admin");
+    String origemAdmin =
+        jdbc.queryForObject(
+            "SELECT origem FROM helpdesk_mensagem WHERE id = ?", String.class, mensagemAdminId);
+    assertThat(origemAdmin).isEqualTo("ADMIN");
+
     assertThatThrownBy(() -> criarTicket(empresaId, usuarioId, "Status invalido", "CANCELADO"))
         .isInstanceOf(DataIntegrityViolationException.class);
     assertThatThrownBy(
@@ -128,6 +165,33 @@ class V12HelpdeskMigrationTest {
   private String nullabilidade(String tabela, String coluna) {
     return jdbc.queryForObject(
         "SELECT is_nullable FROM information_schema.columns"
+            + " WHERE table_schema = 'public' AND table_name = ? AND column_name = ?",
+        String.class,
+        tabela,
+        coluna);
+  }
+
+  private String tipo(String tabela, String coluna) {
+    return jdbc.queryForObject(
+        "SELECT data_type FROM information_schema.columns"
+            + " WHERE table_schema = 'public' AND table_name = ? AND column_name = ?",
+        String.class,
+        tabela,
+        coluna);
+  }
+
+  private Integer tamanhoMaximo(String tabela, String coluna) {
+    return jdbc.queryForObject(
+        "SELECT character_maximum_length FROM information_schema.columns"
+            + " WHERE table_schema = 'public' AND table_name = ? AND column_name = ?",
+        Integer.class,
+        tabela,
+        coluna);
+  }
+
+  private String valorDefault(String tabela, String coluna) {
+    return jdbc.queryForObject(
+        "SELECT column_default FROM information_schema.columns"
             + " WHERE table_schema = 'public' AND table_name = ? AND column_name = ?",
         String.class,
         tabela,
