@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { urlApiServidor } from "./api-url";
 import { API_TIMEOUT_MS } from "./bff-helpers";
 import type { ValorMonetario } from "./money";
 import { resultadoErroLote, type ResultadoCriacaoLote } from "./lancamentos";
@@ -35,9 +36,11 @@ export async function getMe(): Promise<SessionUser | null> {
   const cookieStore = await cookies(); // Next 16: acesso SOMENTE assíncrono
   const token = cookieStore.get("sess")?.value;
   if (!token) return null;
+  const apiUrl = urlApiServidor();
+  if (!apiUrl) return null;
 
   try {
-    const res = await fetchApi(`${process.env.API_URL}/api/auth/me`, {
+    const res = await fetchApi(`${apiUrl}/api/auth/me`, {
       headers: { Authorization: `Bearer ${token}` },
       cache: "no-store",
     });
@@ -77,10 +80,12 @@ export async function getDashboard(
   const cookieStore = await cookies();
   const token = cookieStore.get("sess")?.value;
   if (!token) return null;
+  const apiUrl = urlApiServidor();
+  if (!apiUrl) return null;
 
   try {
     const res = await fetchApi(
-      `${process.env.API_URL}/api/dashboard?ano=${ano}&mes=${mes}`,
+      `${apiUrl}/api/dashboard?ano=${ano}&mes=${mes}`,
       {
         headers: { Authorization: `Bearer ${token}` },
         cache: "no-store",
@@ -125,10 +130,12 @@ export async function getLancamentos(
   const cookieStore = await cookies();
   const token = cookieStore.get("sess")?.value;
   if (!token) return null;
+  const apiUrl = urlApiServidor();
+  if (!apiUrl) return null;
 
   try {
     const res = await fetchApi(
-      `${process.env.API_URL}/api/lancamentos?ano=${ano}&mes=${mes}`,
+      `${apiUrl}/api/lancamentos?ano=${ano}&mes=${mes}`,
       {
         headers: { Authorization: `Bearer ${token}` },
         cache: "no-store",
@@ -152,9 +159,11 @@ export async function criarLancamento(
   const cookieStore = await cookies();
   const token = cookieStore.get("sess")?.value;
   if (!token) return null;
+  const apiUrl = urlApiServidor();
+  if (!apiUrl) return null;
 
   try {
-    const res = await fetchApi(`${process.env.API_URL}/api/lancamentos`, {
+    const res = await fetchApi(`${apiUrl}/api/lancamentos`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -178,9 +187,11 @@ export async function editarLancamento(
   const cookieStore = await cookies();
   const token = cookieStore.get("sess")?.value;
   if (!token) return null;
+  const apiUrl = urlApiServidor();
+  if (!apiUrl) return null;
 
   try {
-    const res = await fetchApi(`${process.env.API_URL}/api/lancamentos/${id}`, {
+    const res = await fetchApi(`${apiUrl}/api/lancamentos/${id}`, {
       method: "PUT",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -213,9 +224,11 @@ export async function criarLote(lote: LoteRequest): Promise<ResultadoCriacaoLote
   const cookieStore = await cookies();
   const token = cookieStore.get("sess")?.value;
   if (!token) return { ok: false, mensagem: "Sessão expirada" };
+  const apiUrl = urlApiServidor();
+  if (!apiUrl) return { ok: false, mensagem: "API não configurada" };
 
   try {
-    const res = await fetchApi(`${process.env.API_URL}/api/lancamentos/lote`, {
+    const res = await fetchApi(`${apiUrl}/api/lancamentos/lote`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -267,9 +280,11 @@ export async function chatComIA(
   const cookieStore = await cookies();
   const token = cookieStore.get("sess")?.value;
   if (!token) return null;
+  const apiUrl = urlApiServidor();
+  if (!apiUrl) return null;
 
   try {
-    const res = await fetchApi(`${process.env.API_URL}/api/ai/chat`, {
+    const res = await fetchApi(`${apiUrl}/api/ai/chat`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -290,9 +305,11 @@ export async function excluirLancamento(id: number): Promise<boolean> {
   const cookieStore = await cookies();
   const token = cookieStore.get("sess")?.value;
   if (!token) return false;
+  const apiUrl = urlApiServidor();
+  if (!apiUrl) return false;
 
   try {
-    const res = await fetchApi(`${process.env.API_URL}/api/lancamentos/${id}`, {
+    const res = await fetchApi(`${apiUrl}/api/lancamentos/${id}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` },
       cache: "no-store",
@@ -328,9 +345,11 @@ export async function getCategorias(): Promise<CategoriaData[] | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get("sess")?.value;
   if (!token) return null;
+  const apiUrl = urlApiServidor();
+  if (!apiUrl) return null;
 
   try {
-    const res = await fetchApi(`${process.env.API_URL}/api/categorias`, {
+    const res = await fetchApi(`${apiUrl}/api/categorias`, {
       headers: { Authorization: `Bearer ${token}` },
       cache: "no-store",
     });
@@ -348,9 +367,11 @@ export async function criarCategoria(
   const cookieStore = await cookies();
   const token = cookieStore.get("sess")?.value;
   if (!token) return null;
+  const apiUrl = urlApiServidor();
+  if (!apiUrl) return null;
 
   try {
-    const res = await fetchApi(`${process.env.API_URL}/api/categorias`, {
+    const res = await fetchApi(`${apiUrl}/api/categorias`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -374,9 +395,11 @@ export async function editarCategoria(
   const cookieStore = await cookies();
   const token = cookieStore.get("sess")?.value;
   if (!token) return null;
+  const apiUrl = urlApiServidor();
+  if (!apiUrl) return null;
 
   try {
-    const res = await fetchApi(`${process.env.API_URL}/api/categorias/${id}`, {
+    const res = await fetchApi(`${apiUrl}/api/categorias/${id}`, {
       method: "PUT",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -397,9 +420,11 @@ export async function desativarCategoria(id: number): Promise<boolean> {
   const cookieStore = await cookies();
   const token = cookieStore.get("sess")?.value;
   if (!token) return false;
+  const apiUrl = urlApiServidor();
+  if (!apiUrl) return false;
 
   try {
-    const res = await fetchApi(`${process.env.API_URL}/api/categorias/${id}`, {
+    const res = await fetchApi(`${apiUrl}/api/categorias/${id}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` },
       cache: "no-store",
@@ -564,10 +589,12 @@ export async function getImportacoes(
   const cookieStore = await cookies();
   const token = cookieStore.get("sess")?.value;
   if (!token) return null;
+  const apiUrl = urlApiServidor();
+  if (!apiUrl) return null;
 
   try {
     const res = await fetchApi(
-      `${process.env.API_URL}/api/importacoes?pagina=${pagina}&tamanho=${tamanho}`,
+      `${apiUrl}/api/importacoes?pagina=${pagina}&tamanho=${tamanho}`,
       {
         headers: { Authorization: `Bearer ${token}` },
         cache: "no-store",

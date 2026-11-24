@@ -3,6 +3,7 @@ package com.controlefinanceiro.whatsapp;
 import com.controlefinanceiro.ai.AiResponse;
 import com.controlefinanceiro.ai.AiService;
 import com.controlefinanceiro.categoria.CategoriaService;
+import com.controlefinanceiro.common.LogRedacao;
 import com.controlefinanceiro.common.NaoAutorizadoException;
 import com.controlefinanceiro.dashboard.DashboardService;
 import com.controlefinanceiro.dashboard.dto.DashboardResponse;
@@ -110,7 +111,7 @@ public class WhatsappWebhookService {
         }
       }
     } catch (Exception e) {
-      LOG.error("Erro ao processar webhook WhatsApp: {}", e.getMessage());
+      LOG.error("Erro ao processar webhook WhatsApp: {}", LogRedacao.mensagem(e));
     }
   }
 

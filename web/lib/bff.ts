@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { urlApiServidor } from "./api-url";
 import { API_TIMEOUT_MS, respostaErroBff, urlApiSegura } from "./bff-helpers";
 
 type EncaminharOptions = {
@@ -19,7 +20,7 @@ export async function encaminharParaApi(
     return respostaErroBff(403, "Rota não permitida");
   }
 
-  const apiUrl = process.env.API_URL;
+  const apiUrl = urlApiServidor();
   if (!apiUrl) {
     return respostaErroBff(503, "API não configurada");
   }

@@ -1,3 +1,4 @@
+import { urlApiServidor } from "@/lib/api-url";
 import { extrairToken } from "@/lib/auth-bff";
 import { setSessionCookie } from "@/lib/session";
 
@@ -16,9 +17,14 @@ export async function POST(request: Request) {
     return Response.json({ erro: "Corpo da requisição inválido" }, { status: 400 });
   }
 
+  const apiUrl = urlApiServidor();
+  if (!apiUrl) {
+    return Response.json({ erro: MSG_CONEXAO }, { status: 502 });
+  }
+
   let res: Response;
   try {
-    res = await fetch(`${process.env.API_URL}/api/auth/login`, {
+    res = await fetch(`${apiUrl}/api/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),

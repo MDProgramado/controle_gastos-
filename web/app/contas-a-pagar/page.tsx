@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getMe } from "@/lib/api";
+import { urlApiServidor } from "@/lib/api-url";
 import { API_TIMEOUT_MS } from "@/lib/bff-helpers";
 import {
   Sidebar,
@@ -13,7 +14,7 @@ import { SkipLink } from "@/components/SkipLink";
 import { ContasAPagarClient, type ContaAPagarItem } from "@/components/ContasAPagarClient";
 
 async function getContasAPagar(): Promise<ContaAPagarItem[]> {
-  const apiUrl = process.env.API_URL;
+  const apiUrl = urlApiServidor();
   if (!apiUrl) return [];
 
   try {

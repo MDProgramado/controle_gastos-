@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { ArrowLeft, Layers } from "lucide-react";
 import { getMe, getLancamentos, type LancamentoData } from "@/lib/api";
+import { urlApiServidor } from "@/lib/api-url";
 import { API_TIMEOUT_MS } from "@/lib/bff-helpers";
 import {
   actionCriarLancamento,
@@ -193,9 +194,11 @@ async function fetchCategorias(): Promise<
   const cookieStore = await cookies();
   const token = cookieStore.get("sess")?.value;
   if (!token) return [];
+  const apiUrl = urlApiServidor();
+  if (!apiUrl) return [];
 
   try {
-    const res = await fetch(`${process.env.API_URL}/api/categorias`, {
+    const res = await fetch(`${apiUrl}/api/categorias`, {
       headers: { Authorization: `Bearer ${token}` },
       cache: "no-store",
       signal: AbortSignal.timeout(API_TIMEOUT_MS),

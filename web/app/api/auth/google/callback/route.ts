@@ -1,9 +1,10 @@
 import { cookies } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
+import { urlApiServidor } from "@/lib/api-url";
 import { extrairToken, googleFalha, motivoFalhaApi, motivoFalhaApi401 } from "@/lib/auth-bff";
 import { type IntencaoGoogle } from "@/lib/google-oauth";
 import { googleOAuthPronto, tokenRequest } from "@/lib/google-oauth-server";
-import { limitarPorIp } from "@/lib/rate-limit";
+import { verificarLimite } from "@/lib/rate-limit";
 import { setSessionCookie } from "@/lib/session";
 
 const LIMITE_MINUTO = 30;
@@ -61,8 +62,14 @@ function lerEstado(valor: string | undefined): EstadoOAuth | null {
 }
 
 export async function GET(request: NextRequest) {
-  if (limitarPorIp(request, "google-callback", LIMITE_MINUTO, JANELA_MS)) {
-    return googleFalha(request, { erro: MSG_LIMITE, status: 429, manterEstado: true });
+  const limite = verificarLimite(request, "google-callback", LIMITE_MINUTO, JANELA_MS);
+  if (limite.excedeu) {
+    return googleFalha(request, {
+      erro: MSG_LIMITE,
+      status: 429,
+      manterEstado: true,
+      reiniciaEm: limite.reiniciaEm,
+    });
   }
   if (!googleOAuthPronto()) return googleFalha(request, { motivo: "CONFIG" });
 
@@ -91,14 +98,15 @@ export async function GET(request: NextRequest) {
     return googleFalha(request, { motivo: "TOKEN" });
   }
   if (!idToken) return googleFalha(request, { motivo: "TOKEN" });
-  if (!process.env.API_URL) return googleFalha(request, { motivo: "API_URL" });
+  const apiUrl = urlApiServidor();
+  if (!apiUrl) return googleFalha(request, { motivo: "API_URL" });
 
   let accessToken: string | null = null;
   let statusApi: number | null = null;
   let respostaApiOk = false;
   let detalheApi: unknown = null;
   try {
-    const resposta = await fetch(`${process.env.API_URL}/api/auth/google`, {
+    const resposta = await fetch(`${apiUrl}/api/auth/google`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
