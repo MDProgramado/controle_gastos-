@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
-import { extrairToken, googleFalha } from "@/lib/auth-bff";
+import { extrairToken, googleFalha, motivoFalhaApi } from "@/lib/auth-bff";
 import { type IntencaoGoogle } from "@/lib/google-oauth";
 import { googleOAuthPronto, tokenRequest } from "@/lib/google-oauth-server";
 import { limitarPorIp } from "@/lib/rate-limit";
@@ -94,6 +94,8 @@ export async function GET(request: NextRequest) {
   if (!process.env.API_URL) return googleFalha(request, { motivo: "API_URL" });
 
   let accessToken: string | null = null;
+  let statusApi: number | null = null;
+  let respostaApiOk = false;
   try {
     const resposta = await fetch(`${process.env.API_URL}/api/auth/google`, {
       method: "POST",
@@ -106,13 +108,19 @@ export async function GET(request: NextRequest) {
       cache: "no-store",
       signal: AbortSignal.timeout(5000),
     });
+    statusApi = resposta.status;
+    respostaApiOk = resposta.ok;
     if (resposta.ok) {
       accessToken = extrairToken(await resposta.json());
     }
   } catch {
-    return googleFalha(request, { motivo: "API" });
+    return googleFalha(request, { motivo: motivoFalhaApi(null, false) });
   }
-  if (!accessToken) return googleFalha(request, { motivo: "API" });
+  if (!accessToken) {
+    return googleFalha(request, {
+      motivo: motivoFalhaApi(statusApi, statusApi !== null && !respostaApiOk),
+    });
+  }
 
   await setSessionCookie(accessToken);
   const sucesso = NextResponse.redirect(new URL("/", request.url), 303);

@@ -21,6 +21,12 @@ export function googleFalha(request: Request, opcoes: OpcoesFalhaGoogle = {}) {
   return resposta;
 }
 
+export function motivoFalhaApi(status: number | null, comStatusHttp: boolean): string {
+  if (status === null) return "API_REDE";
+  if (!comStatusHttp) return "API_SEM_TOKEN";
+  return `API_${status}`;
+}
+
 export function extrairToken(dados: unknown): string | null {
   if (typeof dados !== "object" || dados === null) return null;
   const objeto = dados as { token?: unknown; accessToken?: unknown };
