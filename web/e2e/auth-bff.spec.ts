@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { extrairToken, googleFalha, motivoFalhaApi } from "../lib/auth-bff";
+import { extrairToken, googleFalha, motivoFalhaApi, motivoFalhaApi401 } from "../lib/auth-bff";
 import { googleClientId, googleOAuthHabilitado } from "../lib/google-oauth-config";
 import { limitarPorIp } from "../lib/rate-limit";
 
@@ -84,6 +84,13 @@ test("motivoFalhaApi separa rede, resposta sem token e status HTTP", () => {
   expect(motivoFalhaApi(200, false)).toBe("API_SEM_TOKEN");
   expect(motivoFalhaApi(401, true)).toBe("API_401");
   expect(motivoFalhaApi(400, true)).toBe("API_400");
+});
+
+test("motivoFalhaApi401 separa token inválido de credenciais da conta", () => {
+  expect(motivoFalhaApi401("Token Google inválido")).toBe("API_TOKEN_INVALIDO");
+  expect(motivoFalhaApi401("E-mail ou senha inválidos")).toBe("API_CREDENCIAIS");
+  expect(motivoFalhaApi401("qualquer outro detalhe")).toBe("API_401_OUTRO");
+  expect(motivoFalhaApi401(null)).toBe("API_401_OUTRO");
 });
 
 test("extrairToken aceita token e accessToken da API", () => {
