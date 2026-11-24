@@ -1,5 +1,11 @@
 import { expect, test } from "@playwright/test";
-import { authorizeUrl, derivarChallenge, gerarState, gerarVerifier } from "../lib/google-oauth";
+import {
+  authorizeUrl,
+  derivarChallenge,
+  gerarState,
+  gerarVerifier,
+  googleStartHref,
+} from "../lib/google-oauth";
 
 test("gera state e verifier aleatórios em base64url", () => {
   const state = gerarState();
@@ -16,6 +22,11 @@ test("deriva challenge S256 segundo RFC 7636", async () => {
   await expect(derivarChallenge(verifier)).resolves.toBe(
     "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
   );
+});
+
+test("googleStartHref monta URLs de login e cadastro sem segredos", () => {
+  expect(googleStartHref("LOGIN")).toBe("/api/auth/google/start?intencao=LOGIN");
+  expect(googleStartHref("CADASTRO")).toBe("/api/auth/google/start?intencao=CADASTRO");
 });
 
 test("authorizeUrl monta Authorization Code + PKCE", () => {
