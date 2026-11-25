@@ -104,7 +104,9 @@ public class HelpdeskService {
     TicketStatus status = TicketStatus.from(request.status());
     HelpdeskTicket ticket = buscarTicketDaEmpresa(ticketId);
     ticket.setStatus(status);
-    return paraResponse(ticketRepository.save(ticket));
+    HelpdeskTicket salvo = ticketRepository.save(ticket);
+    ticketRepository.flush();
+    return paraResponse(salvo);
   }
 
   private HelpdeskTicket buscarTicketDoUsuario(Long ticketId) {

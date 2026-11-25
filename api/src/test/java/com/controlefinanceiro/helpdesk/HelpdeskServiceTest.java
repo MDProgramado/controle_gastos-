@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -208,6 +209,27 @@ class HelpdeskServiceTest {
     TicketResponse response = service.alterarStatus(4L, new TicketStatusRequest("RESOLVIDO"));
 
     assertThat(response.status()).isEqualTo(TicketStatus.RESOLVIDO);
+  }
+
+  @Test
+  @DisplayName("alterar status devolve atualizadoEm persistido no response")
+  void alterarStatusDevolveAtualizadoEmPersistido() {
+    autenticar("ADMIN", 99L);
+    HelpdeskTicket t = ticket(4L, 2L);
+    when(ticketRepository.findByIdAndEmpresaId(4L, EMPRESA_ID)).thenReturn(Optional.of(t));
+    when(ticketRepository.save(any(HelpdeskTicket.class))).thenAnswer(inv -> inv.getArgument(0));
+    doAnswer(
+            inv -> {
+              t.aoAtualizar();
+              return null;
+            })
+        .when(ticketRepository)
+        .flush();
+
+    TicketResponse response = service.alterarStatus(4L, new TicketStatusRequest("RESOLVIDO"));
+
+    assertThat(t.getAtualizadoEm()).isNotNull();
+    assertThat(response.atualizadoEm()).isNotNull().isEqualTo(t.getAtualizadoEm());
   }
 
   @Test
