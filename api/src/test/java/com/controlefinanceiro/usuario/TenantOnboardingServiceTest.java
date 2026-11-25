@@ -44,7 +44,7 @@ class TenantOnboardingServiceTest {
   }
 
   @Test
-  void onboardingCriaEmpresaAdminCategoriasEToken() {
+  void onboardingCriaEmpresaUsuarioCategoriasEToken() {
     when(empresaRepository.save(any()))
         .thenAnswer(
             invocacao -> {
@@ -61,7 +61,7 @@ class TenantOnboardingServiceTest {
     assertThat(resposta.token()).isEqualTo("jwt");
     ArgumentCaptor<Usuario> usuarioCaptor = ArgumentCaptor.forClass(Usuario.class);
     verify(usuarioRepository).save(usuarioCaptor.capture());
-    assertThat(usuarioCaptor.getValue().getRole()).isEqualTo("ADMIN");
+    assertThat(usuarioCaptor.getValue().getRole()).isEqualTo("USER");
     assertThat(usuarioCaptor.getValue().isAtivo()).isTrue();
     assertThat(usuarioCaptor.getValue().getSenhaHash()).isEqualTo("$2a$12$hash");
 
@@ -90,6 +90,7 @@ class TenantOnboardingServiceTest {
     ArgumentCaptor<Usuario> usuarioCaptor = ArgumentCaptor.forClass(Usuario.class);
     verify(usuarioRepository).save(usuarioCaptor.capture());
     assertThat(usuarioCaptor.getValue().getGoogleSub()).isEqualTo("sub-google");
+    assertThat(usuarioCaptor.getValue().getRole()).isEqualTo("USER");
     assertThat(usuarioCaptor.getValue().isEmailVerificado()).isTrue();
     assertThat(usuarioCaptor.getValue().getSenhaHash()).startsWith("$2");
 

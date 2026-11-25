@@ -28,8 +28,8 @@ services:
     name: controle-gastos-
     runtime: docker
     dockerfilePath: ./api/Dockerfile
-    # Contexto na raiz para o Dockerfile poder copiar também rag/ (base RAG) para a imagem.
-    dockerContext: .
+    # Contexto em api/: o Dockerfile copia o corpus RAG de src/main/resources/rag/.
+    dockerContext: ./api
     branch: main
     healthCheckPath: /api/health
     # plan omitido: para serviço existente a Render mantém o plano atual
