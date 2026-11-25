@@ -1,4 +1,6 @@
-﻿import { expect, test } from "@playwright/test";
+﻿import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { expect, test } from "@playwright/test";
 import { itensDeNavegacao } from "../lib/navegacao";
 import {
   classesStatus,
@@ -243,4 +245,65 @@ test("ADMIN pode editar outro usuário com mais de um ADMIN ativo", () => {
       usuarios: [autor, outroAdmin, usuario],
     }),
   ).toBe(true);
+});
+
+type AcaoAssistente = {
+  id: string;
+  label: string;
+  href?: string;
+  abreChat?: boolean;
+};
+
+async function acoesPorRole(
+  role: "ADMIN" | "USER" | null,
+): Promise<AcaoAssistente[] | undefined> {
+  try {
+    const modulo = (await import("../lib/assistente")) as {
+      acoesDoAssistente: (
+        role: "ADMIN" | "USER" | null,
+      ) => AcaoAssistente[];
+    };
+    return modulo.acoesDoAssistente(role);
+  } catch {
+    return undefined;
+  }
+}
+
+const acoesComuns: AcaoAssistente[] = [
+  { id: "chat", label: "Falar com a IA", abreChat: true },
+  { id: "lancamentos", label: "Lançamentos", href: "/lancamentos" },
+];
+
+test("ADMIN recebe ações administrativas no assistente", async () => {
+  expect(await acoesPorRole("ADMIN")).toEqual([
+    ...acoesComuns,
+    { id: "usuarios", label: "Usuários", href: "/admin/usuarios" },
+    { id: "helpdesk", label: "Helpdesk", href: "/admin/suporte" },
+  ]);
+});
+
+test("USER recebe ações de suporte e chat no assistente", async () => {
+  expect(await acoesPorRole("USER")).toEqual([
+    ...acoesComuns,
+    { id: "suporte", label: "Meus problemas", href: "/suporte" },
+  ]);
+});
+
+test("sem role o assistente expõe apenas ações comuns seguras", async () => {
+  const acoes = await acoesPorRole(null);
+
+  expect(acoes).toEqual(acoesComuns);
+  expect(acoes?.some((acao) => acao.href?.startsWith("/admin"))).toBe(false);
+});
+
+test("launcher do Ogum fica inferior direito com estado acessível", () => {
+  const fonte = readFileSync(
+    resolve(process.cwd(), "components/ai/ChatFlutuante.tsx"),
+    "utf8",
+  );
+
+  expect(fonte).toContain("right-4");
+  expect(fonte).toContain("/ogum.svg");
+  expect(fonte).toContain("aria-expanded");
+  expect(fonte).not.toContain("left-4");
 });
