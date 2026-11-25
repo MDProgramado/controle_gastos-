@@ -1,4 +1,5 @@
 ﻿import {
+  Database,
   DollarSign,
   FileUp,
   Headset,
@@ -32,6 +33,7 @@ export function itensDeNavegacao(role: RoleUsuario | null): ItemNavegacao[] {
       ...ITENS_COMUNS,
       { href: "/admin/usuarios", label: "Usuários", icon: Users },
       { href: "/admin/suporte", label: "Helpdesk", icon: Headset },
+      { href: "/admin/rag", label: "Base RAG", icon: Database },
     ];
   }
 

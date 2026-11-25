@@ -21,41 +21,53 @@ public class RagIngestionService {
   private final EmbeddingClient embeddingClient;
   private final RagChunkRepository repository;
   private final int batchSize;
+  private final RagIngestaoEstado estado;
 
   @Autowired
   public RagIngestionService(
       EmbeddingClient embeddingClient,
       RagChunkRepository repository,
-      @Value("${ai.rag.embedding-batch-size:64}") int batchSize) {
+      @Value("${ai.rag.embedding-batch-size:64}") int batchSize,
+      RagIngestaoEstado estado) {
     this.embeddingClient = embeddingClient;
     this.repository = repository;
     this.batchSize = Math.max(1, batchSize);
+    this.estado = estado;
   }
 
   public RagIngestaoResultado ingestirSync(String caminho) {
-    List<RagMeta> metas = ler(caminho);
-    int batches = 0;
-    for (int inicio = 0; inicio < metas.size(); inicio += batchSize) {
-      int fim = Math.min(inicio + batchSize, metas.size());
-      List<RagMeta> parte = metas.subList(inicio, fim);
-      List<String> textos = parte.stream().map(this::textoParaEmbedding).toList();
-      List<float[]> vetores = embeddingClient.embedir(textos);
-      if (vetores.size() != parte.size()) {
-        throw new IllegalStateException(
-            "Serviço de embeddings devolveu "
-                + vetores.size()
-                + " vetores para "
-                + parte.size()
-                + " chunks.");
+    estado.iniciar(0);
+    try {
+      List<RagMeta> metas = ler(caminho);
+      estado.iniciar(metas.size());
+      int batches = 0;
+      for (int inicio = 0; inicio < metas.size(); inicio += batchSize) {
+        int fim = Math.min(inicio + batchSize, metas.size());
+        List<RagMeta> parte = metas.subList(inicio, fim);
+        List<String> textos = parte.stream().map(this::textoParaEmbedding).toList();
+        List<float[]> vetores = embeddingClient.embedir(textos);
+        if (vetores.size() != parte.size()) {
+          throw new IllegalStateException(
+              "Serviço de embeddings devolveu "
+                  + vetores.size()
+                  + " vetores para "
+                  + parte.size()
+                  + " chunks.");
+        }
+        List<RagChunk> chunks = new ArrayList<>(parte.size());
+        for (int i = 0; i < parte.size(); i++) {
+          chunks.add(parte.get(i).paraChunk(vetores.get(i)));
+        }
+        repository.upsert(chunks);
+        estado.registrarProgresso(fim);
+        batches++;
       }
-      List<RagChunk> chunks = new ArrayList<>(parte.size());
-      for (int i = 0; i < parte.size(); i++) {
-        chunks.add(parte.get(i).paraChunk(vetores.get(i)));
-      }
-      repository.upsert(chunks);
-      batches++;
+      estado.concluir();
+      return new RagIngestaoResultado(metas.size(), batches);
+    } catch (RuntimeException e) {
+      estado.falhar(e.getMessage());
+      throw e;
     }
-    return new RagIngestaoResultado(metas.size(), batches);
   }
 
   private List<RagMeta> ler(String caminho) {

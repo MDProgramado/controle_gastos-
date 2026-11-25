@@ -5,6 +5,7 @@ const CAMINHOS_PERMITIDOS = [
   "/api/categorias",
   "/api/lancamentos",
   "/api/ai/chat",
+  "/api/ai/rag",
   "/api/importacoes",
   "/api/contas-a-pagar",
   "/api/usuarios",
