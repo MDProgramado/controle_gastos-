@@ -134,3 +134,17 @@ test("classesStatus usa classes neutras para status desconhecido", () => {
   );
   expect(classesStatus("")).toBe("border-border bg-muted text-muted-foreground");
 });
+
+test("rotuloStatus trata chaves herdadas como status desconhecido", () => {
+  expect(rotuloStatus("toString")).toBe(rotuloStatus("STATUS_INESPERADO"));
+  expect(rotuloStatus("toString")).toBe("Status desconhecido");
+});
+
+test("classesStatus trata chaves herdadas como status desconhecido", () => {
+  expect(classesStatus("constructor")).toBe(
+    classesStatus("STATUS_INESPERADO"),
+  );
+  expect(classesStatus("constructor")).toBe(
+    "border-border bg-muted text-muted-foreground",
+  );
+});

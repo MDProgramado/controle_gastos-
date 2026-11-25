@@ -69,11 +69,13 @@ export const CLASSES_STATUS: Record<StatusTicket, string> = {
 };
 
 export function rotuloStatus(status: string): string {
-  return ROTULOS_STATUS[status as StatusTicket] ?? "Status desconhecido";
+  if (!Object.hasOwn(ROTULOS_STATUS, status)) return "Status desconhecido";
+  return ROTULOS_STATUS[status as StatusTicket];
 }
 
 export function classesStatus(status: string): string {
-  return CLASSES_STATUS[status as StatusTicket] ?? CLASSES_STATUS.FECHADO;
+  if (!Object.hasOwn(CLASSES_STATUS, status)) return CLASSES_STATUS.FECHADO;
+  return CLASSES_STATUS[status as StatusTicket];
 }
 
 export const LIMITE_ASSUNTO = ASSUNTO_MAXIMO;
