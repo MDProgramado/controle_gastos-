@@ -9,17 +9,10 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
-import { Home, DollarSign, Layout, LogOut, ChevronLeft, ChevronRight, FileUp, Receipt } from "lucide-react"
+import { ChevronLeft, ChevronRight, LogOut } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
-
-const sidebarItems = [
-  { href: "/", label: "Dashboard", icon: Home },
-  { href: "/lancamentos", label: "Lançamentos", icon: DollarSign },
-  { href: "/categorias", label: "Categorias", icon: Layout },
-  { href: "/importacoes", label: "Importar PDF", icon: FileUp },
-  { href: "/contas-a-pagar", label: "Contas a Pagar", icon: Receipt },
-] as const
+import { itensDeNavegacao, type ItemNavegacao, type RoleUsuario } from "@/lib/navegacao"
 
 // ── Contexto (SidebarProvider) ──────────────────────────────────────────
 
@@ -112,7 +105,7 @@ function SidebarItem({
   isActive,
   isCollapsed,
 }: {
-  item: (typeof sidebarItems)[number]
+  item: ItemNavegacao
   isActive: boolean
   isCollapsed: boolean
 }) {
@@ -139,11 +132,12 @@ function SidebarItem({
   )
 }
 
-function SidebarNav({ collapsed }: { collapsed: boolean }) {
+function SidebarNav({ collapsed, role }: { collapsed: boolean; role: RoleUsuario | null }) {
   const pathname = usePathname()
+  const itens = React.useMemo(() => itensDeNavegacao(role), [role])
   return (
     <nav className="flex-1 flex flex-col gap-1 px-2 py-3">
-      {sidebarItems.map((item) => (
+      {itens.map((item) => (
         <SidebarItem
           key={item.href}
           item={item}
@@ -157,12 +151,14 @@ function SidebarNav({ collapsed }: { collapsed: boolean }) {
 
 // ── SidebarContent (sidebar fixo à esquerda / Sheet em mobile) ──────────
 
-interface SidebarContentProps extends React.ComponentProps<"aside"> {
+interface SidebarContentProps extends Omit<React.ComponentProps<"aside">, "role"> {
   className?: string
+  role?: RoleUsuario | null
 }
 
 export function SidebarContent({
   className,
+  role = null,
   ...props
 }: SidebarContentProps) {
   const { collapsed, onCollapseChange, mobileOpen, onMobileOpenChange } = useSidebar()
@@ -208,7 +204,7 @@ export function SidebarContent({
         </button>
       </div>
       <div className="flex-1 overflow-y-auto">
-        <SidebarNav collapsed={collapsed} />
+        <SidebarNav collapsed={collapsed} role={role} />
       </div>
       <div className="flex flex-col gap-1 px-3 py-3 border-t border-border">
         <SairButton collapsed={collapsed} />
@@ -235,7 +231,7 @@ export function SidebarContent({
         <div className="flex-1 overflow-y-auto">
           {/* No drawer mobile os itens mostram o rótulo: o drawer tem 280px
               e o ícone sozinho não diz para onde vai. */}
-          <SidebarNav collapsed={false} />
+          <SidebarNav collapsed={false} role={role} />
         </div>
         <div className="flex flex-col gap-1 border-t border-border px-3 py-3">
           <SairButton collapsed={false} />

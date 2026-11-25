@@ -67,6 +67,7 @@ ai:
     connect-timeout-ms: ${OPENROUTER_CONNECT_TIMEOUT_MS:3000}
     read-timeout-ms: ${OPENROUTER_READ_TIMEOUT_MS:30000}
     modelo: ${AI_OPENROUTER_MODELO:google/gemma-4-31b-it:free}
+    embedding-model: ${AI_OPENROUTER_EMBEDDING_MODEL:openai/text-embedding-3-small}
     # Cascata de modelos gratuitos (separados por vírgula), usada com route=fallback:
     #   primário   -> google/gemma-4-31b-it:free
     #   secundário -> google/gemma-4-26b-a4b-it:free
@@ -86,6 +87,10 @@ ai:
     max-tokens-extracao: ${AI_OPENROUTER_MAX_TOKENS_EXTRACAO:8000}
     tentativas-extracao: ${AI_OPENROUTER_TENTATIVAS_EXTRACAO:3}
     espera-inicial-ms-extracao: ${AI_OPENROUTER_ESPERA_INICIAL_MS_EXTRACAO:1500}
+
+  rag:
+    corpus-path: ${AI_RAG_CORPUS_PATH:rag/corpus_financeiro_RAG_chunks.jsonl}
+    embedding-batch-size: ${AI_RAG_EMBEDDING_BATCH_SIZE:64}
 
 # WhatsApp (Meta Cloud API). Segredos somente via env var; ausência de token/secret
 # desliga o envio e faz o webhook responder 503 (nunca aceita requisição sem validação).

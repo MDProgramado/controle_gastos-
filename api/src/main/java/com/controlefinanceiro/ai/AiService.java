@@ -1,6 +1,12 @@
 package com.controlefinanceiro.ai;
 
+import com.controlefinanceiro.ai.tools.FerramentaChamada;
+import com.controlefinanceiro.ai.tools.FerramentaChamadaParser;
+import com.controlefinanceiro.ai.tools.FerramentaRegistry;
+import com.controlefinanceiro.ai.tools.ResultadoFerramenta;
 import com.controlefinanceiro.common.UsuarioContext;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -8,6 +14,7 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
@@ -27,21 +34,34 @@ public class AiService {
   private static final int MAX_MENSAGENS_HISTORICO = 20;
   private static final ZoneId FUSO = ZoneId.of("America/Sao_Paulo");
   private static final BigDecimal ZERO = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_EVEN);
+  private static final ObjectMapper MAPPER = new ObjectMapper();
 
   private final AiClient aiClient;
   private final AiMemoryStore memoryStore;
   private final AiKnowledgeStore knowledgeStore;
   private final AiContextoService contextoService;
+  private final FerramentaRegistry ferramentaRegistry;
 
   public AiService(
       AiClient aiClient,
       AiMemoryStore memoryStore,
       AiKnowledgeStore knowledgeStore,
       AiContextoService contextoService) {
+    this(aiClient, memoryStore, knowledgeStore, contextoService, null);
+  }
+
+  @Autowired
+  public AiService(
+      AiClient aiClient,
+      AiMemoryStore memoryStore,
+      AiKnowledgeStore knowledgeStore,
+      AiContextoService contextoService,
+      FerramentaRegistry ferramentaRegistry) {
     this.aiClient = aiClient;
     this.memoryStore = memoryStore;
     this.knowledgeStore = knowledgeStore;
     this.contextoService = contextoService;
+    this.ferramentaRegistry = ferramentaRegistry;
   }
 
   /**
@@ -70,12 +90,63 @@ public class AiService {
         montarMensagens(historico, mensagem, empresaId, usuarioId);
 
     String respostaTexto = aiClient.completar(mensagens);
+    List<AiResponse.AiCitacao> citacoes = List.of();
+
+    FerramentaChamada chamada = extrairChamadaFerramenta(respostaTexto);
+    if (chamada != null && ferramentaRegistry != null) {
+      ResultadoFerramenta resultado =
+          ferramentaRegistry.executar(chamada, parseLong(empresaId), parseLong(usuarioId));
+      citacoes = resultado.citacoes() == null ? List.of() : resultado.citacoes();
+      mensagens = comResultadoDaFerramenta(mensagens, respostaTexto, resultado);
+      respostaTexto = aiClient.completar(mensagens);
+    }
+
     AiResponse resposta = interpretar(respostaTexto);
+    if (!citacoes.isEmpty()) {
+      resposta = resposta.comCitacoes(citacoes);
+    }
 
     memoryStore.adicionarMensagem(
         sessionId, empresaId, usuarioId, new AiMessage("assistant", resposta.resposta()));
 
     return resposta;
+  }
+
+  private List<Map<String, Object>> comResultadoDaFerramenta(
+      List<Map<String, Object>> mensagens, String chamadaTexto, ResultadoFerramenta resultado) {
+    List<Map<String, Object>> comResultado = new ArrayList<>(mensagens);
+    comResultado.add(Map.of("role", "assistant", "content", chamadaTexto));
+    try {
+      String payload =
+          MAPPER.writeValueAsString(
+              Map.of("resultado", resultado.conteudo(), "citacoes", resultado.citacoes()));
+      comResultado.add(Map.of("role", "user", "content", "RESULTADO_DA_FERRAMENTA: " + payload));
+    } catch (JsonProcessingException e) {
+      comResultado.add(
+          Map.of("role", "user", "content", "RESULTADO_DA_FERRAMENTA: " + resultado.conteudo()));
+    }
+    return comResultado;
+  }
+
+  private FerramentaChamada extrairChamadaFerramenta(String texto) {
+    if (texto == null || texto.isBlank()) {
+      return null;
+    }
+    for (String linha : texto.split("\\R")) {
+      FerramentaChamada chamada = FerramentaChamadaParser.parse(linha.trim());
+      if (chamada != null) {
+        return chamada;
+      }
+    }
+    return null;
+  }
+
+  private Long parseLong(String valor) {
+    try {
+      return Long.valueOf(valor);
+    } catch (RuntimeException e) {
+      return 0L;
+    }
   }
 
   /**
@@ -120,6 +191,25 @@ public class AiService {
         Cite os valores em reais no padrão brasileiro (ex.: R$ 1.234,56).
       - Se não souber ou precisar de esclarecimento, responda com:
         ESCLARECIMENTO|texto da resposta|opcao1|opcao2|...
+
+      Ferramentas determinísticas — use QUANDO precisar de cálculo exato, histórico
+      comparativo, categorias, ralos/recorrências, orçamento 50/30/20 ou base normativa.
+      Nunca invente o que a ferramenta calcula. Emita UMA linha, e apenas ela:
+        FERRAMENTA|nome|{"chave":"valor"}
+      Nomes disponíveis:
+        listar_categorias
+        consultar_historico_e_comparativo
+        diagnosticar_orcamento_50_30_20
+        detectar_ralos_e_recorrencias
+        simular_quitacao_ou_juros
+        consultar_base_conhecimento
+      Depois do resultado, responda no formato CONSULTA|... citando a fonte quando houver:
+        [título — órgão, vigência, dispositivo (source_id)]
+      Regras da base normativa: valores em reais com 2 casas; sempre acompanhe percentual
+      do valor absoluto; compare apenas períodos com o mesmo número de meses; nunca
+      prometa rentabilidade nem recomende ativo individualmente.
+      Se uma categoria cair no fallback do 50/30/20, diga exatamente:
+        "Considerei [Categoria X] como Desejo por padrão; me avise se ela for uma despesa essencial"
 
       DADOS REAIS DA EMPRESA (use estes números nas consultas):
       %s

@@ -20,6 +20,8 @@ import com.controlefinanceiro.common.RoleInvalidoException;
 import com.controlefinanceiro.common.ServicoIaIndisponivelException;
 import com.controlefinanceiro.common.TelefoneJaVinculadoException;
 import com.controlefinanceiro.common.TelefoneNaoPertenceAoUsuarioException;
+import com.controlefinanceiro.common.TicketNaoEncontradoException;
+import com.controlefinanceiro.common.TicketStatusInvalidoException;
 import com.controlefinanceiro.common.UltimoAdminAtivoException;
 import com.controlefinanceiro.common.UsuarioNaoEncontradoException;
 import com.controlefinanceiro.importacao.ArquivoInvalidoException;
@@ -82,6 +84,16 @@ public class ProblemDetailExceptionHandler {
   @ExceptionHandler(LancamentoNaoEncontradoException.class)
   public ProblemDetail lancamentoNaoEncontrado(LancamentoNaoEncontradoException ex) {
     return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+  }
+
+  @ExceptionHandler(TicketNaoEncontradoException.class)
+  public ProblemDetail ticketNaoEncontrado(TicketNaoEncontradoException ex) {
+    return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+  }
+
+  @ExceptionHandler(TicketStatusInvalidoException.class)
+  public ProblemDetail ticketStatusInvalido(TicketStatusInvalidoException ex) {
+    return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
   }
 
   /** Operação deixaria a empresa sem ADMIN ativo → 409. */

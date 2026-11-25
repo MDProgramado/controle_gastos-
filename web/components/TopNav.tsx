@@ -3,36 +3,22 @@
 import * as React from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import Image from 'next/image';
-
-type RouteItem = {
-  href: string;
-  label: string;
-};
-
-const ROTAS: RouteItem[] = [
-  { href: "/", label: "Dashboard" },
-  { href: "/lancamentos", label: "Lançamentos" },
-  { href: "/categorias", label: "Categorias" },
-  { href: "/importacoes", label: "Importar PDF" },
-];
+import Image from "next/image";
+import { itensDeNavegacao, type RoleUsuario } from "@/lib/navegacao";
 
 interface TopNavProps {
   activeRoute: string;
-  userRole: "ADMIN" | "USER";
+  userRole?: RoleUsuario | null;
 }
 
 /**
  * Navegação top compartilhada entre as 3 rotas (/, /lancamentos, /categorias)
  * + LogoutButton. Item ativo em teal #0F766E; inativo em muted-foreground #64748B.
  */
-export function TopNav({ activeRoute, userRole }: TopNavProps) {
+export function TopNav({ activeRoute, userRole = null }: TopNavProps) {
   const estaAtivo = (href: string) =>
     activeRoute === href || (href !== "/" && activeRoute.startsWith(href));
-
-  // userRole mantido na interface para contrato; todas as rotas são visíveis
-  // para ADMIN e USER (restrição de escrita está nas ações das páginas, D-23).
-  void userRole;
+  const rotas = React.useMemo(() => itensDeNavegacao(userRole), [userRole]);
 
   return (
     <nav className="sticky top-0 z-20 w-full border-b border-border bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/70">
@@ -62,7 +48,7 @@ export function TopNav({ activeRoute, userRole }: TopNavProps) {
 
         {/* Itens de navegação */}
         <div className="hidden md:flex items-center gap-1">
-          {ROTAS.map((rota) => (
+          {rotas.map((rota) => (
             <Link
               key={rota.href}
               href={rota.href}

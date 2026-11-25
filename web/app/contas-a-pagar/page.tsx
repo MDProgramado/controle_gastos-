@@ -51,7 +51,7 @@ export default async function ContasAPagarPage() {
   return (
     <Sidebar>
       <SkipLink />
-      <SidebarContent />
+      <SidebarContent role={usuario.role} />
       <SidebarInset>
         <div className="flex h-dvh w-full overflow-hidden bg-background text-foreground">
           <div className="flex min-w-0 flex-1 flex-col overflow-hidden">

@@ -51,6 +51,6 @@ jobs:
       - name: TypeScript
         run: npx tsc --noEmit
       - name: Playwright unit specs (sem servidor)
-        run: npx playwright test e2e/frontend-fixes.spec.ts e2e/google-oauth.spec.ts e2e/auth-bff.spec.ts
+        run: npx playwright test e2e/frontend-fixes.spec.ts e2e/google-oauth.spec.ts e2e/auth-bff.spec.ts e2e/user-helpdesk.spec.ts
       - name: Build
         run: npm run build

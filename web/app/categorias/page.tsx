@@ -8,8 +8,13 @@ import {
   criarCategoria,
   editarCategoria,
   desativarCategoria,
+  getGrupos503020,
+  salvarGrupo503020,
+  type CategoriaGrupo503020Data,
 } from "@/lib/api";
 import { CategoriasClient } from "@/components/CategoriasClient";
+import { Grupos503020Client } from "@/components/Grupos503020Client";
+import type { Grupo503020 } from "@/lib/grupos-503020";
 import {
   Sidebar,
   SidebarContent,
@@ -29,6 +34,8 @@ export default async function CategoriasPage() {
 
   const categoriasResp = await getCategorias();
   const categorias: CategoriaData[] = categoriasResp ?? [];
+  const gruposResp = await getGrupos503020();
+  const grupos: CategoriaGrupo503020Data[] = gruposResp ?? [];
 
   // Métricas rápidas para leitura imediata (Redução de carga cognitiva)
   const ativas = categorias.filter((c) => c.ativo);
@@ -61,10 +68,18 @@ export default async function CategoriasPage() {
     return desativarCategoria(id);
   }
 
+  async function actionSalvarGrupo503020(
+    categoriaId: number,
+    grupo: Grupo503020,
+  ) {
+    "use server";
+    return salvarGrupo503020(categoriaId, grupo);
+  }
+
   return (
     <Sidebar>
       <SkipLink />
-      <SidebarContent />
+      <SidebarContent role={usuario.role} />
       <SidebarInset>
         <div className="flex h-dvh w-full overflow-hidden bg-background text-foreground">
           <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
@@ -183,6 +198,24 @@ export default async function CategoriasPage() {
 
                 {/* motion.js/moments.js só DEPOIS da hidratação deste segmento */}
                 <KitBoot />
+              </section>
+
+              <section
+                data-screen="free"
+                aria-labelledby="grupos-503020-h"
+                className="space-y-4"
+              >
+                <h2
+                  id="grupos-503020-h"
+                  className="text-xs font-semibold uppercase tracking-widest text-muted-foreground"
+                >
+                  Planejamento 50/30/20
+                </h2>
+                <Grupos503020Client
+                  itens={grupos}
+                  podeEditar={usuario.role === "ADMIN"}
+                  onSalvar={actionSalvarGrupo503020}
+                />
               </section>
             </div>
           </main>

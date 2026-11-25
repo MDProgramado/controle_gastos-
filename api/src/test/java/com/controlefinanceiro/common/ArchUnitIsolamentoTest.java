@@ -125,6 +125,45 @@ class ArchUnitIsolamentoTest {
               });
 
   @ArchTest
+  static final ArchRule helpdeskRepositoriosExigemEscopo =
+      classes()
+          .that()
+          .areAssignableTo(Repository.class)
+          .and()
+          .resideInAnyPackage("com.controlefinanceiro.helpdesk..")
+          .should(
+              new ArchCondition<JavaClass>("filtrar empresa e usuario/ticket") {
+                @Override
+                public void check(JavaClass repositorio, ConditionEvents events) {
+                  for (JavaMethod metodo : repositorio.getMethods()) {
+                    if (!metodo.getOwner().equals(repositorio)
+                        || !metodo.getName().startsWith("findBy")) {
+                      continue;
+                    }
+                    String nome = metodo.getName();
+                    if (!nome.contains("EmpresaId")) {
+                      events.add(
+                          SimpleConditionEvent.violated(
+                              repositorio,
+                              repositorio.getFullName() + "." + nome + " nao filtra empresaId"));
+                    }
+                    boolean escopoAdmin =
+                        "findByEmpresaIdAndStatus".equals(nome)
+                            || "findByIdAndEmpresaId".equals(nome);
+                    if (!escopoAdmin && !nome.contains("UsuarioId") && !nome.contains("TicketId")) {
+                      events.add(
+                          SimpleConditionEvent.violated(
+                              repositorio,
+                              repositorio.getFullName()
+                                  + "."
+                                  + nome
+                                  + " nao filtra usuario/ticket"));
+                    }
+                  }
+                }
+              });
+
+  @ArchTest
   static final ArchRule memoriaDaIaNaoUsaMapaEmProducao =
       classes()
           .that()

@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.controlefinanceiro.conta.ContaAPagarRepository;
 import com.controlefinanceiro.conta.FaturaCartaoRepository;
 import com.controlefinanceiro.dashboard.DashboardRepository;
+import com.controlefinanceiro.helpdesk.HelpdeskMensagemRepository;
+import com.controlefinanceiro.helpdesk.HelpdeskTicketRepository;
 import com.controlefinanceiro.importacao.ImportacaoDocumentoRepository;
 import com.controlefinanceiro.importacao.ImportacaoFaturaRepository;
 import com.controlefinanceiro.importacao.ImportacaoItemRepository;
@@ -26,7 +28,9 @@ class IsolamentoUsuarioRepositoryTest {
           ImportacaoItemRepository.class,
           ImportacaoFaturaRepository.class,
           ContaAPagarRepository.class,
-          FaturaCartaoRepository.class);
+          FaturaCartaoRepository.class,
+          HelpdeskTicketRepository.class,
+          HelpdeskMensagemRepository.class);
 
   @Test
   @DisplayName("toda query financeira declarada filtra usuario_id")
@@ -34,6 +38,26 @@ class IsolamentoUsuarioRepositoryTest {
     for (Class<?> repositorio : REPOSITORIOS) {
       for (Method metodo : repositorio.getDeclaredMethods()) {
         Query query = metodo.getAnnotation(Query.class);
+        if (ehFilaAdminHelpdesk(repositorio, metodo)) {
+          assertThat(query)
+              .as("fila admin %s.%s usa @Query", repositorio.getSimpleName(), metodo.getName())
+              .isNotNull();
+          assertThat(query.value())
+              .as(
+                  "fila admin %s.%s deve filtrar empresa_id",
+                  repositorio.getSimpleName(), metodo.getName())
+              .contains("empresa.id = :empresaId")
+              .doesNotContain("usuario.id");
+          continue;
+        }
+        if (repositorio == HelpdeskMensagemRepository.class) {
+          assertThat(query).as("query de mensagem %s", metodo.getName()).isNotNull();
+          assertThat(query.value())
+              .as("query de mensagem %s deve filtrar ticket e empresa", metodo.getName())
+              .contains("m.ticket.id = :ticketId")
+              .contains("m.empresa.id = :empresaId");
+          continue;
+        }
         if (query != null) {
           assertThat(query.value())
               .as(
@@ -51,6 +75,12 @@ class IsolamentoUsuarioRepositoryTest {
     }
   }
 
+  private boolean ehFilaAdminHelpdesk(Class<?> repositorio, Method metodo) {
+    return repositorio == HelpdeskTicketRepository.class
+        && ("findByEmpresaIdAndStatus".equals(metodo.getName())
+            || "findByIdAndEmpresaId".equals(metodo.getName()));
+  }
+
   @Test
   @DisplayName("repositorios financeiros expoem busca por id escalonada")
   void buscaPorIdEscalonadaExiste() throws Exception {
@@ -65,6 +95,23 @@ class IsolamentoUsuarioRepositoryTest {
     assertThat(
             FaturaCartaoRepository.class.getMethod(
                 "findByIdAndEmpresaIdAndUsuarioId", Long.class, Long.class, Long.class))
+        .isNotNull();
+  }
+
+  @Test
+  @DisplayName("repositorios do helpdesk expoem buscas escalonadas")
+  void buscasDoHelpdeskEscalonadasExistem() throws Exception {
+    assertThat(
+            HelpdeskTicketRepository.class.getMethod(
+                "findByIdAndEmpresaIdAndUsuarioId", Long.class, Long.class, Long.class))
+        .isNotNull();
+    assertThat(
+            HelpdeskTicketRepository.class.getMethod(
+                "findByIdAndEmpresaId", Long.class, Long.class))
+        .isNotNull();
+    assertThat(
+            HelpdeskMensagemRepository.class.getMethod(
+                "findByTicketIdAndEmpresaIdOrderByCriadoEmAsc", Long.class, Long.class))
         .isNotNull();
   }
 }

@@ -78,6 +78,12 @@ public class SecurityConfig {
                     // Conhecimento da IA é administrativo e escopado pela empresa do JWT (F-002)
                     .requestMatchers("/api/ai/chat/conhecimento", "/api/ai/chat/conhecimento/**")
                     .hasRole("ADMIN")
+                    .requestMatchers("/api/ai/rag/**")
+                    .hasRole("ADMIN")
+                    .requestMatchers("/api/helpdesk/**")
+                    .hasRole("USER")
+                    .requestMatchers("/api/admin/helpdesk/**")
+                    .hasRole("ADMIN")
                     .anyRequest()
                     .authenticated())
         .oauth2ResourceServer(

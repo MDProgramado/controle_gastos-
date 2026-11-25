@@ -28,7 +28,8 @@ services:
     name: controle-gastos-
     runtime: docker
     dockerfilePath: ./api/Dockerfile
-    dockerContext: ./api
+    # Contexto na raiz para o Dockerfile poder copiar também rag/ (base RAG) para a imagem.
+    dockerContext: .
     branch: main
     healthCheckPath: /api/health
     # plan omitido: para serviço existente a Render mantém o plano atual
@@ -47,6 +48,8 @@ services:
         sync: false # valor público do OAuth Client Web; o secret fica só no BFF (Vercel)
       - key: OPENROUTER_API_KEY
         sync: false
+      - key: AI_RAG_CORPUS_PATH
+        value: /app/rag/corpus_financeiro_RAG_chunks.jsonl # copiado para a imagem pelo Dockerfile
       - key: WHATSAPP_API_URL
         sync: false # ex.: https://graph.facebook.com/v21.0 (sem segredo)
       - key: WHATSAPP_PHONE_NUMBER_ID

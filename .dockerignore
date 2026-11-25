@@ -1,0 +1,12 @@
+.git
+.planning
+node_modules/
+web/node_modules/
+web/.next/
+web/test-results/
+web/playwright-report/
+web/blob-report/
+api/target/
+shots/
+**/.env
+**/*.log

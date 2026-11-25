@@ -8,6 +8,7 @@ import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -41,15 +42,20 @@ public class UsuarioController {
   }
 
   @PatchMapping("/{id}")
-  public ResponseEntity<Void> alterarRole(
-      @PathVariable Long id, @Valid @RequestBody AlterarRoleRequest request) {
-    usuarioService.alterarRole(TenantContext.getEmpresaId(), id, request.role());
-    return ResponseEntity.noContent().build();
+  public ResponseEntity<UsuarioContaResponse> atualizar(
+      @PathVariable Long id, @Valid @RequestBody AtualizarUsuarioRequest request) {
+    return ResponseEntity.ok(usuarioService.atualizar(id, request));
   }
 
   @PostMapping("/{id}/desativar")
   public ResponseEntity<Void> desativar(@PathVariable Long id) {
     usuarioService.desativar(TenantContext.getEmpresaId(), id);
+    return ResponseEntity.noContent().build();
+  }
+
+  @DeleteMapping("/{id}")
+  public ResponseEntity<Void> excluir(@PathVariable Long id) {
+    usuarioService.excluir(id);
     return ResponseEntity.noContent().build();
   }
 
