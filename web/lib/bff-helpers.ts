@@ -7,6 +7,9 @@ const CAMINHOS_PERMITIDOS = [
   "/api/ai/chat",
   "/api/importacoes",
   "/api/contas-a-pagar",
+  "/api/usuarios",
+  "/api/helpdesk/tickets",
+  "/api/admin/helpdesk/tickets",
 ];
 
 export function urlApiSegura(caminho: string): string | null {

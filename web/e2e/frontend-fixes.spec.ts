@@ -191,6 +191,19 @@ test("BFF aceita apenas rotas próprias e devolve 502 padronizado", () => {
   expect(resposta.headers.get("content-type")).toContain("application/json");
 });
 
+test("BFF aceita rotas de usuários e do helpdesk na allowlist", () => {
+  expect(urlApiSegura("/api/usuarios")).toBe("/api/usuarios");
+  expect(urlApiSegura("/api/helpdesk/tickets")).toBe("/api/helpdesk/tickets");
+  expect(urlApiSegura("/api/admin/helpdesk/tickets/1/status")).toBe(
+    "/api/admin/helpdesk/tickets/1/status",
+  );
+});
+
+test("BFF rejeita travessia e URL absoluta no helpdesk", () => {
+  expect(urlApiSegura("/api/helpdesk/../secret")).toBeNull();
+  expect(urlApiSegura("/api/https://evil")).toBeNull();
+});
+
 test("descreve sucesso parcial sem afirmar que nada foi gravado", () => {
   expect(
     descreverResultadoConfirmacao({ lancamentos: 2, contas: 1, falhas: 0 }).titulo,
