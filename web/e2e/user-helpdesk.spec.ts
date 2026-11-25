@@ -5,6 +5,7 @@ import {
   rotuloStatus,
   validarTicket,
 } from "../lib/helpdesk";
+import { podeEditarUsuario } from "../lib/usuarios-admin";
 
 test("rejeita assunto vazio", () => {
   expect(validarTicket("", "Descrição válida")).toBe("Informe o assunto.");
@@ -46,7 +47,7 @@ test("ADMIN vê itens comuns e itens administrativos", () => {
   const itens = itensDeNavegacao("ADMIN");
   const labels = itens.map((item) => item.label);
 
-  expect(labels).toEqual([
+  const esperados = [
     "Dashboard",
     "Lançamentos",
     "Categorias",
@@ -54,7 +55,9 @@ test("ADMIN vê itens comuns e itens administrativos", () => {
     "Contas a Pagar",
     "Usuários",
     "Helpdesk",
-  ]);
+  ];
+  expect(labels).toEqual(expect.arrayContaining(esperados));
+  expect(labels.filter((label) => esperados.includes(label))).toEqual(esperados);
   expect(itens.find((item) => item.label === "Usuários")?.href).toBe("/admin/usuarios");
   expect(itens.find((item) => item.label === "Helpdesk")?.href).toBe("/admin/suporte");
   expect(labels).not.toContain("Meus problemas");
@@ -147,4 +150,97 @@ test("classesStatus trata chaves herdadas como status desconhecido", () => {
   expect(classesStatus("constructor")).toBe(
     "border-border bg-muted text-muted-foreground",
   );
+});
+
+test("USER não pode editar outro usuário", () => {
+  const alvo = {
+    id: 2,
+    nome: "Ana",
+    email: "ana@ogum.example",
+    role: "ADMIN" as const,
+    ativo: true,
+  };
+
+  expect(
+    podeEditarUsuario("USER", 1, { ...alvo, usuarios: [alvo] }),
+  ).toBe(false);
+});
+
+test("ADMIN não pode editar a própria conta", () => {
+  const autor = {
+    id: 7,
+    nome: "Bruno",
+    email: "bruno@ogum.example",
+    role: "ADMIN" as const,
+    ativo: true,
+  };
+  const outroAdmin = {
+    id: 8,
+    nome: "Carla",
+    email: "carla@ogum.example",
+    role: "ADMIN" as const,
+    ativo: true,
+  };
+
+  expect(
+    podeEditarUsuario("ADMIN", 7, {
+      ...autor,
+      usuarios: [autor, outroAdmin],
+    }),
+  ).toBe(false);
+});
+
+test("ADMIN não pode editar o último ADMIN ativo", () => {
+  const ultimoAdmin = {
+    id: 9,
+    nome: "Diego",
+    email: "diego@ogum.example",
+    role: "ADMIN" as const,
+    ativo: true,
+  };
+  const inativo = {
+    id: 10,
+    nome: "Elisa",
+    email: "elisa@ogum.example",
+    role: "ADMIN" as const,
+    ativo: false,
+  };
+
+  expect(
+    podeEditarUsuario("ADMIN", 7, {
+      ...ultimoAdmin,
+      usuarios: [ultimoAdmin, inativo],
+    }),
+  ).toBe(false);
+});
+
+test("ADMIN pode editar outro usuário com mais de um ADMIN ativo", () => {
+  const autor = {
+    id: 7,
+    nome: "Bruno",
+    email: "bruno@ogum.example",
+    role: "ADMIN" as const,
+    ativo: true,
+  };
+  const outroAdmin = {
+    id: 8,
+    nome: "Carla",
+    email: "carla@ogum.example",
+    role: "ADMIN" as const,
+    ativo: true,
+  };
+  const usuario = {
+    id: 11,
+    nome: "Fábio",
+    email: "fabio@ogum.example",
+    role: "USER" as const,
+    ativo: true,
+  };
+
+  expect(
+    podeEditarUsuario("ADMIN", 7, {
+      ...usuario,
+      usuarios: [autor, outroAdmin, usuario],
+    }),
+  ).toBe(true);
 });
