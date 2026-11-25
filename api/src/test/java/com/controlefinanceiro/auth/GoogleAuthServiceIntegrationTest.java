@@ -44,7 +44,7 @@ class GoogleAuthServiceIntegrationTest {
   @MockBean private GoogleTokenValidator googleTokenValidator;
 
   @Test
-  void cadastroComEmailNovoCriaEmpresaAdminComGoogleSubESenhaAleatoria() throws Exception {
+  void cadastroComEmailNovoCriaEmpresaUsuarioComGoogleSubESenhaAleatoria() throws Exception {
     String email = "google-cadastro@teste.com";
     long empresasAntes = totalEmpresas();
 
@@ -52,7 +52,7 @@ class GoogleAuthServiceIntegrationTest {
 
     assertThat(token).isNotBlank();
     assertThat(totalEmpresas()).isEqualTo(empresasAntes + 1);
-    assertThat(coluna("select role from usuario where email = ?", email)).isEqualTo("ADMIN");
+    assertThat(coluna("select role from usuario where email = ?", email)).isEqualTo("USER");
     assertThat(coluna("select google_sub from usuario where email = ?", email))
         .isEqualTo("sub-cadastro");
     assertThat(coluna("select email_verificado from usuario where email = ?", email))

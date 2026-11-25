@@ -24,7 +24,7 @@ class TenantOnboardingServiceIntegrationTest {
   @Autowired private JdbcTemplate jdbc;
 
   @Test
-  void onboardingCriaEmpresaAdminECategoriasPadrao() {
+  void onboardingCriaEmpresaUsuarioECategoriasPadrao() {
     TokenResponse resposta =
         service.onboarding("Empresa Nova", "Admin Nova", "adminnova@teste.com", "senha123");
 
@@ -35,7 +35,7 @@ class TenantOnboardingServiceIntegrationTest {
         .isEqualTo(1);
     assertThat(
             jdbc.queryForObject(
-                "SELECT count(*) FROM usuario WHERE email = 'adminnova@teste.com' AND role = 'ADMIN'"
+                "SELECT count(*) FROM usuario WHERE email = 'adminnova@teste.com' AND role = 'USER'"
                     + " AND ativo = true",
                 Integer.class))
         .isEqualTo(1);

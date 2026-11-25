@@ -4,6 +4,7 @@ import com.controlefinanceiro.auth.JwtService;
 import com.controlefinanceiro.auth.TokenResponse;
 import com.controlefinanceiro.categoria.CategoriaRepository;
 import com.controlefinanceiro.common.CadastroInvalidoException;
+import com.controlefinanceiro.common.Role;
 import com.controlefinanceiro.empresa.Empresa;
 import com.controlefinanceiro.empresa.EmpresaRepository;
 import java.util.Locale;
@@ -77,7 +78,7 @@ public class TenantOnboardingService {
     usuario.setEmail(emailNormalizado);
     usuario.setNome(nome == null || nome.isBlank() ? emailNormalizado : nome.trim());
     usuario.setSenhaHash(senhaHash);
-    usuario.setRole("ADMIN");
+    usuario.setRole(Role.USER.valor());
     usuario.setAtivo(true);
     usuario.setEmailVerificado(emailVerificado);
     usuario.setGoogleSub(googleSub);
