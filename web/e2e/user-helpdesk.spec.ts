@@ -1,6 +1,10 @@
 ﻿import { expect, test } from "@playwright/test";
 import { itensDeNavegacao } from "../lib/navegacao";
-import { validarTicket } from "../lib/helpdesk";
+import {
+  classesStatus,
+  rotuloStatus,
+  validarTicket,
+} from "../lib/helpdesk";
 
 test("rejeita assunto vazio", () => {
   expect(validarTicket("", "Descrição válida")).toBe("Informe o assunto.");
@@ -91,4 +95,42 @@ test("role null ou desconhecido vê apenas itens comuns", () => {
     expect(labels).not.toContain("Helpdesk");
     expect(labels).not.toContain("Meus problemas");
   }
+});
+
+test("rotuloStatus traduz os status conhecidos", () => {
+  const casos = [
+    ["ABERTO", "Aberto"],
+    ["EM_ANDAMENTO", "Em andamento"],
+    ["RESOLVIDO", "Resolvido"],
+    ["FECHADO", "Fechado"],
+  ];
+
+  for (const [status, esperado] of casos) {
+    expect(rotuloStatus(status)).toBe(esperado);
+  }
+});
+
+test("rotuloStatus usa rótulo genérico para status desconhecido", () => {
+  expect(rotuloStatus("STATUS_INESPERADO")).toBe("Status desconhecido");
+  expect(rotuloStatus("")).toBe("Status desconhecido");
+});
+
+test("classesStatus usa apenas classes dos tokens do tema", () => {
+  const casos = [
+    ["ABERTO", "border-secondary/50 bg-secondary/20 text-foreground"],
+    ["EM_ANDAMENTO", "border-primary/50 bg-primary/20 text-foreground"],
+    ["RESOLVIDO", "border-positive/40 bg-positive/10 text-positive"],
+    ["FECHADO", "border-border bg-muted text-muted-foreground"],
+  ];
+
+  for (const [status, esperado] of casos) {
+    expect(classesStatus(status)).toBe(esperado);
+  }
+});
+
+test("classesStatus usa classes neutras para status desconhecido", () => {
+  expect(classesStatus("STATUS_INESPERADO")).toBe(
+    "border-border bg-muted text-muted-foreground",
+  );
+  expect(classesStatus("")).toBe("border-border bg-muted text-muted-foreground");
 });

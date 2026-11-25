@@ -26,6 +26,7 @@ export type OrigemMensagem = "USER" | "ADMIN";
 
 export interface TicketResumo {
   id: number;
+  usuarioId?: number | null;
   assunto: string;
   descricao: string;
   status: StatusTicket;
@@ -36,6 +37,7 @@ export interface TicketResumo {
 export interface TicketMensagem {
   id: number;
   ticketId: number;
+  usuarioId?: number | null;
   conteudo: string;
   origem: OrigemMensagem;
   criadoEm: string;
@@ -65,6 +67,14 @@ export const CLASSES_STATUS: Record<StatusTicket, string> = {
   RESOLVIDO: "border-positive/40 bg-positive/10 text-positive",
   FECHADO: "border-border bg-muted text-muted-foreground",
 };
+
+export function rotuloStatus(status: string): string {
+  return ROTULOS_STATUS[status as StatusTicket] ?? "Status desconhecido";
+}
+
+export function classesStatus(status: string): string {
+  return CLASSES_STATUS[status as StatusTicket] ?? CLASSES_STATUS.FECHADO;
+}
 
 export const LIMITE_ASSUNTO = ASSUNTO_MAXIMO;
 export const LIMITE_DESCRICAO = DESCRICAO_MAXIMA;
