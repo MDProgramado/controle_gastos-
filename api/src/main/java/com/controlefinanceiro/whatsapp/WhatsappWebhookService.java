@@ -68,23 +68,13 @@ public class WhatsappWebhookService {
   }
 
   /**
-   * Processa um webhook da Meta. Deve ser chamado com o corpo já verificado quanto à assinatura. O
-   * processamento pesado é assíncrono (@Async) para responder 200 à Meta em até 5s.
-   *
-   * <p>Os métodos transacionais de confirmação são chamados por self-invocation; a atomicidade
-   * depende da transação deste método. Não remover @Transactional aqui sem extrair a confirmação
-   * para outro bean.
-   *
-   * @param payload corpo JSON do webhook da Meta
-   * @param signature valor do header X-Hub-Signature-256
+   * Processa webhook da Meta de forma assíncrona. A IA roda fora de transação; operações de banco
+   * usam transações curtas nos métodos específicos.
    */
   @Async(WhatsappAsyncConfig.EXECUTOR_NAME)
-  @Transactional
   public void processarWebhook(String payload, String signature) {
     try {
-      // Parsing simplificado do payload da Meta. Em produção, usar um DTO Jackson bem tipado.
       Map<String, Object> body = parseJson(payload);
-
       List<Map<String, Object>> entries = asMapList(body.get("entry"));
       if (entries == null) {
         LOG.warn("Webhook sem 'entry'");
@@ -93,18 +83,12 @@ public class WhatsappWebhookService {
 
       for (Map<String, Object> entry : entries) {
         List<Map<String, Object>> changes = asMapList(entry.get("changes"));
-        if (changes == null) {
-          continue;
-        }
+        if (changes == null) continue;
         for (Map<String, Object> change : changes) {
           Map<String, Object> value = asStringMap(change.get("value"));
-          if (value == null) {
-            continue;
-          }
+          if (value == null) continue;
           List<Map<String, Object>> messages = asMapList(value.get("messages"));
-          if (messages == null) {
-            continue;
-          }
+          if (messages == null) continue;
           for (Map<String, Object> message : messages) {
             processarMensagem(message);
           }
