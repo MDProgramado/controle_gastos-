@@ -394,19 +394,32 @@ export function ChatPanel({
                             key={opcao}
                             variant="outline"
                             size="sm"
-                            onClick={() => {
-                              if (opcao === "Tentar novamente") {
-                                const ultimaUsuario = [...mensagens]
-                                  .reverse()
-                                  .find((msg) => msg.role === "user")
-                                if (ultimaUsuario) {
-                                  void enviarMensagemHandler(ultimaUsuario.content)
+                              onClick={() => {
+                                if (opcao === "Tentar novamente") {
+                                  const ultimaUsuario = [...mensagens]
+                                    .reverse()
+                                    .find((msg) => msg.role === "user")
+                                  if (ultimaUsuario) {
+                                    void enviarMensagemHandler(ultimaUsuario.content)
+                                  }
+                                  return
                                 }
-                                return
-                              }
-                              setValorInput(opcao)
-                              void enviarMensagemHandler(opcao)
-                            }}
+                                if (opcao === "Falar com atendente") {
+                                  setMensagens((prev) => [
+                                    ...prev,
+                                    {
+                                      id: `msg-${Date.now()}`,
+                                      role: "assistant",
+                                      content:
+                                        "Você pode falar com nosso atendente pelo canal de suporte da sua empresa. Se quiser, me conte o problema que eu tento ajudar por aqui.",
+                                      criadoEm: new Date(),
+                                    },
+                                  ])
+                                  return
+                                }
+                                setValorInput(opcao)
+                                void enviarMensagemHandler(opcao)
+                              }}
                             className="h-auto w-full max-w-full whitespace-normal break-words px-3 py-2 text-left leading-snug text-xs"
                           >
                             {opcao}
