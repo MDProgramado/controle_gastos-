@@ -3,23 +3,49 @@ package com.controlefinanceiro.ai;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Repositório de conhecimento da IA, escopado por empresa (F-002). O texto definido por uma empresa
- * nunca é injetado no prompt de outra.
- */
+/** Conhecimento da IA por empresa. Persiste em Postgres quando repositório está disponível. */
 @Component
 public class AiKnowledgeStore {
 
-  private final Map<String, String> conhecimentos = new ConcurrentHashMap<>();
+  private final AiConhecimentoRepository repository;
+  private final Map<String, String> fallback = new ConcurrentHashMap<>();
 
-  public String obterConhecimento(String empresaId) {
-    return conhecimentos.getOrDefault(Objects.requireNonNull(empresaId, "empresaId"), "");
+  @Autowired
+  public AiKnowledgeStore(AiConhecimentoRepository repository) {
+    this.repository = repository;
   }
 
+  /** Construtor para testes unitários sem JPA. */
+  public AiKnowledgeStore() {
+    this.repository = null;
+  }
+
+  @Transactional(readOnly = true)
+  public String obterConhecimento(String empresaId) {
+    String id = Objects.requireNonNull(empresaId, "empresaId");
+    if (repository == null) {
+      return fallback.getOrDefault(id, "");
+    }
+    return repository.findByEmpresaId(Long.valueOf(id)).map(AiConhecimento::getTexto).orElse("");
+  }
+
+  @Transactional
   public void definirConhecimento(String empresaId, String texto) {
-    conhecimentos.put(Objects.requireNonNull(empresaId, "empresaId"), texto == null ? "" : texto);
+    String id = Objects.requireNonNull(empresaId, "empresaId");
+    String valor = texto == null ? "" : texto;
+    if (repository == null) {
+      fallback.put(id, valor);
+      return;
+    }
+    Long empresa = Long.valueOf(id);
+    AiConhecimento entidade =
+        repository.findByEmpresaId(empresa).orElseGet(() -> new AiConhecimento(empresa, ""));
+    entidade.setTexto(valor);
+    repository.save(entidade);
   }
 
   public boolean temConhecimento(String empresaId) {

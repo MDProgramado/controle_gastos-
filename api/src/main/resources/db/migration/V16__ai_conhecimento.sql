@@ -1,0 +1,5 @@
+﻿CREATE TABLE IF NOT EXISTS ai_conhecimento (
+    empresa_id BIGINT PRIMARY KEY REFERENCES empresa(id) ON DELETE CASCADE,
+    texto TEXT NOT NULL DEFAULT '',
+    atualizado_em TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
