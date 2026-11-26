@@ -83,13 +83,16 @@ public class AiService {
           "esclarecimento", "Informe uma mensagem.", List.of(), null, List.of(), List.of());
     }
 
-    memoryStore.adicionarMensagem(sessionId, empresaId, usuarioId, new AiMessage("user", mensagem));
-
     List<AiMessage> historico = memoryStore.obterHistorico(sessionId, empresaId, usuarioId);
     List<Map<String, Object>> mensagens =
-        montarMensagens(historico, mensagem, empresaId, usuarioId);
+        montarMensagens(historico, mensagem, empresaId, usuarioId, true);
 
-    String respostaTexto = aiClient.completar(mensagens);
+    String respostaTexto;
+    try {
+      respostaTexto = aiClient.completar(mensagens);
+    } catch (RuntimeException e) {
+      return respostaIndisponivel(e);
+    }
     List<AiResponse.AiCitacao> citacoes = List.of();
 
     FerramentaChamada chamada = extrairChamadaFerramenta(respostaTexto);
@@ -98,7 +101,11 @@ public class AiService {
           ferramentaRegistry.executar(chamada, parseLong(empresaId), parseLong(usuarioId));
       citacoes = resultado.citacoes() == null ? List.of() : resultado.citacoes();
       mensagens = comResultadoDaFerramenta(mensagens, respostaTexto, resultado);
-      respostaTexto = aiClient.completar(mensagens);
+      try {
+        respostaTexto = aiClient.completar(mensagens);
+      } catch (RuntimeException e) {
+        return respostaIndisponivel(e);
+      }
     }
 
     AiResponse resposta = interpretar(respostaTexto);
@@ -106,6 +113,7 @@ public class AiService {
       resposta = resposta.comCitacoes(citacoes);
     }
 
+    memoryStore.adicionarMensagem(sessionId, empresaId, usuarioId, new AiMessage("user", mensagem));
     memoryStore.adicionarMensagem(
         sessionId, empresaId, usuarioId, new AiMessage("assistant", resposta.resposta()));
 
@@ -156,7 +164,11 @@ public class AiService {
    * @param empresaId tenant extraído do JWT (R3) — usado para montar os dados reais
    */
   private List<Map<String, Object>> montarMensagens(
-      List<AiMessage> historico, String mensagemUsuario, String empresaId, String usuarioId) {
+      List<AiMessage> historico,
+      String mensagemUsuario,
+      String empresaId,
+      String usuarioId,
+      boolean incluirMensagemAtual) {
     List<Map<String, Object>> mensagens = new ArrayList<>();
 
     String hoje = LocalDate.now(FUSO).toString();
@@ -230,9 +242,14 @@ public class AiService {
       mensagens.add(Map.of("role", m.role(), "content", m.content()));
     }
 
-    // Rede de segurança: se o histórico veio vazio, garante a mensagem do usuário.
-    if (mensagens.size() == 1) {
-      mensagens.add(Map.of("role", "user", "content", mensagemUsuario));
+    if (incluirMensagemAtual) {
+      boolean ultimaJaEhUsuario =
+          !historico.isEmpty()
+              && "user".equals(historico.get(historico.size() - 1).role())
+              && mensagemUsuario.equals(historico.get(historico.size() - 1).content());
+      if (!ultimaJaEhUsuario) {
+        mensagens.add(Map.of("role", "user", "content", mensagemUsuario));
+      }
     }
 
     return mensagens;
@@ -276,9 +293,10 @@ public class AiService {
     List<AiResponse.AiPropostaLancamento> propostas = new ArrayList<>();
     String consultaCorpo = null;
     String esclarecimentoLinha = null;
+    StringBuilder textoLivre = new StringBuilder();
 
     for (String linha : t.split("\\R")) {
-      String l = linha.trim();
+      String l = sanitizarLinhaProtocolo(linha);
       if (l.isEmpty()) {
         continue;
       }
@@ -291,6 +309,9 @@ public class AiService {
         consultaCorpo = l.substring("CONSULTA|".length()).trim();
       } else if (l.startsWith("ESCLARECIMENTO|") && esclarecimentoLinha == null) {
         esclarecimentoLinha = l;
+      } else if (FerramentaChamadaParser.parse(l) == null) {
+        if (!textoLivre.isEmpty()) textoLivre.append('\n');
+        textoLivre.append(l);
       }
     }
 
@@ -304,8 +325,27 @@ public class AiService {
       return interpretarEsclarecimento(esclarecimentoLinha);
     }
 
-    // Fallback: trata como esclarecimento com o texto bruto
-    return new AiResponse("esclarecimento", t, List.of(), null, List.of(), List.of());
+    String livre = textoLivre.toString().trim();
+    return new AiResponse(
+        "esclarecimento",
+        livre.isEmpty() ? "Não consegui entender a resposta. Pode repetir?" : livre,
+        List.of(),
+        null,
+        List.of(),
+        List.of());
+  }
+
+  private String sanitizarLinhaProtocolo(String linha) {
+    if (linha == null) return "";
+    String l = linha.trim();
+    l = l.replaceFirst("^```[a-zA-Z0-9_-]*\\s*", "");
+    if (l.equals("```")) return "";
+    l = l.replaceFirst("^(?i)(assistant|resposta|output)\\s*:\\s*", "");
+    l = l.replaceFirst("^[-*]\\s+", "");
+    if ((l.startsWith("`") && l.endsWith("`")) || (l.startsWith("\"") && l.endsWith("\""))) {
+      l = l.substring(1, l.length() - 1).trim();
+    }
+    return l;
   }
 
   /**
@@ -327,6 +367,41 @@ public class AiService {
     return false;
   }
 
+  private BigDecimal parseValor(String bruto) {
+    if (bruto == null) return null;
+    String s = bruto.trim();
+    if (s.isEmpty()) return null;
+    s = s.replace("R$", "").replace("\u00A0", "").replace(" ", "");
+    boolean temVirgula = s.indexOf(',') >= 0;
+    boolean temPonto = s.indexOf('.') >= 0;
+    if (temVirgula && temPonto) {
+      if (s.lastIndexOf(',') > s.lastIndexOf('.')) {
+        s = s.replace(".", "").replace(",", ".");
+      } else {
+        s = s.replace(",", "");
+      }
+    } else if (temVirgula) {
+      String[] partes = s.split(",");
+      if (partes.length == 2 && partes[1].length() <= 2) {
+        s = s.replace(".", "").replace(",", ".");
+      } else {
+        s = s.replace(",", "");
+      }
+    } else if (temPonto) {
+      String[] partes = s.split("\\.");
+      if (!(partes.length == 2 && partes[1].length() <= 2)) {
+        s = s.replace(".", "");
+      }
+    }
+    s = s.replaceAll("[^0-9\\.-]", "");
+    if (s.isEmpty() || "-".equals(s) || ".".equals(s)) return null;
+    try {
+      return new BigDecimal(s).setScale(2, RoundingMode.HALF_EVEN);
+    } catch (NumberFormatException e) {
+      return null;
+    }
+  }
+
   private AiResponse.AiPropostaLancamento parseLancamento(String linha) {
     String[] partes = linha.split("\\|", -1);
     if (partes.length < 4) {
@@ -339,7 +414,7 @@ public class AiService {
     }
 
     BigDecimal valor = parseValor(partes[2]);
-    if (valor.signum() <= 0) {
+    if (valor == null || valor.signum() <= 0) {
       return null;
     }
 
@@ -420,20 +495,25 @@ public class AiService {
     return new AiResponse("esclarecimento", corpo, List.of(), null, List.of(), opcoes);
   }
 
-  /** Converte o texto em BigDecimal com escala 2 e HALF_EVEN (R1 — sem double/float). */
-  private BigDecimal parseValor(String s) {
-    if (s == null) {
-      return ZERO;
-    }
-    String limpo = s.trim().replace(",", ".").replaceAll("[^0-9.]", "");
-    if (limpo.isBlank()) {
-      return ZERO;
-    }
-    try {
-      return new BigDecimal(limpo).setScale(2, RoundingMode.HALF_EVEN);
-    } catch (NumberFormatException e) {
-      return ZERO;
-    }
+  private AiResponse respostaIndisponivel(RuntimeException e) {
+    String detalhe = e.getMessage();
+    String mensagem =
+        (detalhe == null || detalhe.isBlank())
+            ? "Não foi possível falar com o serviço de IA agora. Tente novamente em instantes."
+            : detalhe;
+    return new AiResponse(
+        "esclarecimento",
+        mensagem,
+        List.of(),
+        null,
+        List.of(),
+        List.of("Tentar novamente", "Falar com atendente"));
+  }
+
+  /** Converte texto em BigDecimal com escala 2 e HALF_EVEN (R1 — sem double/float). */
+  private BigDecimal parseValorObrigatorio(String s) {
+    BigDecimal valor = parseValor(s);
+    return valor == null ? ZERO : valor;
   }
 
   /* ========================================================================

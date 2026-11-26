@@ -87,13 +87,37 @@ public class AiMemoryStore {
     Objects.requireNonNull(mensagem, "mensagem");
     if (!persistente()) {
       AiSession sessao = obterOuCriar(sessionId, empresaId, usuarioId);
-      sessao.adicionar(mensagem);
+      synchronized (sessao) {
+        List<AiMessage> historico = sessao.mensagens();
+        if (deveIgnorar(historico, mensagem)) {
+          return;
+        }
+        sessao.adicionar(mensagem);
+      }
       return;
     }
     AiMemoriaSessao entidade = obterOuCriarEntidade(sessionId, empresaId, usuarioId);
+    List<AiMemoriaMensagem> recentes =
+        mensagemRepository.findTop20BySessaoIdOrderByIdDesc(entidade.getId());
+    AiMemoriaMensagem ultima = recentes.isEmpty() ? null : recentes.get(0);
+    if (ultima != null && deveIgnorar(ultima.getPapel(), ultima.getConteudo(), mensagem)) {
+      return;
+    }
     mensagemRepository.save(new AiMemoriaMensagem(entidade, mensagem.role(), mensagem.content()));
     entidade.setAtualizadoEm(Instant.now());
     sessaoRepository.save(entidade);
+  }
+
+  private boolean deveIgnorar(List<AiMessage> historico, AiMessage mensagem) {
+    if (historico.isEmpty()) return false;
+    AiMessage ultima = historico.get(historico.size() - 1);
+    return deveIgnorar(ultima.role(), ultima.content(), mensagem);
+  }
+
+  private boolean deveIgnorar(String roleAnterior, String conteudoAnterior, AiMessage mensagem) {
+    if (roleAnterior == null || mensagem.role() == null) return false;
+    if (!roleAnterior.equals(mensagem.role())) return false;
+    return Objects.equals(conteudoAnterior, mensagem.content());
   }
 
   public List<AiMessage> obterHistorico(String sessionId, String empresaId) {
