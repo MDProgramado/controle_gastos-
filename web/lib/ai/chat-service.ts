@@ -43,7 +43,7 @@ export async function enviarMensagem(
         intent: "esclarecimento",
         resposta:
           "Não foi possível conectar ao serviço de IA. Tente novamente mais tarde.",
-        opcoes: ["Tentar novamente"],
+        opcoes: ["Tentar novamente", "Falar com atendente"],
       };
     }
 
@@ -55,7 +55,7 @@ export async function enviarMensagem(
         erro instanceof Error && erro.message
           ? erro.message
           : "Não foi possível conectar ao serviço de IA. Tente novamente mais tarde.",
-      opcoes: ["Tentar novamente"],
+      opcoes: ["Tentar novamente", "Falar com atendente"],
     };
   }
 }
