@@ -9,6 +9,8 @@ import com.controlefinanceiro.common.CategoriaNaoEncontradaException;
 import com.controlefinanceiro.common.CategoriaTipoIncompativelException;
 import com.controlefinanceiro.common.CodigoVerificacaoCooldownException;
 import com.controlefinanceiro.common.CodigoVerificacaoInvalidoException;
+import com.controlefinanceiro.common.ContaAPagarJaPagaException;
+import com.controlefinanceiro.common.ContaAPagarNaoEncontradoException;
 import com.controlefinanceiro.common.ConviteInvalidoException;
 import com.controlefinanceiro.common.CredenciaisInvalidasException;
 import com.controlefinanceiro.common.LancamentoNaoEncontradoException;
@@ -89,6 +91,16 @@ public class ProblemDetailExceptionHandler {
   @ExceptionHandler(TicketNaoEncontradoException.class)
   public ProblemDetail ticketNaoEncontrado(TicketNaoEncontradoException ex) {
     return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+  }
+
+  @ExceptionHandler(ContaAPagarNaoEncontradoException.class)
+  public ProblemDetail contaAPagarNaoEncontrada(ContaAPagarNaoEncontradoException ex) {
+    return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+  }
+
+  @ExceptionHandler(ContaAPagarJaPagaException.class)
+  public ProblemDetail contaAPagarJaPaga(ContaAPagarJaPagaException ex) {
+    return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
   }
 
   @ExceptionHandler(TicketStatusInvalidoException.class)

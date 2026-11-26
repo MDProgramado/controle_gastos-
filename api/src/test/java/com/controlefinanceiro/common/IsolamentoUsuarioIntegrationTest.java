@@ -39,7 +39,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 class IsolamentoUsuarioIntegrationTest {
 
   @Container @ServiceConnection
-  static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
+  static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("pgvector/pgvector:pg16");
 
   private static final String SENHA = "fixture-somente-testes-it";
   private static final String SUFOXO = UUID.randomUUID().toString().substring(0, 8);
@@ -165,9 +165,9 @@ class IsolamentoUsuarioIntegrationTest {
     BigDecimal esperadoUserA = totalEntradas(empresaA, userA);
     BigDecimal esperadoAdminA = totalEntradas(empresaA, adminA);
 
-    assertThat(dashboardUserA.get("totalEntradas").decimalValue())
+    assertThat(new BigDecimal(dashboardUserA.get("totalEntradas").asText()))
         .isEqualByComparingTo(esperadoUserA);
-    assertThat(dashboardAdminA.get("totalEntradas").decimalValue())
+    assertThat(new BigDecimal(dashboardAdminA.get("totalEntradas").asText()))
         .isEqualByComparingTo(esperadoAdminA);
     assertThat(esperadoUserA).isNotEqualByComparingTo(esperadoAdminA);
   }

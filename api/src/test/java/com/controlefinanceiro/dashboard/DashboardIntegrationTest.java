@@ -36,7 +36,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 class DashboardIntegrationTest {
 
   @Container @ServiceConnection
-  static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
+  static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("pgvector/pgvector:pg16");
 
   /** Fixture óbvio de teste — a senha real vive só no env var do serviço (D-04). */
   private static final String SENHA_FIXTURE = "fixture-somente-testes-it";

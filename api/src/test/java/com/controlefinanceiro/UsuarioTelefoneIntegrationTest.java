@@ -42,7 +42,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 class UsuarioTelefoneIntegrationTest {
 
   @Container @ServiceConnection
-  static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
+  static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("pgvector/pgvector:pg16");
 
   private static final String SENHA_FIXTURE = "fixture-somente-testes-it";
 

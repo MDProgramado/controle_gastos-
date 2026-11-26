@@ -4,9 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
-import com.controlefinanceiro.auth.JwtService;
-import com.controlefinanceiro.empresa.Empresa;
+import com.controlefinanceiro.common.Role;
+import com.controlefinanceiro.usuario.TenantOnboardingService;
 import com.controlefinanceiro.usuario.Usuario;
+import com.controlefinanceiro.usuario.UsuarioRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,14 +36,15 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 class AiIntegrationTest {
 
   @Container @ServiceConnection
-  static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
+  static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("pgvector/pgvector:pg16");
 
   /** Fixture óbvio de teste — a senha real vive só no env var do serviço (D-04). */
   private static final String SENHA_FIXTURE = "fixture-somente-testes-it";
 
   @Autowired private TestRestTemplate rest;
   @Autowired private ObjectMapper mapper;
-  @Autowired private JwtService jwtService;
+  @Autowired private TenantOnboardingService onboarding;
+  @Autowired private UsuarioRepository usuarioRepository;
   @MockBean private AiClient aiClient;
 
   private String tokenAdmin;
@@ -169,8 +171,10 @@ class AiIntegrationTest {
 
   @Test
   void usuarioSemRoleAdminNaoAcessaConhecimentoDaIa() throws Exception {
+    onboarding.onboarding(
+        "Empresa Usuario IA", "Usuario IA", "user-ia@controle.com", SENHA_FIXTURE);
     HttpHeaders headers = new HttpHeaders();
-    headers.setBearerAuth(tokenFixado(1L, "USER"));
+    headers.setBearerAuth(login("user-ia@controle.com", SENHA_FIXTURE));
     headers.setContentType(MediaType.APPLICATION_JSON);
 
     assertThat(
@@ -201,8 +205,15 @@ class AiIntegrationTest {
 
   @Test
   void conhecimentoEscopadoPorEmpresa() throws Exception {
+    onboarding.onboarding(
+        "Empresa Dois IA", "Admin Dois", "admin-dois-ia@controle.com", SENHA_FIXTURE);
+    Usuario adminDoisUsuario =
+        usuarioRepository.findByEmail("admin-dois-ia@controle.com").orElseThrow();
+    adminDoisUsuario.setRole(Role.ADMIN.valor());
+    usuarioRepository.save(adminDoisUsuario);
+
     HttpHeaders adminUm = new HttpHeaders();
-    adminUm.setBearerAuth(tokenFixado(1L, "ADMIN"));
+    adminUm.setBearerAuth(tokenAdmin);
     adminUm.setContentType(MediaType.APPLICATION_JSON);
     assertThat(
             rest.exchange(
@@ -214,29 +225,20 @@ class AiIntegrationTest {
         .isEqualTo(HttpStatus.OK);
 
     HttpHeaders adminDois = new HttpHeaders();
-    adminDois.setBearerAuth(tokenFixado(2L, "ADMIN"));
+    adminDois.setBearerAuth(login("admin-dois-ia@controle.com", SENHA_FIXTURE));
     ResponseEntity<String> resposta =
         rest.exchange(
             "/api/ai/chat/conhecimento", HttpMethod.GET, new HttpEntity<>(adminDois), String.class);
 
     assertThat(resposta.getStatusCode()).isEqualTo(HttpStatus.OK);
-    assertThat(resposta.getBody()).doesNotContain("REGRA DA EMPRESA UM");
+    assertThat(resposta.getBody() == null ? "" : resposta.getBody())
+        .doesNotContain("REGRA DA EMPRESA UM");
 
     rest.exchange(
         "/api/ai/chat/conhecimento/limpar",
         HttpMethod.POST,
         new HttpEntity<>(adminUm),
         String.class);
-  }
-
-  private String tokenFixado(long empresaId, String role) {
-    Empresa empresa = new Empresa();
-    empresa.setId(empresaId);
-    Usuario usuario = new Usuario();
-    usuario.setEmail("fixture@controle.com");
-    usuario.setEmpresa(empresa);
-    usuario.setRole(role);
-    return jwtService.gerarToken(usuario);
   }
 
   private String login(String email, String senha) throws Exception {

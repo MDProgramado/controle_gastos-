@@ -13,6 +13,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -69,6 +70,18 @@ public class ContaAPagar {
 
   @Column(nullable = false, length = 16)
   private String origem; // CARTAO | EXTRATO
+
+  @Column(nullable = false)
+  private boolean pago;
+
+  private OffsetDateTime pagoEm;
+
+  @Column(name = "lancamento_id")
+  private Long lancamentoId;
+
+  @Version
+  @Column(nullable = false)
+  private int versao;
 
   @Column(name = "criado_em", nullable = false, updatable = false)
   private OffsetDateTime criadoEm;
@@ -174,6 +187,34 @@ public class ContaAPagar {
 
   public void setOrigem(String origem) {
     this.origem = origem;
+  }
+
+  public boolean isPago() {
+    return pago;
+  }
+
+  public void setPago(boolean pago) {
+    this.pago = pago;
+  }
+
+  public OffsetDateTime getPagoEm() {
+    return pagoEm;
+  }
+
+  public void setPagoEm(OffsetDateTime pagoEm) {
+    this.pagoEm = pagoEm;
+  }
+
+  public Long getLancamentoId() {
+    return lancamentoId;
+  }
+
+  public void setLancamentoId(Long lancamentoId) {
+    this.lancamentoId = lancamentoId;
+  }
+
+  public int getVersao() {
+    return versao;
   }
 
   public OffsetDateTime getCriadoEm() {

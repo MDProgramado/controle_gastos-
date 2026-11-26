@@ -68,7 +68,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 class ImportacaoPdfIntegrationTest {
 
   @Container @ServiceConnection
-  static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
+  static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("pgvector/pgvector:pg16");
 
   /** Fixture óbvio de teste — a senha real vive só no env var do serviço (D-04). */
   private static final String SENHA_FIXTURE = "fixture-somente-testes-it";
@@ -524,11 +524,25 @@ class ImportacaoPdfIntegrationTest {
   /** Assina um JWT fixture HS256 válido (mesmo padrão de AuthTenantIntegrationTest). */
   private String tokenFixado(String email, long empresaId, String role) throws Exception {
     String segredo = System.getenv("JWT_SECRET");
+    Long usuarioId =
+        jdbc.queryForObject(
+            "SELECT id FROM usuario WHERE email = ? AND empresa_id = ?",
+            Long.class,
+            email,
+            empresaId);
+    Long tokenVersion =
+        jdbc.queryForObject(
+            "SELECT token_version FROM usuario WHERE email = ? AND empresa_id = ?",
+            Long.class,
+            email,
+            empresaId);
     Date agora = new Date();
     JWTClaimsSet claims =
         new JWTClaimsSet.Builder()
             .subject(email)
             .claim("empresa_id", empresaId)
+            .claim("usuario_id", usuarioId)
+            .claim("token_version", tokenVersion)
             .claim("role", role)
             .issueTime(agora)
             .expirationTime(new Date(agora.getTime() + 3600_000L))
