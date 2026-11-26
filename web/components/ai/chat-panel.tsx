@@ -183,7 +183,7 @@ export function ChatPanel({
 
   const tentarNovamente = useCallback(() => {
     if (mensagemErro) {
-      enviarMensagemHandler(mensagemErro)
+      void enviarMensagemHandler(mensagemErro)
       setMensagemErro(null)
     }
   }, [mensagemErro, enviarMensagemHandler])
@@ -395,8 +395,17 @@ export function ChatPanel({
                             variant="outline"
                             size="sm"
                             onClick={() => {
+                              if (opcao === "Tentar novamente") {
+                                const ultimaUsuario = [...mensagens]
+                                  .reverse()
+                                  .find((msg) => msg.role === "user")
+                                if (ultimaUsuario) {
+                                  void enviarMensagemHandler(ultimaUsuario.content)
+                                }
+                                return
+                              }
                               setValorInput(opcao)
-                              enviarMensagemHandler(opcao)
+                              void enviarMensagemHandler(opcao)
                             }}
                             className="h-auto w-full max-w-full whitespace-normal break-words px-3 py-2 text-left leading-snug text-xs"
                           >

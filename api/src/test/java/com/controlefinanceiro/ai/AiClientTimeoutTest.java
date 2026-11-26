@@ -13,16 +13,25 @@ import org.springframework.test.util.ReflectionTestUtils;
 class AiClientTimeoutTest {
 
   @Test
-  @DisplayName("OpenRouter usa timeouts configuráveis com padrões 3s/30s")
+  @DisplayName("OpenRouter usa timeouts configuráveis com padrões 3s/25s")
   void timeoutsConfiguraveisComPadroes() throws Exception {
     Constructor<AiClient> construtor =
         AiClient.class.getDeclaredConstructor(
-            String.class, String.class, String.class, String.class, int.class, int.class);
+            String.class,
+            String.class,
+            String.class,
+            String.class,
+            int.class,
+            int.class,
+            int.class,
+            long.class);
     Annotation[][] anotacoes = construtor.getParameterAnnotations();
     assertThat(valor(anotacoes[4])).isEqualTo("${ai.openrouter.connect-timeout-ms:3000}");
-    assertThat(valor(anotacoes[5])).isEqualTo("${ai.openrouter.read-timeout-ms:30000}");
+    assertThat(valor(anotacoes[5])).isEqualTo("${ai.openrouter.read-timeout-ms:25000}");
+    assertThat(valor(anotacoes[6])).isEqualTo("${ai.openrouter.max-tokens-chat:2000}");
+    assertThat(valor(anotacoes[7])).isEqualTo("${ai.openrouter.chat-deadline-ms:55000}");
 
-    AiClient client = construtor.newInstance("chave", "modelo", "", "", 3000, 15000);
+    AiClient client = construtor.newInstance("chave", "modelo", "", "", 3000, 15000, 2000, 55000L);
     Object fabrica = campo(client, "restClient", "clientRequestFactory");
 
     assertThat(fabrica).isInstanceOf(SimpleClientHttpRequestFactory.class);
