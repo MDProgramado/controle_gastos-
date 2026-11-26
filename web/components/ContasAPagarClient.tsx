@@ -80,8 +80,11 @@ export function ContasAPagarClient({ contasIniciais }: ContasAPagarClientProps) 
       if (!res.ok) {
         let mensagem = "Não foi possível dar baixa na conta.";
         try {
-          const dados = (await res.json()) as { mensagem?: string };
-          if (dados?.mensagem) mensagem = dados.mensagem;
+          const dados = (await res.json()) as {
+            detail?: string;
+            erro?: string;
+          };
+          mensagem = dados?.detail ?? dados?.erro ?? mensagem;
         } catch {
           setErroBaixa("Não foi possível dar baixa na conta.");
           return;

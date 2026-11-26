@@ -20,7 +20,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 class V9MultiTenantMigrationTest {
 
   @Container @ServiceConnection
-  static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
+  static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("pgvector/pgvector:pg16");
 
   @Autowired private JdbcTemplate jdbc;
 

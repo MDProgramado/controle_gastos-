@@ -302,7 +302,7 @@ test("launcher do Ogum fica inferior direito com estado acessível", () => {
     "utf8",
   );
 
-  expect(fonte).toContain("right-4");
+  expect(fonte).toContain("right-3");
   expect(fonte).toContain("/ogum.svg");
   expect(fonte).toContain("aria-expanded");
   expect(fonte).not.toContain("left-4");

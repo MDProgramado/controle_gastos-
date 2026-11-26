@@ -26,7 +26,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 class HealthIntegrationTest {
 
   @Container @ServiceConnection
-  static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
+  static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("pgvector/pgvector:pg16");
 
   @Autowired private TestRestTemplate rest;
 

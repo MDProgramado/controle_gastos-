@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -34,7 +35,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 class HelpdeskAutorizacaoIntegrationTest {
 
   @Container @ServiceConnection
-  static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
+  static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("pgvector/pgvector:pg16");
 
   private static final String SENHA = "fixture-somente-testes-it";
   private static final String SUFOXO = UUID.randomUUID().toString().substring(0, 8);
@@ -56,6 +57,12 @@ class HelpdeskAutorizacaoIntegrationTest {
     criarUsuario(empresaId, "user-auth-" + SUFOXO + "@teste.com", hash, "USER");
     tokenAdmin = login("admin-auth-" + SUFOXO + "@teste.com");
     tokenUser = login("user-auth-" + SUFOXO + "@teste.com");
+  }
+
+  @BeforeEach
+  void limparTicketsEntreTestes() {
+    jdbc.update("delete from helpdesk_mensagem where empresa_id = ?", empresaId);
+    jdbc.update("delete from helpdesk_ticket where empresa_id = ?", empresaId);
   }
 
   @AfterAll

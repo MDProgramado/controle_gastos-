@@ -36,7 +36,7 @@ export function ChatFlutuante({ role = null }: { role?: PapelAssistente }) {
         <div
           role="dialog"
           aria-label="Chat com a IA"
-          className="fixed bottom-20 right-4 z-40 flex h-[min(32rem,calc(100dvh-7rem))] w-[min(24rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-xl border border-border bg-card shadow-2xl"
+          className="fixed bottom-20 right-3 z-40 flex h-[min(32rem,calc(100dvh-7rem))] w-[min(24rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-xl border border-border bg-card shadow-2xl"
         >
           <ChatPanel
             onClose={() => setChatAberto(false)}
@@ -49,7 +49,7 @@ export function ChatFlutuante({ role = null }: { role?: PapelAssistente }) {
         <div
           id="acoes-assistente"
           aria-label="Ações do assistente"
-          className="fixed bottom-20 right-4 z-40 w-[min(18rem,calc(100vw-2rem))] rounded-xl border border-border bg-card p-2 shadow-xl"
+          className="fixed bottom-20 right-3 z-40 w-[min(18rem,calc(100vw-2rem))] rounded-xl border border-border bg-card p-2 shadow-xl"
         >
           {acoes.map((acao) =>
             acao.abreChat ? (
@@ -90,7 +90,7 @@ export function ChatFlutuante({ role = null }: { role?: PapelAssistente }) {
         aria-expanded={menuAberto}
         aria-controls={menuAberto ? "acoes-assistente" : undefined}
         className={cn(
-          "fixed bottom-4 right-4 z-40 flex h-12 w-12 items-center justify-center rounded-full border border-border bg-card shadow-lg transition-transform duration-200 hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+          "fixed bottom-4 right-3 z-40 flex h-12 w-12 items-center justify-center rounded-full border border-border bg-card shadow-lg transition-transform duration-200 hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
           menuAberto && "ring-2 ring-primary",
         )}
       >

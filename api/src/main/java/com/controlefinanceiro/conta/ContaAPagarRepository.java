@@ -1,5 +1,6 @@
 package com.controlefinanceiro.conta;
 
+import java.time.LocalDate;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -21,4 +22,18 @@ public interface ContaAPagarRepository extends JpaRepository<ContaAPagar, Long> 
           + " and c.usuario.id = :usuarioId")
   java.util.Optional<ContaAPagar> findByIdAndEmpresaIdAndUsuarioId(
       @Param("id") Long id, @Param("empresaId") Long empresaId, @Param("usuarioId") Long usuarioId);
+
+  @Query(
+      "select c from ContaAPagar c where c.empresa.id = :empresaId"
+          + " and c.usuario.id = :usuarioId"
+          + " and (:pago is null or c.pago = :pago)"
+          + " and (:vencimentoDe is null or c.vencimento >= :vencimentoDe)"
+          + " and (:vencimentoAte is null or c.vencimento <= :vencimentoAte)"
+          + " order by c.vencimento asc nulls last, c.id asc")
+  List<ContaAPagar> findByEmpresaIdAndUsuarioIdAndFiltros(
+      @Param("empresaId") Long empresaId,
+      @Param("usuarioId") Long usuarioId,
+      @Param("pago") Boolean pago,
+      @Param("vencimentoDe") LocalDate vencimentoDe,
+      @Param("vencimentoAte") LocalDate vencimentoAte);
 }

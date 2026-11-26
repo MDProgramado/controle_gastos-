@@ -33,7 +33,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 class WhatsappConfirmacaoIntegrationTest {
 
   @Container @ServiceConnection
-  static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
+  static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("pgvector/pgvector:pg16");
 
   private static final String NUMERO = "+5571999888777";
   private static final String OUTRO_NUMERO = "+5571888777666";

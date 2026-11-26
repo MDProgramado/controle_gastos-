@@ -29,7 +29,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 class SessaoContextoIntegrationTest {
 
   @Container @ServiceConnection
-  static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
+  static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("pgvector/pgvector:pg16");
 
   @Autowired private MockMvc mvc;
   @Autowired private ObjectMapper objectMapper;
