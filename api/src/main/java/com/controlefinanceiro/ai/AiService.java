@@ -32,6 +32,7 @@ import org.springframework.stereotype.Service;
 public class AiService {
 
   private static final int MAX_MENSAGENS_HISTORICO = 20;
+  private static final int MAX_ITERACOES_FERRAMENTA = 2;
   private static final ZoneId FUSO = ZoneId.of("America/Sao_Paulo");
   private static final BigDecimal ZERO = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_EVEN);
   private static final ObjectMapper MAPPER = new ObjectMapper();
@@ -95,16 +96,40 @@ public class AiService {
     }
     List<AiResponse.AiCitacao> citacoes = List.of();
 
-    FerramentaChamada chamada = extrairChamadaFerramenta(respostaTexto);
-    if (chamada != null && ferramentaRegistry != null) {
-      ResultadoFerramenta resultado =
-          ferramentaRegistry.executar(chamada, parseLong(empresaId), parseLong(usuarioId));
-      citacoes = resultado.citacoes() == null ? List.of() : resultado.citacoes();
+    for (int i = 0; i < MAX_ITERACOES_FERRAMENTA; i++) {
+      FerramentaChamada chamada = extrairChamadaFerramenta(respostaTexto);
+      if (chamada == null || ferramentaRegistry == null) {
+        break;
+      }
+      ResultadoFerramenta resultado;
+      try {
+        resultado =
+            ferramentaRegistry.executar(chamada, parseLong(empresaId), parseLong(usuarioId));
+      } catch (RuntimeException e) {
+        resultado =
+            new ResultadoFerramenta(
+                "Não foi possível executar a ferramenta solicitada com segurança.", List.of());
+      }
+      if (resultado.citacoes() != null && !resultado.citacoes().isEmpty()) {
+        citacoes = resultado.citacoes();
+      }
       mensagens = comResultadoDaFerramenta(mensagens, respostaTexto, resultado);
       try {
         respostaTexto = aiClient.completar(mensagens);
       } catch (RuntimeException e) {
         return respostaIndisponivel(e);
+      }
+      if (extrairChamadaFerramenta(respostaTexto) == null) {
+        break;
+      }
+      if (i == MAX_ITERACOES_FERRAMENTA - 1) {
+        return new AiResponse(
+            "esclarecimento",
+            "Não consegui concluir a consulta com segurança. Pode reformular a pergunta?",
+            List.of(),
+            null,
+            List.of(),
+            List.of("Tentar novamente", "Falar com atendente"));
       }
     }
 
