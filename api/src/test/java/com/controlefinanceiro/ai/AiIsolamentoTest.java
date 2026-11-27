@@ -77,12 +77,10 @@ class AiIsolamentoTest {
   private String promptDaChamada(int indice, int totalChamadas) {
     @SuppressWarnings("unchecked")
     ArgumentCaptor<List<Map<String, Object>>> captor = ArgumentCaptor.forClass(List.class);
-    verify(aiClient, times(totalChamadas)).completar(captor.capture(), org.mockito.ArgumentMatchers.anyLong());
+    verify(aiClient, times(totalChamadas))
+        .completar(captor.capture(), org.mockito.ArgumentMatchers.anyLong());
     return captor.getAllValues().get(indice).stream()
         .map(mensagem -> String.valueOf(mensagem.get("content")))
         .collect(Collectors.joining("\n"));
   }
 }
-
-
-

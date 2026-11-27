@@ -310,4 +310,3 @@ class AiServiceTest {
     assertThat(aiService.obterHistorico("sessao-falha", "empresa-1")).isEmpty();
   }
 }
-
