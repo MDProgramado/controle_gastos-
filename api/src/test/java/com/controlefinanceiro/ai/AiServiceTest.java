@@ -66,6 +66,31 @@ class AiServiceTest {
   }
 
   @Test
+  @DisplayName("CONSULTA multiline captura continuacao e sanitiza markdown")
+  void consultaMultilineCapturaContinuacaoESanitizaMarkdown() {
+    when(aiClient.completar(any()))
+        .thenReturn("**CONSULTA|** Seu saldo é **R$ 1.000,00**\nDetalhe: entrada de R$ 1.500,00\nSaída de R$ 500,00");
+    AiResponse resposta = aiService.processar("s-consulta", "empresa-1", "como está meu saldo?");
+    assertThat(resposta.intent()).isEqualTo("consulta");
+    assertThat(resposta.resposta()).contains("Seu saldo é R$ 1.000,00");
+    assertThat(resposta.resposta()).contains("Detalhe: entrada de R$ 1.500,00");
+    assertThat(resposta.resposta()).contains("Saída de R$ 500,00");
+    assertThat(resposta.resposta()).doesNotContain("**");
+  }
+
+  @Test
+  @DisplayName("ESCLARECIMENTO multiline captura continuacao ate proximo protocolo")
+  void esclarecimentoMultilineCapturaContinuacao() {
+    when(aiClient.completar(any()))
+        .thenReturn("ESCLARECIMENTO|Qual categoria você quer?\nPode ser **Mercado** ou Lazer\nMercado|Lazer");
+    AiResponse resposta = aiService.processar("s-esc", "empresa-1", "gastei 10");
+    assertThat(resposta.intent()).isEqualTo("esclarecimento");
+    assertThat(resposta.resposta()).contains("Qual categoria você quer?");
+    assertThat(resposta.resposta()).contains("Pode ser Mercado ou Lazer");
+    assertThat(resposta.resposta()).doesNotContain("**");
+  }
+
+  @Test
   @DisplayName("mensagem com varios itens retorna multiplas propostas")
   void mensagemComVariosItensRetornaMultiplasPropostas() {
     when(aiClient.completar(any()))

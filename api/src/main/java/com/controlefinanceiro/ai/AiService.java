@@ -299,9 +299,10 @@ public class AiService {
 
     String t = texto.trim();
     List<AiResponse.AiPropostaLancamento> propostas = new ArrayList<>();
-    String consultaCorpo = null;
-    String esclarecimentoLinha = null;
+    StringBuilder consultaCorpo = null;
+    StringBuilder esclarecimentoBloco = null;
     StringBuilder textoLivre = new StringBuilder();
+    String modo = null;
 
     for (String linha : t.split("\\R")) {
       String l = sanitizarLinhaProtocolo(linha);
@@ -309,17 +310,38 @@ public class AiService {
         continue;
       }
       if (l.startsWith("LANCAMENTO|")) {
+        modo = null;
         AiResponse.AiPropostaLancamento p = parseLancamento(l);
         if (p != null && !contemProposta(propostas, p)) {
           propostas.add(p);
         }
-      } else if (l.startsWith("CONSULTA|") && consultaCorpo == null) {
-        consultaCorpo = l.substring("CONSULTA|".length()).trim();
-      } else if (l.startsWith("ESCLARECIMENTO|") && esclarecimentoLinha == null) {
-        esclarecimentoLinha = l;
+      } else if (l.startsWith("CONSULTA|")) {
+        if (consultaCorpo == null) {
+          consultaCorpo = new StringBuilder(l.substring("CONSULTA|".length()).trim());
+          modo = "CONSULTA";
+        } else {
+          modo = null;
+        }
+      } else if (l.startsWith("ESCLARECIMENTO|")) {
+        if (esclarecimentoBloco == null) {
+          esclarecimentoBloco = new StringBuilder(l);
+          modo = "ESCLARECIMENTO";
+        } else {
+          modo = null;
+        }
       } else if (FerramentaChamadaParser.parse(l) == null) {
-        if (!textoLivre.isEmpty()) textoLivre.append('\n');
-        textoLivre.append(l);
+        if ("CONSULTA".equals(modo) && consultaCorpo != null) {
+          if (consultaCorpo.length() > 0) consultaCorpo.append('\n');
+          consultaCorpo.append(l);
+        } else if ("ESCLARECIMENTO".equals(modo) && esclarecimentoBloco != null) {
+          esclarecimentoBloco.append('\n').append(l);
+        } else {
+          modo = null;
+          if (!textoLivre.isEmpty()) textoLivre.append('\n');
+          textoLivre.append(l);
+        }
+      } else {
+        modo = null;
       }
     }
 
@@ -327,13 +349,14 @@ public class AiService {
       return montarRespostaLancamento(propostas);
     }
     if (consultaCorpo != null) {
-      return new AiResponse("consulta", consultaCorpo, List.of(), null, List.of(), List.of());
+      return new AiResponse("consulta", consultaCorpo.toString().trim(), List.of(), null, List.of(), List.of());
     }
-    if (esclarecimentoLinha != null) {
-      return interpretarEsclarecimento(esclarecimentoLinha);
+    if (esclarecimentoBloco != null) {
+      return interpretarEsclarecimento(esclarecimentoBloco.toString());
     }
 
     String livre = textoLivre.toString().trim();
+
     return new AiResponse(
         "esclarecimento",
         livre.isEmpty() ? "Não consegui entender a resposta. Pode repetir?" : livre,
@@ -505,8 +528,14 @@ public class AiService {
   }
 
   private AiResponse interpretarEsclarecimento(String t) {
-    String[] partes = t.split("\\|", -1);
-    String corpo = partes.length > 1 ? partes[1].trim() : "Não entendi. Pode explicar melhor?";
+    String[] linhas = t.split("\\R", 2);
+    String primeira = linhas[0];
+    String continuacao = linhas.length > 1 ? linhas[1].trim() : "";
+    String[] partes = primeira.split("\\|", -1);
+    String corpo = partes.length > 1 ? partes[1].trim() : "Nǜo entendi. Pode explicar melhor?";
+    if (!continuacao.isBlank()) {
+      corpo = (corpo + "\n" + continuacao).trim();
+    }
     List<String> opcoes = new ArrayList<>();
     for (int i = 2; i < partes.length; i++) {
       String opcao = partes[i].trim();
