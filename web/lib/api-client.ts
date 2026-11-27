@@ -7,7 +7,7 @@
 - Next (/api/ai/chat, /api/categorias), que repassam o Bearer para a API.
  */
 
-import { AI_TIMEOUT_MS, API_TIMEOUT_MS } from "./bff-helpers";
+import { AI_TIMEOUT_MS, API_TIMEOUT_MS, IMPORTACAO_TIMEOUT_MS } from "./bff-helpers";
 
 async function fetchBff(
   url: string,
@@ -383,7 +383,7 @@ export async function analisarPDFs(
       method: "POST",
       body: form, // o browser gera o multipart com boundary — não setar Content-Type
       cache: "no-store",
-    });
+    }, IMPORTACAO_TIMEOUT_MS + 5000);
     if (!res.ok) {
       const detalhe = await extrairDetalhe(res);
       throw mapearErroUpload(res.status, detalhe);

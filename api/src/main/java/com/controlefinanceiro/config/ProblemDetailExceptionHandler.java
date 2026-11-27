@@ -47,6 +47,9 @@ import org.springframework.web.multipart.MultipartException;
 @RestControllerAdvice
 public class ProblemDetailExceptionHandler {
 
+  private static final org.slf4j.Logger LOG =
+      org.slf4j.LoggerFactory.getLogger(ProblemDetailExceptionHandler.class);
+
   /** D-05/T-2-01: 401 com a mensagem genérica única — nunca dizer qual campo falhou. */
   @ExceptionHandler(CredenciaisInvalidasException.class)
   public ProblemDetail credenciaisInvalidas(CredenciaisInvalidasException ex) {
@@ -267,6 +270,13 @@ public class ProblemDetailExceptionHandler {
     return ProblemDetail.forStatusAndDetail(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage());
   }
 
+  /** Rate limit do chat de IA por usuário → 429 amigável. */
+  @ExceptionHandler(com.controlefinanceiro.common.LimiteIaExcedidoException.class)
+  public ProblemDetail limiteIaExcedido(
+      com.controlefinanceiro.common.LimiteIaExcedidoException ex) {
+    return ProblemDetail.forStatusAndDetail(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage());
+  }
+
   /** Número já vinculado a outra empresa → 409. */
   @ExceptionHandler(TelefoneJaVinculadoException.class)
   public ProblemDetail telefoneJaVinculado(TelefoneJaVinculadoException ex) {
@@ -287,7 +297,16 @@ public class ProblemDetailExceptionHandler {
       return ProblemDetail.forStatusAndDetail(
           HttpStatus.SERVICE_UNAVAILABLE, "Serviço de IA não configurado. Contate o suporte.");
     }
+    LOG.error("Estado ilegal inesperado", ex);
     return ProblemDetail.forStatusAndDetail(
-        HttpStatus.INTERNAL_SERVER_ERROR, "Erro interno. Tente novamente.");
+        HttpStatus.INTERNAL_SERVER_ERROR, "Erro interno. Tente novamente em instantes.");
+  }
+
+  /** Fallback final: 500 fixo, sem vazar detalhe interno. */
+  @ExceptionHandler(Exception.class)
+  public ProblemDetail erroInterno(Exception ex) {
+    LOG.error("Erro interno não tratado", ex);
+    return ProblemDetail.forStatusAndDetail(
+        HttpStatus.INTERNAL_SERVER_ERROR, "Erro interno. Tente novamente em instantes.");
   }
 }

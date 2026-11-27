@@ -7,7 +7,6 @@ import com.controlefinanceiro.common.LogRedacao;
 import com.controlefinanceiro.common.NaoAutorizadoException;
 import com.controlefinanceiro.dashboard.DashboardService;
 import com.controlefinanceiro.dashboard.dto.DashboardResponse;
-import com.controlefinanceiro.lancamento.LancamentoRequest;
 import com.controlefinanceiro.lancamento.LancamentoService;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -23,7 +22,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Núcleo do webhook do WhatsApp. Chama os mesmos services dos controllers REST (LancamentoService,
@@ -47,6 +45,7 @@ public class WhatsappWebhookService {
   private final LancamentoService lancamentoService;
   private final CategoriaService categoriaService;
   private final DashboardService dashboardService;
+  private final WhatsappConfirmacaoService confirmacaoService;
 
   public WhatsappWebhookService(
       UsuarioTelefoneRepository telefoneRepository,
@@ -56,7 +55,8 @@ public class WhatsappWebhookService {
       AiService aiService,
       LancamentoService lancamentoService,
       CategoriaService categoriaService,
-      DashboardService dashboardService) {
+      DashboardService dashboardService,
+      WhatsappConfirmacaoService confirmacaoService) {
     this.telefoneRepository = telefoneRepository;
     this.mensagemRepository = mensagemRepository;
     this.confirmacaoRepository = confirmacaoRepository;
@@ -65,6 +65,7 @@ public class WhatsappWebhookService {
     this.lancamentoService = lancamentoService;
     this.categoriaService = categoriaService;
     this.dashboardService = dashboardService;
+    this.confirmacaoService = confirmacaoService;
   }
 
   /**
@@ -291,7 +292,6 @@ public class WhatsappWebhookService {
     }
   }
 
-  @Transactional
   void processarConfirmacaoTexto(String messageId, String from, String texto) {
     UsuarioTelefone telefone = telefoneRepository.findByNumeroE164(from).orElse(null);
     if (telefone == null) {
@@ -302,28 +302,23 @@ public class WhatsappWebhookService {
         messageId, from, texto, telefone.getEmpresa().getId(), telefone.getUsuario().getId());
   }
 
-  @Transactional
   void processarConfirmacaoTexto(
       String messageId, String from, String texto, Long empresaId, Long usuarioId) {
-    String[] partes = texto.trim().split("\\s+");
-    String acao = partes[0].toLowerCase(java.util.Locale.ROOT);
-    Long confirmacaoId = null;
+    WhatsappConfirmacaoResultado resultado;
     try {
-      if (partes.length > 1) {
-        confirmacaoId = Long.parseLong(partes[1]);
-      }
-    } catch (NumberFormatException e) {
-      registrarMensagem(messageId, "REJEITADA");
+      resultado =
+          confirmacaoService.processarConfirmacaoTexto(
+              messageId, from, texto, empresaId, usuarioId);
+    } catch (RuntimeException e) {
+      LOG.error("Erro ao processar confirmacao WhatsApp: {}", LogRedacao.mensagem(e));
+      envioService.enviarTexto(
+          from, "Não foi possível processar sua confirmação agora. Tente novamente.", messageId);
+      registrarMensagem(messageId, "ERRO_CONFIRMAR");
       return;
     }
-    if ("não".equals(acao) || "nao".equals(acao)) {
-      cancelarLancamento(messageId, from, confirmacaoId, empresaId, usuarioId);
-    } else {
-      confirmarLancamento(messageId, from, confirmacaoId, empresaId, usuarioId);
-    }
+    aplicarResultadoConfirmacao(messageId, from, resultado);
   }
 
-  @Transactional
   void confirmarLancamento(String messageId, String from, Long confirmacaoId) {
     UsuarioTelefone telefone = telefoneRepository.findByNumeroE164(from).orElse(null);
     if (telefone == null) {
@@ -338,82 +333,23 @@ public class WhatsappWebhookService {
         telefone.getUsuario().getId());
   }
 
-  @Transactional
   void confirmarLancamento(
       String messageId, String from, Long confirmacaoId, Long empresaId, Long usuarioId) {
-    Optional<UsuarioTelefone> telefoneOpt = telefoneRepository.findByNumeroE164(from);
-    if (telefoneOpt.isEmpty()) {
-      registrarMensagem(messageId, "REJEITADA");
-      return;
-    }
-    UsuarioTelefone telefone = telefoneOpt.get();
-    if (!identidadeValida(telefone)
-        || !Objects.equals(usuarioId, telefone.getUsuario().getId())
-        || !Objects.equals(empresaId, telefone.getEmpresa().getId())) {
-      rejeitarIdentidade(messageId, from);
-      return;
-    }
-    Long telefoneId = telefone.getId();
-    String numeroE164 = telefone.getNumeroE164();
-
-    Optional<WhatsappConfirmacaoPendente> pendenciaOpt =
-        buscarPendencia(
-            telefoneId, numeroE164, messageId, confirmacaoId, "sim", empresaId, usuarioId);
-    if (pendenciaOpt.isEmpty()) {
-      return;
-    }
-    WhatsappConfirmacaoPendente pendencia = pendenciaOpt.get();
-    Long pendenciaId = pendencia.getId();
-    OffsetDateTime agora = OffsetDateTime.now();
-
-    if (pendencia.getExpiraEm() != null && !pendencia.getExpiraEm().isAfter(agora)) {
-      if (confirmacaoRepository.expirar(pendenciaId, telefoneId, agora) == 1) {
-        envioService.enviarTexto(
-            numeroE164, "Este lançamento expirou. Envie novamente.", messageId);
-        registrarMensagem(messageId, "EXPIRADA");
-      } else {
-        envioService.enviarTexto(numeroE164, "Este lançamento já foi processado.", messageId);
-        registrarMensagem(messageId, "DUPLICADA");
-      }
-      return;
-    }
-
-    Map<String, Object> proposta = parseJson(pendencia.getProposta());
-    String tipo = (String) proposta.get("tipo");
-    BigDecimal valor = new BigDecimal((String) proposta.get("valor"));
-    LocalDate data = LocalDate.parse((String) proposta.get("data"));
-    String descricao = (String) proposta.getOrDefault("descricao", "");
-    String categoriaSugerida = (String) proposta.getOrDefault("categoriaSugerida", "");
-
-    Long categoriaId = resolverCategoria(empresaId, categoriaSugerida, tipo);
-    if (categoriaId == null) {
+    WhatsappConfirmacaoResultado resultado;
+    try {
+      resultado =
+          confirmacaoService.confirmarLancamento(
+              messageId, from, confirmacaoId, empresaId, usuarioId);
+    } catch (RuntimeException e) {
+      LOG.error("Erro ao confirmar lancamento WhatsApp: {}", LogRedacao.mensagem(e));
       envioService.enviarTexto(
-          numeroE164,
-          "Categoria '%s' não encontrada. Informe uma categoria válida."
-              .formatted(categoriaSugerida),
-          messageId);
-      registrarMensagem(messageId, "CATEGORIA_NAO_ENCONTRADA");
+          from, "Não foi possível confirmar o lançamento agora. Tente novamente.", messageId);
+      registrarMensagem(messageId, "ERRO_CONFIRMAR");
       return;
     }
-
-    if (confirmacaoRepository.confirmar(pendenciaId, telefoneId, agora) == 0) {
-      envioService.enviarTexto(numeroE164, "Este lançamento já foi processado.", messageId);
-      registrarMensagem(messageId, "DUPLICADA");
-      return;
-    }
-
-    LancamentoRequest request = new LancamentoRequest(categoriaId, tipo, valor, data, descricao);
-    lancamentoService.criarComCanal(empresaId, usuarioId, request, "WHATSAPP", messageId);
-
-    envioService.enviarTexto(
-        numeroE164,
-        "Lançamento gravado com sucesso: %s de %s em %s."
-            .formatted(tipo, valor.toPlainString(), data),
-        messageId);
-    registrarMensagem(messageId, "GRAVADA");
+    aplicarResultadoConfirmacao(messageId, from, resultado);
   }
 
-  @Transactional
   void cancelarLancamento(String messageId, String from, Long confirmacaoId) {
     UsuarioTelefone telefone = telefoneRepository.findByNumeroE164(from).orElse(null);
     if (telefone == null) {
@@ -428,104 +364,33 @@ public class WhatsappWebhookService {
         telefone.getUsuario().getId());
   }
 
-  @Transactional
   void cancelarLancamento(
       String messageId, String from, Long confirmacaoId, Long empresaId, Long usuarioId) {
-    Optional<UsuarioTelefone> telefoneOpt = telefoneRepository.findByNumeroE164(from);
-    if (telefoneOpt.isEmpty()) {
-      registrarMensagem(messageId, "REJEITADA");
-      return;
-    }
-    UsuarioTelefone telefone = telefoneOpt.get();
-    if (!identidadeValida(telefone)
-        || !Objects.equals(usuarioId, telefone.getUsuario().getId())
-        || !Objects.equals(empresaId, telefone.getEmpresa().getId())) {
-      rejeitarIdentidade(messageId, from);
-      return;
-    }
-    Long telefoneId = telefone.getId();
-    String numeroE164 = telefone.getNumeroE164();
-
-    Optional<WhatsappConfirmacaoPendente> pendenciaOpt =
-        buscarPendencia(
-            telefoneId, numeroE164, messageId, confirmacaoId, "não", empresaId, usuarioId);
-    if (pendenciaOpt.isEmpty()) {
-      return;
-    }
-
-    if (confirmacaoRepository.cancelar(pendenciaOpt.get().getId(), telefoneId) == 1) {
+    WhatsappConfirmacaoResultado resultado;
+    try {
+      resultado =
+          confirmacaoService.cancelarLancamento(
+              messageId, from, confirmacaoId, empresaId, usuarioId);
+    } catch (RuntimeException e) {
+      LOG.error("Erro ao cancelar lancamento WhatsApp: {}", LogRedacao.mensagem(e));
       envioService.enviarTexto(
-          numeroE164, "Lançamento cancelado. Nenhum valor foi gravado.", messageId);
-      registrarMensagem(messageId, "CANCELADA");
-    } else {
-      envioService.enviarTexto(numeroE164, "Este lançamento já foi processado.", messageId);
-      registrarMensagem(messageId, "DUPLICADA");
+          from, "Não foi possível cancelar o lançamento agora. Tente novamente.", messageId);
+      registrarMensagem(messageId, "ERRO_CANCELAR");
+      return;
     }
+    aplicarResultadoConfirmacao(messageId, from, resultado);
   }
 
-  private Optional<WhatsappConfirmacaoPendente> buscarPendencia(
-      Long telefoneId,
-      String numeroE164,
-      String messageId,
-      Long confirmacaoId,
-      String acao,
-      Long empresaId,
-      Long usuarioId) {
-    if (confirmacaoId != null) {
-      Optional<WhatsappConfirmacaoPendente> pendencia =
-          confirmacaoRepository.findById(confirmacaoId);
-      if (pendencia.isEmpty()
-          || !pendenciaPertenceAoUsuario(pendencia.get(), telefoneId, empresaId, usuarioId)
-          || !"PENDENTE".equals(pendencia.get().getStatus())) {
-        envioService.enviarTexto(
-            numeroE164,
-            "Este lançamento já foi processado ou não pertence a este número.",
-            messageId);
-        registrarMensagem(messageId, "REJEITADA");
-        return Optional.empty();
-      }
-      return pendencia;
-    }
-
-    long pendentes =
-        confirmacaoRepository.countByUsuarioTelefoneIdAndStatus(telefoneId, "PENDENTE");
-    if (pendentes > 1) {
-      envioService.enviarTexto(
-          numeroE164,
-          "Existe mais de um lançamento pendente. Responda " + acao + " <id> para escolher.",
-          messageId);
+  private void aplicarResultadoConfirmacao(
+      String messageId, String from, WhatsappConfirmacaoResultado resultado) {
+    if (resultado == null) {
       registrarMensagem(messageId, "REJEITADA");
-      return Optional.empty();
+      return;
     }
-    if (pendentes == 0) {
-      envioService.enviarTexto(numeroE164, "Este lançamento já foi processado.", messageId);
-      registrarMensagem(messageId, "DUPLICADA");
-      return Optional.empty();
+    if (resultado.enviarTexto() && resultado.textoEnvio() != null) {
+      envioService.enviarTexto(from, resultado.textoEnvio(), messageId);
     }
-    Optional<WhatsappConfirmacaoPendente> pendencia =
-        confirmacaoRepository.findFirstByUsuarioTelefoneIdAndStatusOrderByCriadoEmDesc(
-            telefoneId, "PENDENTE");
-    if (pendencia.isPresent()
-        && !pendenciaPertenceAoUsuario(pendencia.get(), telefoneId, empresaId, usuarioId)) {
-      envioService.enviarTexto(
-          numeroE164,
-          "Este lançamento já foi processado ou não pertence a este número.",
-          messageId);
-      registrarMensagem(messageId, "REJEITADA");
-      return Optional.empty();
-    }
-    return pendencia;
-  }
-
-  private boolean pendenciaPertenceAoUsuario(
-      WhatsappConfirmacaoPendente pendencia, Long telefoneId, Long empresaId, Long usuarioId) {
-    UsuarioTelefone telefone = pendencia.getUsuarioTelefone();
-    return telefone != null
-        && Objects.equals(telefoneId, telefone.getId())
-        && telefone.getUsuario() != null
-        && Objects.equals(usuarioId, telefone.getUsuario().getId())
-        && telefone.getEmpresa() != null
-        && Objects.equals(empresaId, telefone.getEmpresa().getId());
+    registrarMensagem(messageId, resultado.resultadoMensagem());
   }
 
   private boolean identidadeValida(UsuarioTelefone telefone) {

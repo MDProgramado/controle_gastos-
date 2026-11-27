@@ -31,8 +31,10 @@ import org.springframework.stereotype.Service;
 @Service
 public class AiService {
 
+  private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(AiService.class);
   private static final int MAX_MENSAGENS_HISTORICO = 20;
   private static final int MAX_ITERACOES_FERRAMENTA = 2;
+  private static final long CHAT_DEADLINE_MS = 50_000L;
   private static final ZoneId FUSO = ZoneId.of("America/Sao_Paulo");
   private static final BigDecimal ZERO = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_EVEN);
   private static final ObjectMapper MAPPER = new ObjectMapper();
@@ -87,10 +89,12 @@ public class AiService {
     List<AiMessage> historico = memoryStore.obterHistorico(sessionId, empresaId, usuarioId);
     List<Map<String, Object>> mensagens =
         montarMensagens(historico, mensagem, empresaId, usuarioId, true);
+    long deadlineNanos =
+        System.nanoTime() + java.time.Duration.ofMillis(CHAT_DEADLINE_MS).toNanos();
 
     String respostaTexto;
     try {
-      respostaTexto = aiClient.completar(mensagens);
+      respostaTexto = aiClient.completar(mensagens, deadlineNanos);
     } catch (RuntimeException e) {
       return respostaIndisponivel(e);
     }
@@ -115,7 +119,7 @@ public class AiService {
       }
       mensagens = comResultadoDaFerramenta(mensagens, respostaTexto, resultado);
       try {
-        respostaTexto = aiClient.completar(mensagens);
+        respostaTexto = aiClient.completar(mensagens, deadlineNanos);
       } catch (RuntimeException e) {
         return respostaIndisponivel(e);
       }
@@ -138,9 +142,14 @@ public class AiService {
       resposta = resposta.comCitacoes(citacoes);
     }
 
+    String brutoNormalizado = normalizarTextoBruto(respostaTexto);
     memoryStore.adicionarMensagem(sessionId, empresaId, usuarioId, new AiMessage("user", mensagem));
     memoryStore.adicionarMensagem(
-        sessionId, empresaId, usuarioId, new AiMessage("assistant", resposta.resposta()));
+        sessionId,
+        empresaId,
+        usuarioId,
+        new AiMessage(
+            "assistant", brutoNormalizado.isBlank() ? resposta.resposta() : brutoNormalizado));
 
     return resposta;
   }
@@ -220,8 +229,13 @@ public class AiService {
 
       Ferramentas determinísticas (uma linha, quando precisar de cálculo exato):
         FERRAMENTA|nome|{"chave":"valor"}
-      Nomes: listar_categorias, consultar_historico_e_comparativo, diagnosticar_orcamento_50_30_20,
-      detectar_ralos_e_recorrencias, simular_quitacao_ou_juros, consultar_base_conhecimento.
+      Use EXATAMENTE estes nomes e argumentos JSON:
+      - listar_categorias: {}
+      - consultar_historico_e_comparativo: {"mes":"YYYY-MM","meses":6}
+      - diagnosticar_orcamento_50_30_20: {"mes":"YYYY-MM"}
+      - detectar_ralos_e_recorrencias: {"mes":"YYYY-MM"}
+      - simular_quitacao_ou_juros: {"valor":1000.00,"taxaMensal":0.02,"parcelas":12}
+      - consultar_base_conhecimento: {"query":"termo de busca"}
       Após resultado, responda em CONSULTA|... citando fonte quando houver:
         [título — órgão, vigência, dispositivo (source_id)]
 
@@ -293,9 +307,10 @@ public class AiService {
 
     String t = texto.trim();
     List<AiResponse.AiPropostaLancamento> propostas = new ArrayList<>();
-    String consultaCorpo = null;
-    String esclarecimentoLinha = null;
+    StringBuilder consultaCorpo = null;
+    StringBuilder esclarecimentoBloco = null;
     StringBuilder textoLivre = new StringBuilder();
+    String modo = null;
 
     for (String linha : t.split("\\R")) {
       String l = sanitizarLinhaProtocolo(linha);
@@ -303,17 +318,38 @@ public class AiService {
         continue;
       }
       if (l.startsWith("LANCAMENTO|")) {
+        modo = null;
         AiResponse.AiPropostaLancamento p = parseLancamento(l);
         if (p != null && !contemProposta(propostas, p)) {
           propostas.add(p);
         }
-      } else if (l.startsWith("CONSULTA|") && consultaCorpo == null) {
-        consultaCorpo = l.substring("CONSULTA|".length()).trim();
-      } else if (l.startsWith("ESCLARECIMENTO|") && esclarecimentoLinha == null) {
-        esclarecimentoLinha = l;
+      } else if (l.startsWith("CONSULTA|")) {
+        if (consultaCorpo == null) {
+          consultaCorpo = new StringBuilder(l.substring("CONSULTA|".length()).trim());
+          modo = "CONSULTA";
+        } else {
+          modo = null;
+        }
+      } else if (l.startsWith("ESCLARECIMENTO|")) {
+        if (esclarecimentoBloco == null) {
+          esclarecimentoBloco = new StringBuilder(l);
+          modo = "ESCLARECIMENTO";
+        } else {
+          modo = null;
+        }
       } else if (FerramentaChamadaParser.parse(l) == null) {
-        if (!textoLivre.isEmpty()) textoLivre.append('\n');
-        textoLivre.append(l);
+        if ("CONSULTA".equals(modo) && consultaCorpo != null) {
+          if (consultaCorpo.length() > 0) consultaCorpo.append('\n');
+          consultaCorpo.append(l);
+        } else if ("ESCLARECIMENTO".equals(modo) && esclarecimentoBloco != null) {
+          esclarecimentoBloco.append('\n').append(l);
+        } else {
+          modo = null;
+          if (!textoLivre.isEmpty()) textoLivre.append('\n');
+          textoLivre.append(l);
+        }
+      } else {
+        modo = null;
       }
     }
 
@@ -321,13 +357,15 @@ public class AiService {
       return montarRespostaLancamento(propostas);
     }
     if (consultaCorpo != null) {
-      return new AiResponse("consulta", consultaCorpo, List.of(), null, List.of(), List.of());
+      return new AiResponse(
+          "consulta", consultaCorpo.toString().trim(), List.of(), null, List.of(), List.of());
     }
-    if (esclarecimentoLinha != null) {
-      return interpretarEsclarecimento(esclarecimentoLinha);
+    if (esclarecimentoBloco != null) {
+      return interpretarEsclarecimento(esclarecimentoBloco.toString());
     }
 
     String livre = textoLivre.toString().trim();
+
     return new AiResponse(
         "esclarecimento",
         livre.isEmpty() ? "Não consegui entender a resposta. Pode repetir?" : livre,
@@ -344,10 +382,27 @@ public class AiService {
     if (l.equals("```")) return "";
     l = l.replaceFirst("^(?i)(assistant|resposta|output)\\s*:\\s*", "");
     l = l.replaceFirst("^[-*]\\s+", "");
+    l = l.replace("**", "").replace("__", "").trim();
     if ((l.startsWith("`") && l.endsWith("`")) || (l.startsWith("\"") && l.endsWith("\""))) {
       l = l.substring(1, l.length() - 1).trim();
     }
+    l = l.replace("**", "").replace("__", "").trim();
     return l;
+  }
+
+  private String normalizarTextoBruto(String texto) {
+    if (texto == null || texto.isBlank()) return "";
+    List<String> linhas = new ArrayList<>();
+    for (String linha : texto.split("\\R")) {
+      String l = sanitizarLinhaProtocolo(linha);
+      if (l.isEmpty()) continue;
+      if (l.startsWith("LANCAMENTO|")
+          || l.startsWith("CONSULTA|")
+          || l.startsWith("ESCLARECIMENTO|")) {
+        linhas.add(l);
+      }
+    }
+    return String.join("\n", linhas);
   }
 
   /**
@@ -482,8 +537,14 @@ public class AiService {
   }
 
   private AiResponse interpretarEsclarecimento(String t) {
-    String[] partes = t.split("\\|", -1);
-    String corpo = partes.length > 1 ? partes[1].trim() : "Não entendi. Pode explicar melhor?";
+    String[] linhas = t.split("\\R", 2);
+    String primeira = linhas[0];
+    String continuacao = linhas.length > 1 ? linhas[1].trim() : "";
+    String[] partes = primeira.split("\\|", -1);
+    String corpo = partes.length > 1 ? partes[1].trim() : "Nǜo entendi. Pode explicar melhor?";
+    if (!continuacao.isBlank()) {
+      corpo = (corpo + "\n" + continuacao).trim();
+    }
     List<String> opcoes = new ArrayList<>();
     for (int i = 2; i < partes.length; i++) {
       String opcao = partes[i].trim();
@@ -498,14 +559,20 @@ public class AiService {
   }
 
   private AiResponse respostaIndisponivel(RuntimeException e) {
-    String detalhe = e.getMessage();
-    String mensagem =
-        (detalhe == null || detalhe.isBlank())
-            ? "Não foi possível falar com o serviço de IA agora. Tente novamente em instantes."
-            : detalhe;
+    if (e instanceof com.controlefinanceiro.common.ServicoIaIndisponivelException) {
+      LOG.warn("IA indisponível para o chat: {}", e.getMessage());
+      return new AiResponse(
+          "esclarecimento",
+          "Não foi possível falar com o serviço de IA agora. Tente novamente em instantes.",
+          List.of(),
+          null,
+          List.of(),
+          List.of("Tentar novamente", "Falar com atendente"));
+    }
+    LOG.error("Erro inesperado no chat de IA", e);
     return new AiResponse(
         "esclarecimento",
-        mensagem,
+        "Ocorreu um erro interno. Tente novamente em instantes.",
         List.of(),
         null,
         List.of(),

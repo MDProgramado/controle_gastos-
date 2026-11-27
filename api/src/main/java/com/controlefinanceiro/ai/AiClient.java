@@ -131,21 +131,30 @@ public class AiClient {
    * vazia, content nulo/vazio e finish_reason=length. O pior caso respeita {@code chatDeadlineMs}.
    */
   public String completar(List<Map<String, Object>> mensagens) {
+    return completar(mensagens, System.nanoTime() + Duration.ofMillis(chatDeadlineMs).toNanos());
+  }
+
+  /**
+   * Variante com deadline absoluto (System.nanoTime) compartilhado por toda a mensagem, permitindo
+   * que retries/fallbacks consumam o mesmo orçamento.
+   */
+  public String completar(List<Map<String, Object>> mensagens, long deadlineNanos) {
     if (!configurado) {
       throw new IllegalStateException(
-          "ai.openrouter.api-key não configurada. Defina a env var OPENROUTER_API_KEY.");
+          "ai.openrouter.api-key nǜo configurada. Defina a env var OPENROUTER_API_KEY.");
     }
 
-    long inicio = System.nanoTime();
     List<String> candidatos = listaCandidatosChat();
     ServicoIaIndisponivelException ultimaFalha = null;
 
     for (int i = 0; i < candidatos.size(); i++) {
       String modeloAtual = candidatos.get(i);
-      long restante = restanteMs(inicio);
+      long restante = restanteMsAte(deadlineNanos);
       if (restante < MARGEM_TENTATIVA_MS) {
         LOG.warn(
-            "Orçamento do chat esgotado antes do modelo {} (restante={}ms)", modeloAtual, restante);
+            "Or��amento do chat esgotado antes do modelo {} (restante={}ms)",
+            modeloAtual,
+            restante);
         break;
       }
 
@@ -157,26 +166,27 @@ public class AiClient {
       } catch (ServicoIaIndisponivelException e) {
         ultimaFalha = e;
         LOG.warn(
-            "Modelo {} falhou no chat (recuperável). Avançando. motivo={}",
+            "Modelo {} falhou no chat (recuperǭvel). Avan��ando. motivo={}",
             modeloAtual,
             e.getMessage());
       } catch (RestClientResponseException e) {
+        int status = e.getStatusCode().value();
+        boolean recuperavel = recuperavel(status) || ehErroReasoning(status, e);
         ultimaFalha = indisponivel(e);
-        boolean recuperavel = recuperavel(e.getStatusCode().value());
         LOG.warn(
-            "Modelo {} falhou no chat (HTTP {}, recuperável={}). {}",
+            "Modelo {} falhou no chat (HTTP {}, recuperǭvel={}). {}",
             modeloAtual,
-            e.getStatusCode().value(),
+            status,
             recuperavel,
-            recuperavel ? "Avançando." : "Encerrando.");
+            recuperavel ? "Avan��ando." : "Encerrando.");
         if (!recuperavel) {
           throw ultimaFalha;
         }
       } catch (ResourceAccessException e) {
         ultimaFalha =
             new ServicoIaIndisponivelException(
-                "O serviço de IA demorou para responder. Tente novamente em instantes.", e);
-        LOG.warn("Modelo {} falhou por timeout/conexão no chat. Avançando.", modeloAtual, e);
+                "O servi��o de IA demorou para responder. Tente novamente em instantes.", e);
+        LOG.warn("Modelo {} falhou por timeout/conexǜo no chat. Avan��ando.", modeloAtual, e);
       }
     }
 
@@ -184,7 +194,7 @@ public class AiClient {
       throw ultimaFalha;
     }
     throw new ServicoIaIndisponivelException(
-        "Não foi possível falar com o serviço de IA agora. Tente novamente em instantes.");
+        "Nǜo foi poss��vel falar com o servi��o de IA agora. Tente novamente em instantes.");
   }
 
   private List<String> listaCandidatosChat() {
@@ -196,9 +206,23 @@ public class AiClient {
     return List.copyOf(candidatos);
   }
 
+  private long restanteMsAte(long deadlineNanos) {
+    return Math.max(0, Duration.ofNanos(deadlineNanos - System.nanoTime()).toMillis());
+  }
+
   private long restanteMs(long inicioNanos) {
     long decorrido = Duration.ofNanos(System.nanoTime() - inicioNanos).toMillis();
     return Math.max(0, chatDeadlineMs - decorrido);
+  }
+
+  private boolean ehErroReasoning(int status, RestClientResponseException e) {
+    if (status != 400) return false;
+    try {
+      String body = e.getResponseBodyAsString();
+      return body != null && body.toLowerCase(java.util.Locale.ROOT).contains("reasoning");
+    } catch (RuntimeException ex) {
+      return false;
+    }
   }
 
   private boolean recuperavel(int status) {
@@ -392,7 +416,7 @@ public class AiClient {
     corpo.put("messages", mensagens);
     corpo.put("temperature", temperatura != null ? temperatura : 0.4);
     corpo.put("max_tokens", maxTokens != null ? maxTokens : 800);
-    corpo.put("reasoning", Map.of("effort", "none"));
+    corpo.put("reasoning", Map.of("effort", "low", "exclude", true));
     return corpo;
   }
 

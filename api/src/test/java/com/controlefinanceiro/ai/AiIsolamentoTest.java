@@ -2,6 +2,7 @@ package com.controlefinanceiro.ai;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -33,7 +34,7 @@ class AiIsolamentoTest {
     when(contextoService.montarContexto(any())).thenReturn("");
     aiService =
         new AiService(aiClient, new AiMemoryStore(), new AiKnowledgeStore(), contextoService);
-    when(aiClient.completar(any())).thenReturn("CONSULTA|Resposta");
+    when(aiClient.completar(any(), anyLong())).thenReturn("CONSULTA|Resposta");
   }
 
   @AfterEach
@@ -76,7 +77,8 @@ class AiIsolamentoTest {
   private String promptDaChamada(int indice, int totalChamadas) {
     @SuppressWarnings("unchecked")
     ArgumentCaptor<List<Map<String, Object>>> captor = ArgumentCaptor.forClass(List.class);
-    verify(aiClient, times(totalChamadas)).completar(captor.capture());
+    verify(aiClient, times(totalChamadas))
+        .completar(captor.capture(), org.mockito.ArgumentMatchers.anyLong());
     return captor.getAllValues().get(indice).stream()
         .map(mensagem -> String.valueOf(mensagem.get("content")))
         .collect(Collectors.joining("\n"));

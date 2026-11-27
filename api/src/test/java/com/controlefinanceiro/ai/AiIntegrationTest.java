@@ -2,6 +2,7 @@ package com.controlefinanceiro.ai;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
 
 import com.controlefinanceiro.common.Role;
@@ -57,7 +58,8 @@ class AiIntegrationTest {
   @Test
   void mensagemComGasteiRetornaIntentLancamentoComProposta() throws Exception {
     // Mock da OpenRouter: retorna proposta de lançamento
-    when(aiClient.completar(any())).thenReturn("LANCAMENTO|SAIDA|45.00|2026-11-10||Almoço");
+    when(aiClient.completar(any(), anyLong()))
+        .thenReturn("LANCAMENTO|SAIDA|45.00|2026-11-10||Almoço");
 
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(MediaType.APPLICATION_JSON);
@@ -82,7 +84,8 @@ class AiIntegrationTest {
   @Test
   void mensagemComQuantoRetornaIntentConsultaComDados() throws Exception {
     // Mock da OpenRouter: retorna consulta com dados
-    when(aiClient.completar(any())).thenReturn("CONSULTA|Gastou R$ 342,50 com alimentação");
+    when(aiClient.completar(any(), anyLong()))
+        .thenReturn("CONSULTA|Gastou R$ 342,50 com alimentação");
 
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(MediaType.APPLICATION_JSON);
@@ -103,7 +106,7 @@ class AiIntegrationTest {
   @Test
   void mensagemSemIntencaoRetornaEsclarecimentoComOpcoes() throws Exception {
     // Mock da OpenRouter: retorna esclarecimento com opções
-    when(aiClient.completar(any()))
+    when(aiClient.completar(any(), anyLong()))
         .thenReturn("ESCLARECIMENTO|Não entendi. Tente: gastou quanto com X?|Opção 1|Opção 2");
 
     HttpHeaders headers = new HttpHeaders();
@@ -124,7 +127,7 @@ class AiIntegrationTest {
 
   @Test
   void respostaNaoExpõeEmpresaIdNoCorpo() throws Exception {
-    when(aiClient.completar(any())).thenReturn("CONSULTA|Resposta genérica");
+    when(aiClient.completar(any(), anyLong())).thenReturn("CONSULTA|Resposta genérica");
 
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(MediaType.APPLICATION_JSON);
