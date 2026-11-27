@@ -54,7 +54,8 @@ class AiServiceTest {
   @Test
   @DisplayName("mensagem com gastei retorna lancamento com proposta")
   void mensagemComGasteiRetornaLancamentoComProposta() {
-    when(aiClient.completar(any(), anyLong())).thenReturn("LANCAMENTO|SAIDA|45.00|2026-11-10||Almoço");
+    when(aiClient.completar(any(), anyLong()))
+        .thenReturn("LANCAMENTO|SAIDA|45.00|2026-11-10||Almoço");
 
     AiResponse resposta = aiService.processar("sessao-1", "empresa-1", "gastei 45 no almoço");
 
@@ -70,7 +71,8 @@ class AiServiceTest {
   @DisplayName("CONSULTA multiline captura continuacao e sanitiza markdown")
   void consultaMultilineCapturaContinuacaoESanitizaMarkdown() {
     when(aiClient.completar(any(), anyLong()))
-        .thenReturn("**CONSULTA|** Seu saldo é **R$ 1.000,00**\nDetalhe: entrada de R$ 1.500,00\nSaída de R$ 500,00");
+        .thenReturn(
+            "**CONSULTA|** Seu saldo é **R$ 1.000,00**\nDetalhe: entrada de R$ 1.500,00\nSaída de R$ 500,00");
     AiResponse resposta = aiService.processar("s-consulta", "empresa-1", "como está meu saldo?");
     assertThat(resposta.intent()).isEqualTo("consulta");
     assertThat(resposta.resposta()).contains("Seu saldo é R$ 1.000,00");
@@ -83,7 +85,8 @@ class AiServiceTest {
   @DisplayName("ESCLARECIMENTO multiline captura continuacao ate proximo protocolo")
   void esclarecimentoMultilineCapturaContinuacao() {
     when(aiClient.completar(any(), anyLong()))
-        .thenReturn("ESCLARECIMENTO|Qual categoria você quer?\nPode ser **Mercado** ou Lazer\nMercado|Lazer");
+        .thenReturn(
+            "ESCLARECIMENTO|Qual categoria você quer?\nPode ser **Mercado** ou Lazer\nMercado|Lazer");
     AiResponse resposta = aiService.processar("s-esc", "empresa-1", "gastei 10");
     assertThat(resposta.intent()).isEqualTo("esclarecimento");
     assertThat(resposta.resposta()).contains("Qual categoria você quer?");
@@ -160,7 +163,8 @@ class AiServiceTest {
   @Test
   @DisplayName("mensagem com quanto retorna consulta com dados")
   void mensagemComQuantoRetornaConsultaComDados() {
-    when(aiClient.completar(any(), anyLong())).thenReturn("CONSULTA|Gastou R$ 342,50 com alimentação");
+    when(aiClient.completar(any(), anyLong()))
+        .thenReturn("CONSULTA|Gastou R$ 342,50 com alimentação");
 
     AiResponse resposta =
         aiService.processar("sessao-1", "empresa-1", "quanto gastei com alimentação");
@@ -187,7 +191,8 @@ class AiServiceTest {
   @Test
   @DisplayName("categoriaId nulo quando IA nao tem certeza")
   void categoriaIdNuloQuandoIaNaoTemCerteza() {
-    when(aiClient.completar(any(), anyLong())).thenReturn("LANCAMENTO|ENTRADA|100.00|2026-11-10||Salário");
+    when(aiClient.completar(any(), anyLong()))
+        .thenReturn("LANCAMENTO|ENTRADA|100.00|2026-11-10||Salário");
 
     AiResponse resposta = aiService.processar("sessao-1", "empresa-1", "recebi 100 de salário");
 
@@ -292,7 +297,8 @@ class AiServiceTest {
     List<AiMessage> historico = aiService.obterHistorico("sessao-bruto", "empresa-1");
     assertThat(historico).hasSize(2);
     assertThat(historico.get(1).role()).isEqualTo("assistant");
-    assertThat(historico.get(1).content()).isEqualTo("LANCAMENTO|SAIDA|30,00|2026-11-10|5|Mercado|Padaria");
+    assertThat(historico.get(1).content())
+        .isEqualTo("LANCAMENTO|SAIDA|30,00|2026-11-10|5|Mercado|Padaria");
   }
 
   @Test

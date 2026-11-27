@@ -25,8 +25,7 @@ public class AiRateLimiter {
   public void verificar(Long usuarioId) {
     if (usuarioId == null) return;
     Instant agora = Instant.now();
-    Deque<Instant> eventos =
-        eventosPorUsuario.computeIfAbsent(usuarioId, k -> new ArrayDeque<>());
+    Deque<Instant> eventos = eventosPorUsuario.computeIfAbsent(usuarioId, k -> new ArrayDeque<>());
     synchronized (eventos) {
       limparAntigos(eventos, agora);
       long noMinuto = contarDesde(eventos, agora.minus(JANELA_MINUTO));

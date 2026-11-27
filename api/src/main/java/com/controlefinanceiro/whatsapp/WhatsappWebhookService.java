@@ -7,7 +7,6 @@ import com.controlefinanceiro.common.LogRedacao;
 import com.controlefinanceiro.common.NaoAutorizadoException;
 import com.controlefinanceiro.dashboard.DashboardService;
 import com.controlefinanceiro.dashboard.dto.DashboardResponse;
-import com.controlefinanceiro.lancamento.LancamentoRequest;
 import com.controlefinanceiro.lancamento.LancamentoService;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -23,7 +22,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Núcleo do webhook do WhatsApp. Chama os mesmos services dos controllers REST (LancamentoService,
@@ -395,8 +393,6 @@ public class WhatsappWebhookService {
     registrarMensagem(messageId, resultado.resultadoMensagem());
   }
 
-
-
   private boolean identidadeValida(UsuarioTelefone telefone) {
     return telefone.getUsuario() != null
         && telefone.getUsuario().isAtivo()
@@ -514,7 +510,3 @@ public class WhatsappWebhookService {
     }
   }
 }
-
-
-
-

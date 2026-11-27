@@ -187,8 +187,7 @@ public class WhatsappConfirmacaoService {
       return WhatsappConfirmacaoResultado.comEnvio(
           "CANCELADA", "Lançamento cancelado. Nenhum valor foi gravado.");
     }
-    return WhatsappConfirmacaoResultado.comEnvio(
-        "DUPLICADA", "Este lançamento já foi processado.");
+    return WhatsappConfirmacaoResultado.comEnvio("DUPLICADA", "Este lançamento já foi processado.");
   }
 
   private WhatsappConfirmacaoResultado resultadoBusca(
@@ -204,8 +203,7 @@ public class WhatsappConfirmacaoService {
           "REJEITADA",
           "Existe mais de um lançamento pendente. Responda " + acao + " <id> para escolher.");
     }
-    return WhatsappConfirmacaoResultado.comEnvio(
-        "DUPLICADA", "Este lançamento já foi processado.");
+    return WhatsappConfirmacaoResultado.comEnvio("DUPLICADA", "Este lançamento já foi processado.");
   }
 
   private Optional<WhatsappConfirmacaoPendente> buscarPendencia(

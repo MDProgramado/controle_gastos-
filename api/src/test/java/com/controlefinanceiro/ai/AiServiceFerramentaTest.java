@@ -110,6 +110,3 @@ class AiServiceFerramentaTest {
     assertThat(resposta.opcoes()).contains("Falar com atendente");
   }
 }
-
-
-

@@ -89,7 +89,8 @@ public class AiService {
     List<AiMessage> historico = memoryStore.obterHistorico(sessionId, empresaId, usuarioId);
     List<Map<String, Object>> mensagens =
         montarMensagens(historico, mensagem, empresaId, usuarioId, true);
-    long deadlineNanos = System.nanoTime() + java.time.Duration.ofMillis(CHAT_DEADLINE_MS).toNanos();
+    long deadlineNanos =
+        System.nanoTime() + java.time.Duration.ofMillis(CHAT_DEADLINE_MS).toNanos();
 
     String respostaTexto;
     try {
@@ -148,8 +149,7 @@ public class AiService {
         empresaId,
         usuarioId,
         new AiMessage(
-            "assistant",
-            brutoNormalizado.isBlank() ? resposta.resposta() : brutoNormalizado));
+            "assistant", brutoNormalizado.isBlank() ? resposta.resposta() : brutoNormalizado));
 
     return resposta;
   }
@@ -357,7 +357,8 @@ public class AiService {
       return montarRespostaLancamento(propostas);
     }
     if (consultaCorpo != null) {
-      return new AiResponse("consulta", consultaCorpo.toString().trim(), List.of(), null, List.of(), List.of());
+      return new AiResponse(
+          "consulta", consultaCorpo.toString().trim(), List.of(), null, List.of(), List.of());
     }
     if (esclarecimentoBloco != null) {
       return interpretarEsclarecimento(esclarecimentoBloco.toString());

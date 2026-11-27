@@ -152,7 +152,9 @@ public class AiClient {
       long restante = restanteMsAte(deadlineNanos);
       if (restante < MARGEM_TENTATIVA_MS) {
         LOG.warn(
-            "Or��amento do chat esgotado antes do modelo {} (restante={}ms)", modeloAtual, restante);
+            "Or��amento do chat esgotado antes do modelo {} (restante={}ms)",
+            modeloAtual,
+            restante);
         break;
       }
 
@@ -213,7 +215,6 @@ public class AiClient {
     return Math.max(0, chatDeadlineMs - decorrido);
   }
 
-
   private boolean ehErroReasoning(int status, RestClientResponseException e) {
     if (status != 400) return false;
     try {
@@ -223,6 +224,7 @@ public class AiClient {
       return false;
     }
   }
+
   private boolean recuperavel(int status) {
     return status == 402 || status == 429 || status >= 500;
   }

@@ -58,7 +58,8 @@ class AiIntegrationTest {
   @Test
   void mensagemComGasteiRetornaIntentLancamentoComProposta() throws Exception {
     // Mock da OpenRouter: retorna proposta de lançamento
-    when(aiClient.completar(any(), anyLong())).thenReturn("LANCAMENTO|SAIDA|45.00|2026-11-10||Almoço");
+    when(aiClient.completar(any(), anyLong()))
+        .thenReturn("LANCAMENTO|SAIDA|45.00|2026-11-10||Almoço");
 
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(MediaType.APPLICATION_JSON);
@@ -83,7 +84,8 @@ class AiIntegrationTest {
   @Test
   void mensagemComQuantoRetornaIntentConsultaComDados() throws Exception {
     // Mock da OpenRouter: retorna consulta com dados
-    when(aiClient.completar(any(), anyLong())).thenReturn("CONSULTA|Gastou R$ 342,50 com alimentação");
+    when(aiClient.completar(any(), anyLong()))
+        .thenReturn("CONSULTA|Gastou R$ 342,50 com alimentação");
 
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(MediaType.APPLICATION_JSON);

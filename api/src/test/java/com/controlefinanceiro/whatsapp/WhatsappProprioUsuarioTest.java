@@ -171,5 +171,3 @@ class WhatsappProprioUsuarioTest {
     return pendencia;
   }
 }
-
-

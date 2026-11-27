@@ -272,10 +272,10 @@ public class ProblemDetailExceptionHandler {
 
   /** Rate limit do chat de IA por usuário → 429 amigável. */
   @ExceptionHandler(com.controlefinanceiro.common.LimiteIaExcedidoException.class)
-  public ProblemDetail limiteIaExcedido(com.controlefinanceiro.common.LimiteIaExcedidoException ex) {
+  public ProblemDetail limiteIaExcedido(
+      com.controlefinanceiro.common.LimiteIaExcedidoException ex) {
     return ProblemDetail.forStatusAndDetail(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage());
   }
-
 
   /** Número já vinculado a outra empresa → 409. */
   @ExceptionHandler(TelefoneJaVinculadoException.class)
@@ -289,7 +289,7 @@ public class ProblemDetailExceptionHandler {
     return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
   }
 
-    /** Estado ilegal de configuração da IA → 503 sem vazar detalhe interno. */
+  /** Estado ilegal de configuração da IA → 503 sem vazar detalhe interno. */
   @ExceptionHandler(IllegalStateException.class)
   public ProblemDetail estadoIlegal(IllegalStateException ex) {
     String mensagem = ex.getMessage();
