@@ -152,7 +152,7 @@ class AiServiceTest {
 
     @SuppressWarnings("unchecked")
     ArgumentCaptor<List<Map<String, Object>>> captor = ArgumentCaptor.forClass(List.class);
-    verify(aiClient).completar(captor.capture());
+    verify(aiClient).completar(captor.capture(), org.mockito.ArgumentMatchers.anyLong());
 
     List<Map<String, Object>> enviados = captor.getValue();
     String system = (String) enviados.get(0).get("content");
@@ -310,3 +310,4 @@ class AiServiceTest {
     assertThat(aiService.obterHistorico("sessao-falha", "empresa-1")).isEmpty();
   }
 }
+
