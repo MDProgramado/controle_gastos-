@@ -168,12 +168,13 @@ public class AiClient {
             modeloAtual,
             e.getMessage());
       } catch (RestClientResponseException e) {
+        int status = e.getStatusCode().value();
+        boolean recuperavel = recuperavel(status) || ehErroReasoning(status, e);
         ultimaFalha = indisponivel(e);
-        boolean recuperavel = recuperavel(e.getStatusCode().value());
         LOG.warn(
             "Modelo {} falhou no chat (HTTP {}, recuperǭvel={}). {}",
             modeloAtual,
-            e.getStatusCode().value(),
+            status,
             recuperavel,
             recuperavel ? "Avan��ando." : "Encerrando.");
         if (!recuperavel) {
@@ -212,6 +213,16 @@ public class AiClient {
     return Math.max(0, chatDeadlineMs - decorrido);
   }
 
+
+  private boolean ehErroReasoning(int status, RestClientResponseException e) {
+    if (status != 400) return false;
+    try {
+      String body = e.getResponseBodyAsString();
+      return body != null && body.toLowerCase(java.util.Locale.ROOT).contains("reasoning");
+    } catch (RuntimeException ex) {
+      return false;
+    }
+  }
   private boolean recuperavel(int status) {
     return status == 402 || status == 429 || status >= 500;
   }
@@ -403,7 +414,7 @@ public class AiClient {
     corpo.put("messages", mensagens);
     corpo.put("temperature", temperatura != null ? temperatura : 0.4);
     corpo.put("max_tokens", maxTokens != null ? maxTokens : 800);
-    corpo.put("reasoning", Map.of("effort", "none"));
+    corpo.put("reasoning", Map.of("effort", "low", "exclude", true));
     return corpo;
   }
 
