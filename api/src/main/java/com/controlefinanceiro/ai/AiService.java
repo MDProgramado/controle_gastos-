@@ -34,7 +34,8 @@ public class AiService {
   private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(AiService.class);
   private static final int MAX_MENSAGENS_HISTORICO = 20;
   private static final int MAX_ITERACOES_FERRAMENTA = 2;
-  private static final long CHAT_DEADLINE_MS = 50_000L;
+  private static final long CHAT_DEADLINE_MS_DEFAULT = 50_000L;
+  private final long chatDeadlineMs;
   private static final ZoneId FUSO = ZoneId.of("America/Sao_Paulo");
   private static final BigDecimal ZERO = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_EVEN);
   private static final ObjectMapper MAPPER = new ObjectMapper();
@@ -59,12 +60,24 @@ public class AiService {
       AiMemoryStore memoryStore,
       AiKnowledgeStore knowledgeStore,
       AiContextoService contextoService,
-      FerramentaRegistry ferramentaRegistry) {
+      FerramentaRegistry ferramentaRegistry,
+      @org.springframework.beans.factory.annotation.Value("${ai.openrouter.chat-deadline-ms:50000}")
+          long chatDeadlineMs) {
     this.aiClient = aiClient;
     this.memoryStore = memoryStore;
     this.knowledgeStore = knowledgeStore;
     this.contextoService = contextoService;
     this.ferramentaRegistry = ferramentaRegistry;
+    this.chatDeadlineMs = chatDeadlineMs > 0 ? chatDeadlineMs : CHAT_DEADLINE_MS_DEFAULT;
+  }
+
+  public AiService(
+      AiClient aiClient,
+      AiMemoryStore memoryStore,
+      AiKnowledgeStore knowledgeStore,
+      AiContextoService contextoService,
+      FerramentaRegistry ferramentaRegistry) {
+    this(aiClient, memoryStore, knowledgeStore, contextoService, ferramentaRegistry, CHAT_DEADLINE_MS_DEFAULT);
   }
 
   /**
@@ -90,7 +103,7 @@ public class AiService {
     List<Map<String, Object>> mensagens =
         montarMensagens(historico, mensagem, empresaId, usuarioId, true);
     long deadlineNanos =
-        System.nanoTime() + java.time.Duration.ofMillis(CHAT_DEADLINE_MS).toNanos();
+        System.nanoTime() + java.time.Duration.ofMillis(chatDeadlineMs).toNanos();
 
     String respostaTexto;
     try {

@@ -66,7 +66,7 @@ ai:
     api-key: ${OPENROUTER_API_KEY:}
     connect-timeout-ms: ${OPENROUTER_CONNECT_TIMEOUT_MS:3000}
     read-timeout-ms: ${OPENROUTER_READ_TIMEOUT_MS:25000}
-    chat-deadline-ms: ${AI_OPENROUTER_CHAT_DEADLINE_MS:55000}
+    chat-deadline-ms: ${AI_OPENROUTER_CHAT_DEADLINE_MS:50000}
     max-tokens-chat: ${AI_OPENROUTER_MAX_TOKENS_CHAT:2000}
     modelo: ${AI_OPENROUTER_MODELO:google/gemma-4-31b-it:free}
     embedding-model: ${AI_OPENROUTER_EMBEDDING_MODEL:openai/text-embedding-3-small}
