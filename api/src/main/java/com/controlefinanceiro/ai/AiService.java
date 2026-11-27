@@ -31,6 +31,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class AiService {
 
+  private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(AiService.class);
   private static final int MAX_MENSAGENS_HISTORICO = 20;
   private static final int MAX_ITERACOES_FERRAMENTA = 2;
   private static final long CHAT_DEADLINE_MS = 50_000L;
@@ -552,14 +553,20 @@ public class AiService {
   }
 
   private AiResponse respostaIndisponivel(RuntimeException e) {
-    String detalhe = e.getMessage();
-    String mensagem =
-        (detalhe == null || detalhe.isBlank())
-            ? "Não foi possível falar com o serviço de IA agora. Tente novamente em instantes."
-            : detalhe;
+    if (e instanceof com.controlefinanceiro.common.ServicoIaIndisponivelException) {
+      LOG.warn("IA indisponível para o chat: {}", e.getMessage());
+      return new AiResponse(
+          "esclarecimento",
+          "Não foi possível falar com o serviço de IA agora. Tente novamente em instantes.",
+          List.of(),
+          null,
+          List.of(),
+          List.of("Tentar novamente", "Falar com atendente"));
+    }
+    LOG.error("Erro inesperado no chat de IA", e);
     return new AiResponse(
         "esclarecimento",
-        mensagem,
+        "Ocorreu um erro interno. Tente novamente em instantes.",
         List.of(),
         null,
         List.of(),
