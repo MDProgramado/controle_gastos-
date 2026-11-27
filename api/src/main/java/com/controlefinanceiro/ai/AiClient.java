@@ -152,9 +152,7 @@ public class AiClient {
       long restante = restanteMsAte(deadlineNanos);
       if (restante < MARGEM_TENTATIVA_MS) {
         LOG.warn(
-            "Or?amento do chat esgotado antes do modelo {} (restante={}ms)",
-            modeloAtual,
-            restante);
+            "Or?amento do chat esgotado antes do modelo {} (restante={}ms)", modeloAtual, restante);
         break;
       }
 

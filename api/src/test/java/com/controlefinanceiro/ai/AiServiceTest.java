@@ -67,7 +67,7 @@ class AiServiceTest {
     assertThat(resposta.proposta().categoriaSugerida()).isEqualTo("Almoço");
   }
 
-    @Test
+  @Test
   @DisplayName("CONSULTA multiline captura continuacao e sanitiza markdown")
   void consultaMultilineCapturaContinuacaoESanitizaMarkdown() {
     when(aiClient.completar(any(), anyLong()))

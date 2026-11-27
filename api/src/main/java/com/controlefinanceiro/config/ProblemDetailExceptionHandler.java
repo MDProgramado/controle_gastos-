@@ -137,7 +137,8 @@ public class ProblemDetailExceptionHandler {
   }
 
   /** Tipo inv?lido em path/query param (ex.: /api/lancamentos/abc) ? 400. */
-  @ExceptionHandler(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class)
+  @ExceptionHandler(
+      org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class)
   public ProblemDetail tipoArgumentoInvalido(
       org.springframework.web.method.annotation.MethodArgumentTypeMismatchException ex) {
     return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Par?metro inv?lido");

@@ -77,7 +77,13 @@ public class AiService {
       AiKnowledgeStore knowledgeStore,
       AiContextoService contextoService,
       FerramentaRegistry ferramentaRegistry) {
-    this(aiClient, memoryStore, knowledgeStore, contextoService, ferramentaRegistry, CHAT_DEADLINE_MS_DEFAULT);
+    this(
+        aiClient,
+        memoryStore,
+        knowledgeStore,
+        contextoService,
+        ferramentaRegistry,
+        CHAT_DEADLINE_MS_DEFAULT);
   }
 
   /**
@@ -102,8 +108,7 @@ public class AiService {
     List<AiMessage> historico = memoryStore.obterHistorico(sessionId, empresaId, usuarioId);
     List<Map<String, Object>> mensagens =
         montarMensagens(historico, mensagem, empresaId, usuarioId, true);
-    long deadlineNanos =
-        System.nanoTime() + java.time.Duration.ofMillis(chatDeadlineMs).toNanos();
+    long deadlineNanos = System.nanoTime() + java.time.Duration.ofMillis(chatDeadlineMs).toNanos();
 
     String respostaTexto;
     try {

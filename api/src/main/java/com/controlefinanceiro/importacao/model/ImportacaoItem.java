@@ -85,8 +85,8 @@ public class ImportacaoItem {
   private OffsetDateTime criadoEm;
 
   /**
-   * R3: timestamp preenchido pela aplicação (o DEFAULT now() do banco não é visto pelo INSERT
-   * do Hibernate).
+   * R3: timestamp preenchido pela aplicação (o DEFAULT now() do banco não é visto pelo INSERT do
+   * Hibernate).
    */
   @PrePersist
   void aoPersistir() {
