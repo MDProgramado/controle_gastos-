@@ -15,44 +15,24 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
 /**
- * Cliente HTTP para a OpenRouter (modelo Gemma 4 via OpenRouter API). Compatível com a API de chat
- * completions da OpenAI.
+ * Cliente HTTP para a OpenRouter (API compatível com chat completions).
  *
- * <p><strong>Estratégia de modelos (fallback em cascata):</strong>
- *
- * <ol>
- *   <li><b>Cascata de modelos gratuitos</b> — primário, secundário e terciário, na ordem
- *       configurada em {@code ai.openrouter.modelos}. A OpenRouter recebe a lista com {@code
- *       route=fallback}: se o modelo atual falhar (provedor sobrecarregado, modelo fora do ar), ela
- *       tenta o próximo da cascata sem nova chamada da aplicação.
- *   <li><b>Último recurso</b> — {@code ai.openrouter.modelos-reserva}. Entra em campo quando a
- *       cascata inteira falha. Existe porque o limite de modelos :free é <b>por conta e por dia</b>
- *       (50 req/dia na conta free): quando ele estoura, todos os modelos gratuitos caem juntos e
- *       nenhuma cascata de modelos gratuitos resolve. Sem a reserva, o chat cairia todo dia após as
- *       50 primeiras mensagens. Para desativar, defina a variável de ambiente {@code
- *       AI_OPENROUTER_MODELOS_RESERVA} com o valor {@code none}.
- * </ol>
- *
- * <p><strong>Extração de PDFs (fase 5):</strong> {@link #completarComCascata(List,
- * OpcoesCompletar)} generaliza a chamada com per-modelo iteração, backoff exponencial (1,5 s → 3 s
- * → 6 s), honra o header {@code Retry-After}, avança de modelo quando o conteúdo não passa no
- * validador (ex.: JSON inválido) e expõe {@code modeloUsado} + {@code degradado}. O caminho do chat
- * ({@link #completar(List)}) mantém o comportamento original da fase 4, intacto.
- *
- * <p>O parse da resposta usa Jackson ({@link ObjectMapper}) em vez de manipulação de string: o
- * campo {@code choices[0].message.content} pode conter aspas, quebras de linha e caracteres de
- * escape, o que quebraria um parse ingênuo por {@code indexOf}.
+ * <p>O chat usa cascata por modelo controlada pelo cliente, com orçamento total de tempo. A
+ * extração de PDF usa {@link #completarComCascata(List, OpcoesCompletar)} com validação de conteúdo
+ * e backoff por modelo. Falhas recuperáveis (429/5xx/402, timeout/conexão, conteúdo vazio/length)
+ * avançam para o próximo modelo quando houver orçamento.
  */
 @Component
 public class AiClient {
 
   private static final Logger LOG = LoggerFactory.getLogger(AiClient.class);
   private static final ObjectMapper MAPPER = new ObjectMapper();
-  private static final long PAUSA_ENTRE_TENTATIVAS_MS = 1500L;
+  private static final long MARGEM_TENTATIVA_MS = 8000L;
 
   /** Valores que desligam uma lista de modelos (último recurso). */
   private static final java.util.Set<String> DESATIVA =
@@ -62,6 +42,8 @@ public class AiClient {
   private final String modelo;
   private final List<String> modelos;
   private final List<String> modelosReserva;
+  private final int maxTokensChat;
+  private final long chatDeadlineMs;
   private final boolean configurado;
 
   /**
@@ -95,14 +77,15 @@ public class AiClient {
       @Value("${ai.openrouter.modelos:}") String modelosConfig,
       @Value("${ai.openrouter.modelos-reserva:}") String modelosReservaConfig,
       @Value("${ai.openrouter.connect-timeout-ms:3000}") int connectTimeoutMs,
-      @Value("${ai.openrouter.read-timeout-ms:30000}") int readTimeoutMs) {
+      @Value("${ai.openrouter.read-timeout-ms:25000}") int readTimeoutMs,
+      @Value("${ai.openrouter.max-tokens-chat:2000}") int maxTokensChat,
+      @Value("${ai.openrouter.chat-deadline-ms:55000}") long chatDeadlineMs) {
     this.modelo = modelo;
     this.configurado = apiKey != null && !apiKey.isBlank();
-
-    // Cascata de modelos gratuitos (primário -> secundário -> terciário).
     this.modelos = listaDeModelos(modelosConfig, modelo);
-    // Último recurso: entra quando a cascata inteira falha.
     this.modelosReserva = listaDeModelos(modelosReservaConfig, null);
+    this.maxTokensChat = maxTokensChat;
+    this.chatDeadlineMs = chatDeadlineMs;
 
     SimpleClientHttpRequestFactory fabrica = new SimpleClientHttpRequestFactory();
     fabrica.setConnectTimeout(Duration.ofMillis(connectTimeoutMs));
@@ -123,18 +106,29 @@ public class AiClient {
 
   /** Construtor para testes de unidade: injeta o {@link RestClient} mockado (sem rede). */
   AiClient(List<String> modelos, List<String> modelosReserva, RestClient restClient) {
+    this(modelos, modelosReserva, restClient, 2000, 55000L);
+  }
+
+  AiClient(
+      List<String> modelos,
+      List<String> modelosReserva,
+      RestClient restClient,
+      int maxTokensChat,
+      long chatDeadlineMs) {
     this.modelo = modelos.isEmpty() ? "google/gemma-4-31b-it:free" : modelos.get(0);
     this.modelos = modelos;
     this.modelosReserva = modelosReserva;
     this.restClient = restClient;
+    this.maxTokensChat = maxTokensChat;
+    this.chatDeadlineMs = chatDeadlineMs;
     this.configurado = true;
   }
 
   /**
-   * Envia uma lista de mensagens para a OpenRouter e retorna o conteúdo da resposta.
+   * Envia mensagens para a OpenRouter com cascata por modelo e orçamento total de tempo.
    *
-   * <p>Etapa 1: cascata de modelos gratuitos (a OpenRouter tenta cada um da lista). Etapa 2: último
-   * recurso, só quando a cascata inteira falha.
+   * <p>Falhas recuperáveis avançam para o próximo modelo: 429/5xx/402, timeout/conexão, resposta
+   * vazia, content nulo/vazio e finish_reason=length. O pior caso respeita {@code chatDeadlineMs}.
    */
   public String completar(List<Map<String, Object>> mensagens) {
     if (!configurado) {
@@ -142,47 +136,73 @@ public class AiClient {
           "ai.openrouter.api-key não configurada. Defina a env var OPENROUTER_API_KEY.");
     }
 
-    // Etapa 1 — cascata de modelos gratuitos.
-    try {
-      return executar(mensagens, modelos, "cascata", true);
-    } catch (RestClientResponseException e) {
-      if (modelosReserva.isEmpty()) {
-        throw indisponivel(e);
+    long inicio = System.nanoTime();
+    List<String> candidatos = listaCandidatosChat();
+    ServicoIaIndisponivelException ultimaFalha = null;
+
+    for (int i = 0; i < candidatos.size(); i++) {
+      String modeloAtual = candidatos.get(i);
+      long restante = restanteMs(inicio);
+      if (restante < MARGEM_TENTATIVA_MS) {
+        LOG.warn(
+            "Orçamento do chat esgotado antes do modelo {} (restante={}ms)", modeloAtual, restante);
+        break;
       }
-      LOG.warn(
-          "Cascata de modelos gratuitos falhou (HTTP {}). Indo para o último recurso: {}",
-          e.getStatusCode().value(),
-          modelosReserva);
-      // Etapa 2 — último recurso (modelo pago): o limite de :free é por conta/dia e derruba
-      // todos os modelos gratuitos de uma vez.
+
       try {
-        return executar(mensagens, modelosReserva, "reserva", false);
-      } catch (RestClientResponseException segunda) {
-        throw indisponivel(segunda);
+        Map<String, Object> corpo =
+            montarCorpo(mensagens, List.of(modeloAtual), 0.4, maxTokensChat);
+        String json = chamar(corpo);
+        return extrairConteudo(json, "chat", modeloAtual);
+      } catch (ServicoIaIndisponivelException e) {
+        ultimaFalha = e;
+        LOG.warn(
+            "Modelo {} falhou no chat (recuperável). Avançando. motivo={}",
+            modeloAtual,
+            e.getMessage());
+      } catch (RestClientResponseException e) {
+        ultimaFalha = indisponivel(e);
+        boolean recuperavel = recuperavel(e.getStatusCode().value());
+        LOG.warn(
+            "Modelo {} falhou no chat (HTTP {}, recuperável={}). {}",
+            modeloAtual,
+            e.getStatusCode().value(),
+            recuperavel,
+            recuperavel ? "Avançando." : "Encerrando.");
+        if (!recuperavel) {
+          throw ultimaFalha;
+        }
+      } catch (ResourceAccessException e) {
+        ultimaFalha =
+            new ServicoIaIndisponivelException(
+                "O serviço de IA demorou para responder. Tente novamente em instantes.", e);
+        LOG.warn("Modelo {} falhou por timeout/conexão no chat. Avançando.", modeloAtual, e);
       }
     }
+
+    if (ultimaFalha != null) {
+      throw ultimaFalha;
+    }
+    throw new ServicoIaIndisponivelException(
+        "Não foi possível falar com o serviço de IA agora. Tente novamente em instantes.");
   }
 
-  /**
-   * Executa a chamada em uma lista de modelos. Com mais de um modelo, usa {@code models} + {@code
-   * route=fallback} para que a OpenRouter tente o próximo quando o atual falhar.
-   *
-   * @param repetirEm429 quando true, faz uma segunda tentativa após uma pausa curta (429 do
-   *     provedor costuma ser passageiro)
-   */
-  private String executar(
-      List<Map<String, Object>> mensagens, List<String> lista, String etapa, boolean repetirEm429) {
-    Map<String, Object> corpo = montarCorpo(mensagens, lista);
-
-    try {
-      return extrairConteudo(chamar(corpo), etapa);
-    } catch (RestClientResponseException e) {
-      if (repetirEm429 && e.getStatusCode().value() == 429) {
-        dormir(PAUSA_ENTRE_TENTATIVAS_MS);
-        return extrairConteudo(chamar(corpo), etapa);
-      }
-      throw e;
+  private List<String> listaCandidatosChat() {
+    java.util.LinkedHashSet<String> candidatos = new java.util.LinkedHashSet<>(modelos);
+    candidatos.addAll(modelosReserva);
+    if (candidatos.isEmpty()) {
+      candidatos.add(modelo);
     }
+    return List.copyOf(candidatos);
+  }
+
+  private long restanteMs(long inicioNanos) {
+    long decorrido = Duration.ofNanos(System.nanoTime() - inicioNanos).toMillis();
+    return Math.max(0, chatDeadlineMs - decorrido);
+  }
+
+  private boolean recuperavel(int status) {
+    return status == 402 || status == 429 || status >= 500;
   }
 
   /**
@@ -264,15 +284,21 @@ public class AiClient {
           return new RespostaCompletar(conteudo, modeloUsado, degradado, chamadas);
         } catch (RestClientResponseException e) {
           int status = e.getStatusCode().value();
-          boolean recuperavel = status == 429 || status >= 500;
+          boolean recuperavel = status == 402 || status == 429 || status >= 500;
           if (recuperavel && tentativa < opcoes.tentativasPorModelo()) {
             dormir(pausaComRetryAfter(e, opcoes.esperaInicialMs(), tentativa));
             continue;
           }
           LOG.warn("Modelo {} falhou (HTTP {}). Avançando de modelo.", modeloAtual, status);
           break;
+        } catch (ResourceAccessException e) {
+          if (tentativa < opcoes.tentativasPorModelo()) {
+            dormir(opcoes.esperaInicialMs() * (long) Math.pow(2, tentativa - 1));
+            continue;
+          }
+          LOG.warn("Modelo {} falhou por timeout/conexão. Avançando de modelo.", modeloAtual, e);
+          break;
         } catch (ServicoIaIndisponivelException e) {
-          // Resposta vazia, objeto error ou formato inesperado: falha do modelo, avança.
           LOG.warn(
               "Modelo {} devolveu resposta inválida ({}). Avançando de modelo.",
               modeloAtual,
@@ -346,18 +372,14 @@ public class AiClient {
     return padrao == null ? List.of() : List.of(padrao);
   }
 
-  /**
-   * Monta o corpo da requisição. Com mais de um modelo, usa {@code models} + {@code route=fallback}
-   * para que a OpenRouter tente o próximo quando o provedor do atual falhar.
-   */
   private Map<String, Object> montarCorpo(List<Map<String, Object>> mensagens, List<String> lista) {
     return montarCorpo(mensagens, lista, 0.4, 800);
   }
 
   /**
-   * Monta o corpo com temperature/max_tokens parametrizados (fase 5); {@code null} mantém os
-   * defaults do chat (0.4 / 800). Com um único modelo, envia {@code model}; com vários, {@code
-   * models} + {@code route=fallback}.
+   * Monta corpo de chat completion. Usa sempre {@code model} único (sem {@code route:fallback}),
+   * pois a cascata é controlada pelo cliente. Inclui {@code reasoning.effort=none} quando suportado
+   * pelo provedor.
    */
   private Map<String, Object> montarCorpo(
       List<Map<String, Object>> mensagens,
@@ -365,17 +387,12 @@ public class AiClient {
       Double temperatura,
       Integer maxTokens) {
     Map<String, Object> corpo = new java.util.LinkedHashMap<>();
-    if (lista.size() > 1) {
-      corpo.put("models", lista);
-      corpo.put("route", "fallback");
-    } else if (lista.size() == 1) {
-      corpo.put("model", lista.get(0));
-    } else {
-      corpo.put("model", modelo);
-    }
+    String modeloAlvo = lista.size() == 1 ? lista.get(0) : modelo;
+    corpo.put("model", modeloAlvo);
     corpo.put("messages", mensagens);
     corpo.put("temperature", temperatura != null ? temperatura : 0.4);
     corpo.put("max_tokens", maxTokens != null ? maxTokens : 800);
+    corpo.put("reasoning", Map.of("effort", "none"));
     return corpo;
   }
 
@@ -390,12 +407,15 @@ public class AiClient {
         .body(String.class);
   }
 
-  /**
-   * Extrai o campo {@code choices[0].message.content} da resposta JSON da OpenRouter. Se o corpo
-   * trouxer um objeto {@code error}, lança {@link ServicoIaIndisponivelException} com a mensagem do
-   * provedor.
-   */
   private String extrairConteudo(String json, String etapa) {
+    return extrairConteudo(json, etapa, null);
+  }
+
+  /**
+   * Extrai conteúdo da resposta. Content nulo/vazio, finish_reason=length e objeto error são falhas
+   * recuperáveis (o chamador do chat pode avançar para outro modelo).
+   */
+  private String extrairConteudo(String json, String etapa, String modeloSolicitado) {
     if (json == null || json.isBlank()) {
       throw new ServicoIaIndisponivelException("O serviço de IA devolveu uma resposta vazia.");
     }
@@ -414,19 +434,25 @@ public class AiClient {
       throw new ServicoIaIndisponivelException("O serviço de IA retornou erro: " + msg);
     }
 
-    JsonNode content = raiz.path("choices").path(0).path("message").path("content");
-    if (content.isMissingNode() || content.isNull()) {
-      throw new ServicoIaIndisponivelException("O serviço de IA devolveu uma resposta inesperada.");
+    JsonNode choice = raiz.path("choices").path(0);
+    JsonNode content = choice.path("message").path("content");
+    String finishReason = choice.path("finish_reason").asText("");
+    String modeloUsado =
+        raiz.path("model").asText(modeloSolicitado == null ? "desconhecido" : modeloSolicitado);
+    LOG.info("Resposta IA: modelo={} finish_reason={} etapa={}", modeloUsado, finishReason, etapa);
+
+    if ("length".equals(finishReason)) {
+      throw new ServicoIaIndisponivelException(
+          "O serviço de IA interrompeu a resposta por limite de tamanho.");
     }
-
-    // Log do modelo que atendeu: com fallback em cascata é essencial saber qual foi usado
-    // (o :free esgota o quota diário da conta e a OpenRouter cai para o próximo da lista).
-    LOG.info(
-        "Resposta da IA servida pelo modelo {} (etapa: {})",
-        raiz.path("model").asText("desconhecido"),
-        etapa);
-
-    return content.asText("");
+    if (content.isMissingNode() || content.isNull()) {
+      throw new ServicoIaIndisponivelException("O serviço de IA devolveu uma resposta vazia.");
+    }
+    String texto = content.asText("");
+    if (texto.isBlank()) {
+      throw new ServicoIaIndisponivelException("O serviço de IA devolveu uma resposta vazia.");
+    }
+    return texto;
   }
 
   /** Extrai o campo {@code model} da resposta da OpenRouter (modelo que de fato respondeu). */

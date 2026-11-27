@@ -90,4 +90,22 @@ class AiServiceFerramentaTest {
     assertThat(ultima).contains("RESULTADO_DA_FERRAMENTA");
     assertThat(ultima).contains("art. 2-C");
   }
+
+  @Test
+  @DisplayName("loop de ferramenta excedido retorna esclarecimento amigavel sem erro cru")
+  void loopFerramentaExcedidoRetornaEsclarecimento() {
+    when(aiClient.completar(any()))
+        .thenReturn(
+            "FERRAMENTA|consultar_base_conhecimento|{\"query\":\"a\"}",
+            "FERRAMENTA|consultar_base_conhecimento|{\"query\":\"b\"}",
+            "FERRAMENTA|consultar_base_conhecimento|{\"query\":\"c\"}");
+    when(registry.executar(any(FerramentaChamada.class), eq(1L), eq(7L)))
+        .thenReturn(new ResultadoFerramenta("{\"trechos\":[]}", List.of()));
+
+    AiResponse resposta = aiService.processar("sessao-loop", "1", "consulta complexa");
+
+    assertThat(resposta.intent()).isEqualTo("esclarecimento");
+    assertThat(resposta.resposta()).doesNotContain("Exception").contains("reformular");
+    assertThat(resposta.opcoes()).contains("Falar com atendente");
+  }
 }

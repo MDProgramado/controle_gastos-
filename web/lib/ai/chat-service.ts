@@ -12,8 +12,6 @@ import type {
 } from "./types";
 import { normalizarValorParaApi } from "@/lib/money";
 
-const DELAY_MS = 400;
-
 function valorParaApi(valor: number): string {
   const normalizado = normalizarValorParaApi(String(valor));
   if (!normalizado) {
@@ -28,30 +26,39 @@ function valorParaApi(valor: number): string {
 export async function enviarMensagem(
   req: AiChatRequest,
 ): Promise<ChatResponse> {
-  // Simula latência de rede para testar o estado "digitando".
-  await new Promise((resolve) => setTimeout(resolve, DELAY_MS));
+  try {
+    const resposta = await chatComIA({
+      mensagem: req.mensagem,
+      // A API aceita apenas {role, content} no histórico (fail-on-unknown-properties):
+      // enviar o ChatMessage inteiro (id, criadoEm, lancamentoProposta...) é rejeitado com 400.
+      historico: req.historico.map((m) => ({
+        role: m.role,
+        content: m.content,
+      })),
+      sessionId: req.sessionId,
+    });
 
-  const resposta = await chatComIA({
-    mensagem: req.mensagem,
-    // A API aceita apenas {role, content} no histórico (fail-on-unknown-properties):
-    // enviar o ChatMessage inteiro (id, criadoEm, lancamentoProposta...) é rejeitado com 400.
-    historico: req.historico.map((m) => ({
-      role: m.role,
-      content: m.content,
-    })),
-    sessionId: req.sessionId,
-  });
+    if (!resposta) {
+      return {
+        intent: "esclarecimento",
+        resposta:
+          "Não foi possível conectar ao serviço de IA. Tente novamente mais tarde.",
+        opcoes: ["Tentar novamente", "Falar com atendente"],
+      };
+    }
 
-  if (!resposta) {
+    return mapearResposta(resposta);
+  } catch (erro) {
     return {
       intent: "esclarecimento",
       resposta:
-        "Não foi possível conectar ao serviço de IA. Tente novamente mais tarde.",
-      opcoes: ["Tentar novamente"],
+        erro instanceof Error && erro.message
+          ? erro.message
+          : "Não foi possível conectar ao serviço de IA. Tente novamente mais tarde.",
+      opcoes: ["Tentar novamente", "Falar com atendente"],
     };
   }
-
-  return mapearResposta(resposta);}
+}
 
 /**
  * Mapeia a resposta da API (AiChatResponse) para o formato esperado pelo
@@ -88,10 +95,12 @@ function mapearResposta(resposta: AiChatResponse): ChatResponse {
       return {
         intent: "consulta",
         resposta: resposta.resposta,
-        dados: resposta.dados?.map((d) => ({
-          label: d.label,
-          valor: d.valor,
-        })) ?? [],
+        dados:
+          resposta.dados?.map((d) => ({
+            label: d.label,
+            valor: d.valor,
+          })) ?? [],
+        citacoes: resposta.citacoes,
       };
     }
     case "esclarecimento":
@@ -100,6 +109,7 @@ function mapearResposta(resposta: AiChatResponse): ChatResponse {
         intent: "esclarecimento",
         resposta: resposta.resposta,
         opcoes: resposta.opcoes,
+        citacoes: resposta.citacoes,
       };
   }
 }

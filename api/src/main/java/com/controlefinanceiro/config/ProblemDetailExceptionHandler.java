@@ -36,6 +36,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.MultipartException;
 
@@ -198,6 +199,14 @@ public class ProblemDetailExceptionHandler {
     return ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage());
   }
 
+  /** Timeout/conexão com serviço externo (IA) → 503 amigável, sem vazar stack/URL. */
+  @ExceptionHandler(ResourceAccessException.class)
+  public ProblemDetail recursoInacessivel(ResourceAccessException ex) {
+    return ProblemDetail.forStatusAndDetail(
+        HttpStatus.SERVICE_UNAVAILABLE,
+        "O serviço de IA demorou para responder. Tente novamente em instantes.");
+  }
+
   /** Arquivo rejeitado na importação (não é PDF, vazio, ou acima de 8 MB) → 400 (fase 5). */
   @ExceptionHandler(ArquivoInvalidoException.class)
   public ProblemDetail arquivoInvalido(ArquivoInvalidoException ex) {
@@ -268,5 +277,17 @@ public class ProblemDetailExceptionHandler {
   @ExceptionHandler(IllegalArgumentException.class)
   public ProblemDetail argumentoInvalido(IllegalArgumentException ex) {
     return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+  }
+
+  /** Estado ilegal de configuração da IA → 503 sem vazar detalhe interno. */
+  @ExceptionHandler(IllegalStateException.class)
+  public ProblemDetail estadoIlegal(IllegalStateException ex) {
+    String mensagem = ex.getMessage();
+    if (mensagem != null && mensagem.contains("ai.openrouter.api-key")) {
+      return ProblemDetail.forStatusAndDetail(
+          HttpStatus.SERVICE_UNAVAILABLE, "Serviço de IA não configurado. Contate o suporte.");
+    }
+    return ProblemDetail.forStatusAndDetail(
+        HttpStatus.INTERNAL_SERVER_ERROR, "Erro interno. Tente novamente.");
   }
 }

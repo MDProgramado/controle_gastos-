@@ -1,8 +1,11 @@
 import { encaminharParaApi } from "@/lib/bff";
+import { IMPORTACAO_TIMEOUT_MS } from "@/lib/bff-helpers";
 
 const MAXIMO_ARQUIVOS = 5;
 const LIMITE_ARQUIVO_BYTES = 4 * 1024 * 1024;
 const LIMITE_LOTE_BYTES = 4.5 * 1024 * 1024;
+
+export const maxDuration = 120;
 
 export async function POST(request: Request) {
   let form: FormData;
@@ -65,6 +68,7 @@ export async function POST(request: Request) {
     method: "POST",
     body: formAPI,
     contentType: null,
+    timeoutMs: IMPORTACAO_TIMEOUT_MS,
   });
 }
 

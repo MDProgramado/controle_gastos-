@@ -65,14 +65,14 @@ ai:
   openrouter:
     api-key: ${OPENROUTER_API_KEY:}
     connect-timeout-ms: ${OPENROUTER_CONNECT_TIMEOUT_MS:3000}
-    read-timeout-ms: ${OPENROUTER_READ_TIMEOUT_MS:30000}
+    read-timeout-ms: ${OPENROUTER_READ_TIMEOUT_MS:25000}
+    chat-deadline-ms: ${AI_OPENROUTER_CHAT_DEADLINE_MS:55000}
+    max-tokens-chat: ${AI_OPENROUTER_MAX_TOKENS_CHAT:2000}
     modelo: ${AI_OPENROUTER_MODELO:google/gemma-4-31b-it:free}
     embedding-model: ${AI_OPENROUTER_EMBEDDING_MODEL:openai/text-embedding-3-small}
-    # Cascata de modelos gratuitos (separados por vírgula), usada com route=fallback:
-    #   primário   -> google/gemma-4-31b-it:free
-    #   secundário -> google/gemma-4-26b-a4b-it:free
-    #   terciário  -> openrouter/free (roteador de modelos gratuitos)
-    modelos: ${AI_OPENROUTER_MODELOS:google/gemma-4-31b-it:free,google/gemma-4-26b-a4b-it:free,openrouter/free}
+    # Cascata de modelos do chat (separados por vírgula). O cliente tenta em ordem,
+    # respeitando o orçamento total de tempo do chat.
+    modelos: ${AI_OPENROUTER_MODELOS:google/gemma-4-31b-it:free,google/gemma-4-26b-a4b-it:free}
     # Último recurso: entra em campo só quando a cascata inteira falha. Necessário porque o
     # limite de modelos :free é por conta e por dia (50 req/dia): quando estoura, TODOS os
     # modelos gratuitos caem juntos e nenhuma cascata de gratuitos resolve.

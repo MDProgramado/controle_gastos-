@@ -9,6 +9,7 @@ type EncaminharOptions = {
   headers?: Record<string, string>;
   query?: Record<string, string | string[] | undefined> | URLSearchParams;
   limparCookieEm401?: boolean;
+  timeoutMs?: number;
 };
 
 export async function encaminharParaApi(
@@ -56,7 +57,7 @@ export async function encaminharParaApi(
       method: options.method ?? "GET",
       headers: { ...headers, ...options.headers },
       body: options.body,
-      signal: AbortSignal.timeout(API_TIMEOUT_MS),
+      signal: AbortSignal.timeout(options.timeoutMs ?? API_TIMEOUT_MS),
       cache: "no-store",
     });
 
@@ -78,8 +79,14 @@ export async function encaminharParaApi(
       headers: respostaHeaders,
     });
   } catch (erro) {
-    if (erro instanceof Error && erro.name === "TimeoutError") {
-      return respostaErroBff(504, "Tempo limite ao consultar a API");
+    if (
+      erro instanceof Error &&
+      (erro.name === "TimeoutError" || erro.name === "AbortError")
+    ) {
+      return respostaErroBff(
+        504,
+        "O serviço demorou para responder. Tente novamente em instantes.",
+      );
     }
     return respostaErroBff(502, "Não foi possível conectar à API");
   }

@@ -140,6 +140,7 @@ class AiClientCascataTest {
     for (Map<String, Object> corpo : corposEnviados) {
       assertThat(corpo.get("temperature")).isEqualTo(0.0);
       assertThat(corpo.get("max_tokens")).isEqualTo(8000);
+      assertThat(corpo).doesNotContainKey("route");
     }
   }
 
@@ -178,6 +179,62 @@ class AiClientCascataTest {
 
     assertThat(resposta.conteudo()).isEqualTo("ok");
     assertThat(resposta.chamadas()).isEqualTo(3);
+  }
+
+  @Test
+  @DisplayName("chat: timeout/conexão faz fallback para próximo modelo")
+  void chatTimeoutFazFallback() {
+    RestClient.Builder builder = RestClient.builder().baseUrl(BASE_URL);
+    MockRestServiceServer servidor = MockRestServiceServer.bindTo(builder).build();
+    servidor
+        .expect(requestTo(URL_CHAT))
+        .andRespond(
+            request -> {
+              throw new org.springframework.web.client.ResourceAccessException("timeout");
+            });
+    servidor
+        .expect(requestTo(URL_CHAT))
+        .andRespond(
+            withSuccess(
+                resposta("ok", "google/gemma-4-26b-a4b-it:free"), MediaType.APPLICATION_JSON));
+    RestClient restClient = builder.build();
+
+    AiClient client = new AiClient(CASCATA_FREE, List.of(), restClient);
+    String conteudo = client.completar(MENSAGENS);
+
+    assertThat(conteudo).isEqualTo("ok");
+    servidor.verify();
+  }
+
+  @Test
+  @DisplayName("chat: content vazio faz fallback para próximo modelo")
+  void chatContentVazioFazFallback() {
+    String vazio =
+        """
+        {"model":"google/gemma-4-31b-it:free","choices":[{"message":{"role":"assistant","content":""},"finish_reason":"stop"}]}
+        """;
+    RestClient restClient =
+        novoRestClient(
+            fila(sucesso(vazio), sucesso(resposta("ok", "google/gemma-4-26b-a4b-it:free"))), null);
+    AiClient client = new AiClient(CASCATA_FREE, List.of(), restClient);
+
+    assertThat(client.completar(MENSAGENS)).isEqualTo("ok");
+  }
+
+  @Test
+  @DisplayName("chat: finish_reason length faz fallback para próximo modelo")
+  void chatFinishReasonLengthFazFallback() {
+    String truncado =
+        """
+        {"model":"google/gemma-4-31b-it:free","choices":[{"message":{"role":"assistant","content":"parcial"},"finish_reason":"length"}]}
+        """;
+    RestClient restClient =
+        novoRestClient(
+            fila(sucesso(truncado), sucesso(resposta("ok", "google/gemma-4-26b-a4b-it:free"))),
+            null);
+    AiClient client = new AiClient(CASCATA_FREE, List.of(), restClient);
+
+    assertThat(client.completar(MENSAGENS)).isEqualTo("ok");
   }
 
   /* ========================================================================

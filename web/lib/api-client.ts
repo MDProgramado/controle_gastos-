@@ -7,20 +7,29 @@
 - Next (/api/ai/chat, /api/categorias), que repassam o Bearer para a API.
  */
 
-import { API_TIMEOUT_MS } from "./bff-helpers";
+import { AI_TIMEOUT_MS, API_TIMEOUT_MS } from "./bff-helpers";
 
-async function fetchBff(url: string, init: RequestInit = {}): Promise<Response> {
+async function fetchBff(
+  url: string,
+  init: RequestInit = {},
+  timeoutMs = API_TIMEOUT_MS,
+): Promise<Response> {
   try {
     return await fetch(url, {
       ...init,
       cache: "no-store",
-      signal: AbortSignal.timeout(API_TIMEOUT_MS),
+      signal: init.signal ?? AbortSignal.timeout(timeoutMs),
     });
   } catch (erro) {
-    if (erro instanceof Error && erro.name === "TimeoutError") {
-      throw new Error("Tempo limite ao consultar o servidor. Tente novamente.");
+    if (
+      erro instanceof Error &&
+      (erro.name === "TimeoutError" || erro.name === "AbortError")
+    ) {
+      throw new Error(
+        "O serviço demorou para responder. Tente novamente em instantes.",
+      );
     }
-    throw erro;
+    throw new Error("Não foi possível conectar ao servidor. Tente novamente.");
   }
 }
 
@@ -47,6 +56,13 @@ export type AiChatResponse = {
   /** Todos os lançamentos retornados na mensagem (pode ter mais de um). */
   propostas?: AiPropostaLancamento[];
   opcoes?: string[];
+  citacoes?: Array<{
+    sourceId: string;
+    titulo: string | null;
+    organizacao: string | null;
+    vigencia: string | null;
+    dispositivo: string | null;
+  }>;
 };
 
 /**
@@ -59,14 +75,18 @@ export async function chatComIA(
   request: AiChatRequest,
 ): Promise<AiChatResponse | null> {
   try {
-    const res = await fetchBff("/api/ai/chat", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
+    const res = await fetchBff(
+      "/api/ai/chat",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(request),
+        cache: "no-store",
       },
-      body: JSON.stringify(request),
-      cache: "no-store",
-    });
+      AI_TIMEOUT_MS + 5000,
+    );
     if (!res.ok) {
       const detalhe = await extrairDetalhe(res);
       throw new Error(
@@ -81,11 +101,13 @@ export async function chatComIA(
   }
 }
 
-/** Lê o campo "detail" de um ProblemDetail (RFC 7807) devolvido pela API. */
+/** Lê detalhe amigável de ProblemDetail (RFC 7807) ou erro do BFF. */
 async function extrairDetalhe(res: Response): Promise<string | null> {
   try {
-    const corpo = (await res.json()) as { detail?: string };
-    return typeof corpo?.detail === "string" ? corpo.detail : null;
+    const corpo = (await res.json()) as { detail?: string; erro?: string };
+    if (typeof corpo?.detail === "string") return corpo.detail;
+    if (typeof corpo?.erro === "string") return corpo.erro;
+    return null;
   } catch {
     return null;
   }
@@ -93,8 +115,10 @@ async function extrairDetalhe(res: Response): Promise<string | null> {
 
 function extrairDetalheTexto(texto: string): string | null {
   try {
-    const corpo = JSON.parse(texto) as { detail?: string };
-    return typeof corpo?.detail === "string" ? corpo.detail : null;
+    const corpo = JSON.parse(texto) as { detail?: string; erro?: string };
+    if (typeof corpo?.detail === "string") return corpo.detail;
+    if (typeof corpo?.erro === "string") return corpo.erro;
+    return null;
   } catch {
     return null;
   }

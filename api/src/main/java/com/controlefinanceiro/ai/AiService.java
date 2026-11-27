@@ -32,6 +32,7 @@ import org.springframework.stereotype.Service;
 public class AiService {
 
   private static final int MAX_MENSAGENS_HISTORICO = 20;
+  private static final int MAX_ITERACOES_FERRAMENTA = 2;
   private static final ZoneId FUSO = ZoneId.of("America/Sao_Paulo");
   private static final BigDecimal ZERO = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_EVEN);
   private static final ObjectMapper MAPPER = new ObjectMapper();
@@ -83,22 +84,53 @@ public class AiService {
           "esclarecimento", "Informe uma mensagem.", List.of(), null, List.of(), List.of());
     }
 
-    memoryStore.adicionarMensagem(sessionId, empresaId, usuarioId, new AiMessage("user", mensagem));
-
     List<AiMessage> historico = memoryStore.obterHistorico(sessionId, empresaId, usuarioId);
     List<Map<String, Object>> mensagens =
-        montarMensagens(historico, mensagem, empresaId, usuarioId);
+        montarMensagens(historico, mensagem, empresaId, usuarioId, true);
 
-    String respostaTexto = aiClient.completar(mensagens);
+    String respostaTexto;
+    try {
+      respostaTexto = aiClient.completar(mensagens);
+    } catch (RuntimeException e) {
+      return respostaIndisponivel(e);
+    }
     List<AiResponse.AiCitacao> citacoes = List.of();
 
-    FerramentaChamada chamada = extrairChamadaFerramenta(respostaTexto);
-    if (chamada != null && ferramentaRegistry != null) {
-      ResultadoFerramenta resultado =
-          ferramentaRegistry.executar(chamada, parseLong(empresaId), parseLong(usuarioId));
-      citacoes = resultado.citacoes() == null ? List.of() : resultado.citacoes();
+    for (int i = 0; i < MAX_ITERACOES_FERRAMENTA; i++) {
+      FerramentaChamada chamada = extrairChamadaFerramenta(respostaTexto);
+      if (chamada == null || ferramentaRegistry == null) {
+        break;
+      }
+      ResultadoFerramenta resultado;
+      try {
+        resultado =
+            ferramentaRegistry.executar(chamada, parseLong(empresaId), parseLong(usuarioId));
+      } catch (RuntimeException e) {
+        resultado =
+            new ResultadoFerramenta(
+                "Não foi possível executar a ferramenta solicitada com segurança.", List.of());
+      }
+      if (resultado.citacoes() != null && !resultado.citacoes().isEmpty()) {
+        citacoes = resultado.citacoes();
+      }
       mensagens = comResultadoDaFerramenta(mensagens, respostaTexto, resultado);
-      respostaTexto = aiClient.completar(mensagens);
+      try {
+        respostaTexto = aiClient.completar(mensagens);
+      } catch (RuntimeException e) {
+        return respostaIndisponivel(e);
+      }
+      if (extrairChamadaFerramenta(respostaTexto) == null) {
+        break;
+      }
+      if (i == MAX_ITERACOES_FERRAMENTA - 1) {
+        return new AiResponse(
+            "esclarecimento",
+            "Não consegui concluir a consulta com segurança. Pode reformular a pergunta?",
+            List.of(),
+            null,
+            List.of(),
+            List.of("Tentar novamente", "Falar com atendente"));
+      }
     }
 
     AiResponse resposta = interpretar(respostaTexto);
@@ -106,6 +138,7 @@ public class AiService {
       resposta = resposta.comCitacoes(citacoes);
     }
 
+    memoryStore.adicionarMensagem(sessionId, empresaId, usuarioId, new AiMessage("user", mensagem));
     memoryStore.adicionarMensagem(
         sessionId, empresaId, usuarioId, new AiMessage("assistant", resposta.resposta()));
 
@@ -156,7 +189,11 @@ public class AiService {
    * @param empresaId tenant extraído do JWT (R3) — usado para montar os dados reais
    */
   private List<Map<String, Object>> montarMensagens(
-      List<AiMessage> historico, String mensagemUsuario, String empresaId, String usuarioId) {
+      List<AiMessage> historico,
+      String mensagemUsuario,
+      String empresaId,
+      String usuarioId,
+      boolean incluirMensagemAtual) {
     List<Map<String, Object>> mensagens = new ArrayList<>();
 
     String hoje = LocalDate.now(FUSO).toString();
@@ -165,59 +202,36 @@ public class AiService {
     String systemPrompt =
         """
       Você é um assistente financeiro de uma empresa. Responda em português do Brasil.
-      Data de hoje: %s (America/Sao_Paulo). Use sempre o ano corrente correto quando a data
-      não for informada.
+      Data de hoje: %s (America/Sao_Paulo). Se a data não for informada, use a data de hoje.
 
-      Regras de ouro:
-      - Nunca invente valores financeiros. Para consultas, use EXATAMENTE os DADOS REAIS da
-        empresa informados abaixo. Se o período perguntado não estiver nos dados, diga isso e
-        pergunte qual período consultar.
-      - Nunca confirme ou grave lançamentos automaticamente. Apenas proponha; o usuário confirma.
-      - Se o usuário relatar UM OU MAIS lançamentos, responda com UMA LINHA POR LANÇAMENTO,
-        sem texto extra, no formato:
+      FORMATO OBRIGATÓRIO (saída crua, sem markdown, sem texto antes/depois):
+      - Lançamento(s): UMA linha por item:
         LANCAMENTO|tipo|valor|data|categoriaId|categoriaSugerida|descricao
-        onde:
-          tipo = ENTRADA ou SAIDA
-          valor = número positivo (use ponto como separador decimal, ex.: 2400.00)
-          data = YYYY-MM-DD (se não informada, use a data de hoje)
-          categoriaId = deixe SEMPRE vazio (você não tem acesso aos IDs reais do banco)
-          categoriaSugerida = nome da categoria (ex.: Salário, Aluguel, Energia, Água, Alimentação)
-          descricao = texto curto do lançamento
-        Exemplo com vários itens:
-        LANCAMENTO|ENTRADA|2400.00|%s||Salário|Salário do mês
-        LANCAMENTO|SAIDA|900.00|%s||Aluguel|Aluguel
-      - Se o usuário pedir uma consulta (quanto gastou, total, saldo, etc.), responda com:
-        CONSULTA|texto da resposta
-        Cite os valores em reais no padrão brasileiro (ex.: R$ 1.234,56).
-      - Se não souber ou precisar de esclarecimento, responda com:
-        ESCLARECIMENTO|texto da resposta|opcao1|opcao2|...
+        tipo=ENTRADA ou SAIDA; valor positivo com ponto decimal (2400.00); data YYYY-MM-DD;
+        categoriaId SEMPRE vazio; categoriaSugerida e descricao curtas.
+      - Consulta: CONSULTA|texto objetivo com valores em R$ 1.234,56
+      - Esclarecimento: ESCLARECIMENTO|pergunta curta|opcao1|opcao2
 
-      Ferramentas determinísticas — use QUANDO precisar de cálculo exato, histórico
-      comparativo, categorias, ralos/recorrências, orçamento 50/30/20 ou base normativa.
-      Nunca invente o que a ferramenta calcula. Emita UMA linha, e apenas ela:
+      Regras:
+      - Nunca invente valores. Para consultas, use EXATAMENTE os DADOS REAIS abaixo. Se o período
+        não estiver nos dados, diga isso e pergunte o período.
+      - Nunca confirme nem grave lançamentos; apenas proponha.
+      - Não repita o mesmo lançamento.
+
+      Ferramentas determinísticas (uma linha, quando precisar de cálculo exato):
         FERRAMENTA|nome|{"chave":"valor"}
-      Nomes disponíveis:
-        listar_categorias
-        consultar_historico_e_comparativo
-        diagnosticar_orcamento_50_30_20
-        detectar_ralos_e_recorrencias
-        simular_quitacao_ou_juros
-        consultar_base_conhecimento
-      Depois do resultado, responda no formato CONSULTA|... citando a fonte quando houver:
+      Nomes: listar_categorias, consultar_historico_e_comparativo, diagnosticar_orcamento_50_30_20,
+      detectar_ralos_e_recorrencias, simular_quitacao_ou_juros, consultar_base_conhecimento.
+      Após resultado, responda em CONSULTA|... citando fonte quando houver:
         [título — órgão, vigência, dispositivo (source_id)]
-      Regras da base normativa: valores em reais com 2 casas; sempre acompanhe percentual
-      do valor absoluto; compare apenas períodos com o mesmo número de meses; nunca
-      prometa rentabilidade nem recomende ativo individualmente.
-      Se uma categoria cair no fallback do 50/30/20, diga exatamente:
-        "Considerei [Categoria X] como Desejo por padrão; me avise se ela for uma despesa essencial"
 
-      DADOS REAIS DA EMPRESA (use estes números nas consultas):
+      DADOS REAIS DA EMPRESA:
       %s
 
-      Conhecimento da empresa (definido pelo administrador):
+      Conhecimento da empresa:
       %s
       """
-            .formatted(hoje, hoje, hoje, dadosReais, knowledgeStore.obterConhecimento(empresaId));
+            .formatted(hoje, dadosReais, knowledgeStore.obterConhecimento(empresaId));
 
     mensagens.add(Map.of("role", "system", "content", systemPrompt));
 
@@ -230,9 +244,14 @@ public class AiService {
       mensagens.add(Map.of("role", m.role(), "content", m.content()));
     }
 
-    // Rede de segurança: se o histórico veio vazio, garante a mensagem do usuário.
-    if (mensagens.size() == 1) {
-      mensagens.add(Map.of("role", "user", "content", mensagemUsuario));
+    if (incluirMensagemAtual) {
+      boolean ultimaJaEhUsuario =
+          !historico.isEmpty()
+              && "user".equals(historico.get(historico.size() - 1).role())
+              && mensagemUsuario.equals(historico.get(historico.size() - 1).content());
+      if (!ultimaJaEhUsuario) {
+        mensagens.add(Map.of("role", "user", "content", mensagemUsuario));
+      }
     }
 
     return mensagens;
@@ -276,9 +295,10 @@ public class AiService {
     List<AiResponse.AiPropostaLancamento> propostas = new ArrayList<>();
     String consultaCorpo = null;
     String esclarecimentoLinha = null;
+    StringBuilder textoLivre = new StringBuilder();
 
     for (String linha : t.split("\\R")) {
-      String l = linha.trim();
+      String l = sanitizarLinhaProtocolo(linha);
       if (l.isEmpty()) {
         continue;
       }
@@ -291,6 +311,9 @@ public class AiService {
         consultaCorpo = l.substring("CONSULTA|".length()).trim();
       } else if (l.startsWith("ESCLARECIMENTO|") && esclarecimentoLinha == null) {
         esclarecimentoLinha = l;
+      } else if (FerramentaChamadaParser.parse(l) == null) {
+        if (!textoLivre.isEmpty()) textoLivre.append('\n');
+        textoLivre.append(l);
       }
     }
 
@@ -304,8 +327,27 @@ public class AiService {
       return interpretarEsclarecimento(esclarecimentoLinha);
     }
 
-    // Fallback: trata como esclarecimento com o texto bruto
-    return new AiResponse("esclarecimento", t, List.of(), null, List.of(), List.of());
+    String livre = textoLivre.toString().trim();
+    return new AiResponse(
+        "esclarecimento",
+        livre.isEmpty() ? "Não consegui entender a resposta. Pode repetir?" : livre,
+        List.of(),
+        null,
+        List.of(),
+        List.of());
+  }
+
+  private String sanitizarLinhaProtocolo(String linha) {
+    if (linha == null) return "";
+    String l = linha.trim();
+    l = l.replaceFirst("^```[a-zA-Z0-9_-]*\\s*", "");
+    if (l.equals("```")) return "";
+    l = l.replaceFirst("^(?i)(assistant|resposta|output)\\s*:\\s*", "");
+    l = l.replaceFirst("^[-*]\\s+", "");
+    if ((l.startsWith("`") && l.endsWith("`")) || (l.startsWith("\"") && l.endsWith("\""))) {
+      l = l.substring(1, l.length() - 1).trim();
+    }
+    return l;
   }
 
   /**
@@ -327,6 +369,41 @@ public class AiService {
     return false;
   }
 
+  private BigDecimal parseValor(String bruto) {
+    if (bruto == null) return null;
+    String s = bruto.trim();
+    if (s.isEmpty()) return null;
+    s = s.replace("R$", "").replace("\u00A0", "").replace(" ", "");
+    boolean temVirgula = s.indexOf(',') >= 0;
+    boolean temPonto = s.indexOf('.') >= 0;
+    if (temVirgula && temPonto) {
+      if (s.lastIndexOf(',') > s.lastIndexOf('.')) {
+        s = s.replace(".", "").replace(",", ".");
+      } else {
+        s = s.replace(",", "");
+      }
+    } else if (temVirgula) {
+      String[] partes = s.split(",");
+      if (partes.length == 2 && partes[1].length() <= 2) {
+        s = s.replace(".", "").replace(",", ".");
+      } else {
+        s = s.replace(",", "");
+      }
+    } else if (temPonto) {
+      String[] partes = s.split("\\.");
+      if (!(partes.length == 2 && partes[1].length() <= 2)) {
+        s = s.replace(".", "");
+      }
+    }
+    s = s.replaceAll("[^0-9\\.-]", "");
+    if (s.isEmpty() || "-".equals(s) || ".".equals(s)) return null;
+    try {
+      return new BigDecimal(s).setScale(2, RoundingMode.HALF_EVEN);
+    } catch (NumberFormatException e) {
+      return null;
+    }
+  }
+
   private AiResponse.AiPropostaLancamento parseLancamento(String linha) {
     String[] partes = linha.split("\\|", -1);
     if (partes.length < 4) {
@@ -339,7 +416,7 @@ public class AiService {
     }
 
     BigDecimal valor = parseValor(partes[2]);
-    if (valor.signum() <= 0) {
+    if (valor == null || valor.signum() <= 0) {
       return null;
     }
 
@@ -420,20 +497,25 @@ public class AiService {
     return new AiResponse("esclarecimento", corpo, List.of(), null, List.of(), opcoes);
   }
 
-  /** Converte o texto em BigDecimal com escala 2 e HALF_EVEN (R1 — sem double/float). */
-  private BigDecimal parseValor(String s) {
-    if (s == null) {
-      return ZERO;
-    }
-    String limpo = s.trim().replace(",", ".").replaceAll("[^0-9.]", "");
-    if (limpo.isBlank()) {
-      return ZERO;
-    }
-    try {
-      return new BigDecimal(limpo).setScale(2, RoundingMode.HALF_EVEN);
-    } catch (NumberFormatException e) {
-      return ZERO;
-    }
+  private AiResponse respostaIndisponivel(RuntimeException e) {
+    String detalhe = e.getMessage();
+    String mensagem =
+        (detalhe == null || detalhe.isBlank())
+            ? "Não foi possível falar com o serviço de IA agora. Tente novamente em instantes."
+            : detalhe;
+    return new AiResponse(
+        "esclarecimento",
+        mensagem,
+        List.of(),
+        null,
+        List.of(),
+        List.of("Tentar novamente", "Falar com atendente"));
+  }
+
+  /** Converte texto em BigDecimal com escala 2 e HALF_EVEN (R1 — sem double/float). */
+  private BigDecimal parseValorObrigatorio(String s) {
+    BigDecimal valor = parseValor(s);
+    return valor == null ? ZERO : valor;
   }
 
   /* ========================================================================

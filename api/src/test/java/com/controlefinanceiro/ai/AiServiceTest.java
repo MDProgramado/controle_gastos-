@@ -219,4 +219,50 @@ class AiServiceTest {
     aiService.limparSessao("sessao-1", "empresa-1");
     assertThat(aiService.obterHistorico("sessao-1", "empresa-1")).isEmpty();
   }
+
+  @Test
+  @DisplayName("interpreta lancamento em resposta multiline com markdown")
+  void interpretaLancamentoMultilineComMarkdown() {
+    when(aiClient.completar(any()))
+        .thenReturn(
+            "Claro!\n```text\nLANCAMENTO|SAIDA|45,90|2026-11-12||Alimentação|Almoço\n```\n");
+    AiResponse resposta = aiService.processar("sessao-1", "empresa-1", "gastei 45,90 almoço");
+    assertThat(resposta.intent()).isEqualTo("lancamento");
+    assertThat(resposta.proposta().valor()).isEqualByComparingTo("45.90");
+  }
+
+  @Test
+  @DisplayName("interpreta consulta em resposta multiline com markdown")
+  void interpretaConsultaMultilineComMarkdown() {
+    when(aiClient.completar(any()))
+        .thenReturn(
+            "Segue o resumo:\n```text\nCONSULTA|Você gastou R$ 342,50 em alimentação.\n```");
+    AiResponse resposta = aiService.processar("sessao-1", "empresa-1", "quanto gastei?");
+
+    assertThat(resposta.intent()).isEqualTo("consulta");
+    assertThat(resposta.resposta()).contains("R$ 342,50");
+    assertThat(resposta.proposta()).isNull();
+  }
+
+  @Test
+  @DisplayName("parseValor aceita formatos BR e US")
+  void parseValorAceitaFormatos() {
+    when(aiClient.completar(any()))
+        .thenReturn("LANCAMENTO|SAIDA|1.234,56|2026-11-12||Mercado|Compra");
+    AiResponse br = aiService.processar("s1", "empresa-1", "gastei 1.234,56");
+    assertThat(br.proposta().valor()).isEqualByComparingTo("1234.56");
+    when(aiClient.completar(any()))
+        .thenReturn("LANCAMENTO|SAIDA|1,234.56|2026-11-12||Mercado|Compra");
+    AiResponse us = aiService.processar("s2", "empresa-1", "gastei 1,234.56");
+    assertThat(us.proposta().valor()).isEqualByComparingTo("1234.56");
+  }
+
+  @Test
+  @DisplayName("nao persiste mensagens quando IA falha")
+  void naoPersisteMensagensQuandoIaFalha() {
+    when(aiClient.completar(any())).thenThrow(new RuntimeException("falha IA"));
+    AiResponse resposta = aiService.processar("sessao-falha", "empresa-1", "oi");
+    assertThat(resposta.intent()).isEqualTo("esclarecimento");
+    assertThat(aiService.obterHistorico("sessao-falha", "empresa-1")).isEmpty();
+  }
 }
