@@ -190,15 +190,24 @@ public class WhatsappWebhookService {
       return;
     }
 
-    AiResponse resposta =
-        aiService.processar(from, empresaId.toString(), usuarioId.toString(), texto);
+    try {
+      AiResponse resposta =
+          aiService.processar(from, empresaId.toString(), usuarioId.toString(), texto);
 
-    switch (resposta.intent()) {
-      case "lancamento" ->
-          processarPropostaLancamento(messageId, telefone, empresaId, usuarioId, resposta);
-      case "consulta" -> processarConsulta(messageId, telefone, empresaId, usuarioId, resposta);
-      case "esclarecimento" -> processarEsclarecimento(messageId, telefone, resposta);
-      default -> registrarMensagem(messageId, "REJEITADA");
+      switch (resposta.intent()) {
+        case "lancamento" ->
+            processarPropostaLancamento(messageId, telefone, empresaId, usuarioId, resposta);
+        case "consulta" -> processarConsulta(messageId, telefone, empresaId, usuarioId, resposta);
+        case "esclarecimento" -> processarEsclarecimento(messageId, telefone, resposta);
+        default -> registrarMensagem(messageId, "REJEITADA");
+      }
+    } catch (RuntimeException e) {
+      LOG.error("Erro ao processar mensagem WhatsApp com IA: messageId={}", messageId, e);
+      envioService.enviarTexto(
+          telefone.getNumeroE164(),
+          "Não consegui processar sua mensagem agora. Tente novamente em instantes.",
+          messageId);
+      registrarMensagem(messageId, "ERRO_IA");
     }
   }
 
