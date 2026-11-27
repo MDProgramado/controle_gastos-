@@ -49,6 +49,7 @@ class WhatsappConfirmacaoIntegrationTest {
   @Autowired private WhatsappWebhookService webhookService;
 
   @MockBean private WhatsappEnvioService envioService;
+  @MockBean private com.controlefinanceiro.ai.AiService aiService;
 
   @org.springframework.boot.test.mock.mockito.SpyBean
   private com.controlefinanceiro.lancamento.LancamentoService lancamentoService;
@@ -338,6 +339,32 @@ class WhatsappConfirmacaoIntegrationTest {
           .hasSize(1);
       assertThat(textos.getAllValues()).filteredOn(texto -> texto.contains("gravado")).hasSize(1);
     }
+  }
+
+
+  @Test
+  void mensagemTextoDeNumeroVerificadoRegistraEEnviaResposta() throws Exception {
+    org.mockito.Mockito.when(
+            aiService.processar(
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.anyString()))
+        .thenReturn(
+            new com.controlefinanceiro.ai.AiResponse(
+                "consulta",
+                "Seu saldo atual é R$ 100,00",
+                java.util.List.of(),
+                null,
+                java.util.List.of(),
+                java.util.List.of()));
+
+    String messageId = "wamid-texto-comum-1";
+    webhookService.processarWebhook(payloadTexto(messageId, NUMERO, "qual meu saldo?"), "sig");
+
+    aguardarResultado(messageId, "CONSULTA");
+    verify(envioService, timeout(ESPERA_ASSINCRONA_MS))
+        .enviarTexto(eq(NUMERO), contains("saldo"), eq(messageId));
   }
 
   @Test
