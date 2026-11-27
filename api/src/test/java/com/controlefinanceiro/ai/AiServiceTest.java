@@ -67,18 +67,24 @@ class AiServiceTest {
     assertThat(resposta.proposta().categoriaSugerida()).isEqualTo("Almoço");
   }
 
-  @Test
+    @Test
   @DisplayName("CONSULTA multiline captura continuacao e sanitiza markdown")
   void consultaMultilineCapturaContinuacaoESanitizaMarkdown() {
     when(aiClient.completar(any(), anyLong()))
         .thenReturn(
-            "**CONSULTA|** Seu saldo é **R$ 1.000,00**\nDetalhe: entrada de R$ 1.500,00\nSaída de R$ 500,00");
-    AiResponse resposta = aiService.processar("s-consulta", "empresa-1", "como está meu saldo?");
+            "**CONSULTA|** Seu saldo ? **R$ 1.000,00**\nDetalhe: entrada de R$ 1.500,00\nSa?da de R$ 500,00");
+    AiResponse resposta = aiService.processar("s-consulta", "empresa-1", "como est? meu saldo?");
     assertThat(resposta.intent()).isEqualTo("consulta");
-    assertThat(resposta.resposta()).contains("Seu saldo é R$ 1.000,00");
+    assertThat(resposta.resposta()).contains("Seu saldo ? R$ 1.000,00");
     assertThat(resposta.resposta()).contains("Detalhe: entrada de R$ 1.500,00");
-    assertThat(resposta.resposta()).contains("Saída de R$ 500,00");
+    assertThat(resposta.resposta()).contains("Sa?da de R$ 500,00");
     assertThat(resposta.resposta()).doesNotContain("**");
+
+    List<AiMessage> historico = aiService.obterHistorico("s-consulta", "empresa-1");
+    assertThat(historico).hasSize(2);
+    assertThat(historico.get(1).content())
+        .isEqualTo(
+            "CONSULTA| Seu saldo ? R$ 1.000,00\nDetalhe: entrada de R$ 1.500,00\nSa?da de R$ 500,00");
   }
 
   @Test

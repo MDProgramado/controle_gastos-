@@ -393,13 +393,29 @@ public class AiService {
   private String normalizarTextoBruto(String texto) {
     if (texto == null || texto.isBlank()) return "";
     List<String> linhas = new ArrayList<>();
+    String blocoAtual = null;
     for (String linha : texto.split("\\R")) {
       String l = sanitizarLinhaProtocolo(linha);
       if (l.isEmpty()) continue;
-      if (l.startsWith("LANCAMENTO|")
-          || l.startsWith("CONSULTA|")
-          || l.startsWith("ESCLARECIMENTO|")) {
+      if (l.startsWith("LANCAMENTO|")) {
         linhas.add(l);
+        blocoAtual = "LANCAMENTO";
+        continue;
+      }
+      if (l.startsWith("CONSULTA|") || l.startsWith("ESCLARECIMENTO|")) {
+        linhas.add(l);
+        blocoAtual = l.startsWith("CONSULTA|") ? "CONSULTA" : "ESCLARECIMENTO";
+        continue;
+      }
+      if (l.startsWith("FERRAMENTA|")) {
+        blocoAtual = null;
+        continue;
+      }
+      if (("CONSULTA".equals(blocoAtual) || "ESCLARECIMENTO".equals(blocoAtual))
+          && !l.contains("|")) {
+        linhas.add(l);
+      } else {
+        blocoAtual = null;
       }
     }
     return String.join("\n", linhas);
