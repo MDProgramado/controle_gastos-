@@ -49,6 +49,8 @@ class WhatsappConfirmacaoIntegrationTest {
   @Autowired private WhatsappWebhookService webhookService;
 
   @MockBean private WhatsappEnvioService envioService;
+  @org.springframework.boot.test.mock.mockito.SpyBean
+  private com.controlefinanceiro.lancamento.LancamentoService lancamentoService;
 
   private Long empresaId;
   private Long usuarioId;
@@ -147,6 +149,9 @@ class WhatsappConfirmacaoIntegrationTest {
   @Test
   void confirmacaoPorTextoSimGravaLancamentoComEmpresaEUsuarioDoTelefone() {
     Long pendenciaId = criarPendencia();
+    org.mockito.ArgumentCaptor<com.controlefinanceiro.lancamento.LancamentoRequest> reqCaptor =
+        org.mockito.ArgumentCaptor.forClass(
+            com.controlefinanceiro.lancamento.LancamentoRequest.class);
 
     webhookService.processarConfirmacaoTexto("wamid-sim-1", NUMERO, "sim");
 
@@ -160,7 +165,29 @@ class WhatsappConfirmacaoIntegrationTest {
             usuarioId,
             "wamid-sim-1");
     assertThat(lancamentos).isEqualTo(1);
+    verify(lancamentoService)
+        .criarComCanal(
+            eq(empresaId), eq(usuarioId), reqCaptor.capture(), eq("WHATSAPP"), eq("wamid-sim-1"));
     verify(envioService).enviarTexto(eq(NUMERO), contains("gravado"), eq("wamid-sim-1"));
+    org.mockito.InOrder ordem = org.mockito.Mockito.inOrder(lancamentoService, envioService);
+    ordem.verify(lancamentoService).criarComCanal(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+    ordem.verify(envioService).enviarTexto(eq(NUMERO), contains("gravado"), eq("wamid-sim-1"));
+  }
+
+  @Test
+  void falhaAoCriarLancamentoNaoConfirmaPendenciaENaoEnviaSucesso() {
+    Long pendenciaId = criarPendencia();
+    org.mockito.Mockito.doThrow(new RuntimeException("falha simulada criarComCanal"))
+        .when(lancamentoService)
+        .criarComCanal(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+
+    org.assertj.core.api.Assertions.assertThatThrownBy(
+            () -> webhookService.processarConfirmacaoTexto("wamid-falha-1", NUMERO, "sim " + pendenciaId))
+        .isInstanceOf(RuntimeException.class);
+
+    assertThat(status(pendenciaId)).isEqualTo("PENDENTE");
+    assertThat(contarLancamentos(empresaId)).isZero();
+    verify(envioService, org.mockito.Mockito.never()).enviarTexto(org.mockito.ArgumentMatchers.any(), contains("gravado"), org.mockito.ArgumentMatchers.any());
   }
 
   @Test
@@ -413,3 +440,7 @@ class WhatsappConfirmacaoIntegrationTest {
         "SELECT status FROM whatsapp_confirmacao_pendente WHERE id = ?", String.class, pendenciaId);
   }
 }
+
+
+
+
