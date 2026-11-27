@@ -41,7 +41,7 @@ public class WhatsappConfirmacaoService {
   @Transactional
   public WhatsappConfirmacaoResultado processarConfirmacaoTexto(
       String messageId, String from, String texto) {
-    UsuarioTelefone telefone = telefoneRepository.findByNumeroE164(from).orElse(null);
+    UsuarioTelefone telefone = telefoneRepository.findComIdentidadeByNumeroE164(from).orElse(null);
     if (telefone == null) {
       return WhatsappConfirmacaoResultado.semEnvio("REJEITADA");
     }
@@ -71,7 +71,7 @@ public class WhatsappConfirmacaoService {
   @Transactional
   public WhatsappConfirmacaoResultado confirmarLancamento(
       String messageId, String from, Long confirmacaoId) {
-    UsuarioTelefone telefone = telefoneRepository.findByNumeroE164(from).orElse(null);
+    UsuarioTelefone telefone = telefoneRepository.findComIdentidadeByNumeroE164(from).orElse(null);
     if (telefone == null) {
       return WhatsappConfirmacaoResultado.semEnvio("REJEITADA");
     }
@@ -86,7 +86,7 @@ public class WhatsappConfirmacaoService {
   @Transactional
   public WhatsappConfirmacaoResultado confirmarLancamento(
       String messageId, String from, Long confirmacaoId, Long empresaId, Long usuarioId) {
-    Optional<UsuarioTelefone> telefoneOpt = telefoneRepository.findByNumeroE164(from);
+    Optional<UsuarioTelefone> telefoneOpt = telefoneRepository.findComIdentidadeByNumeroE164(from);
     if (telefoneOpt.isEmpty()) {
       return WhatsappConfirmacaoResultado.semEnvio("REJEITADA");
     }
@@ -149,7 +149,7 @@ public class WhatsappConfirmacaoService {
   @Transactional
   public WhatsappConfirmacaoResultado cancelarLancamento(
       String messageId, String from, Long confirmacaoId) {
-    UsuarioTelefone telefone = telefoneRepository.findByNumeroE164(from).orElse(null);
+    UsuarioTelefone telefone = telefoneRepository.findComIdentidadeByNumeroE164(from).orElse(null);
     if (telefone == null) {
       return WhatsappConfirmacaoResultado.semEnvio("REJEITADA");
     }
@@ -164,7 +164,7 @@ public class WhatsappConfirmacaoService {
   @Transactional
   public WhatsappConfirmacaoResultado cancelarLancamento(
       String messageId, String from, Long confirmacaoId, Long empresaId, Long usuarioId) {
-    Optional<UsuarioTelefone> telefoneOpt = telefoneRepository.findByNumeroE164(from);
+    Optional<UsuarioTelefone> telefoneOpt = telefoneRepository.findComIdentidadeByNumeroE164(from);
     if (telefoneOpt.isEmpty()) {
       return WhatsappConfirmacaoResultado.semEnvio("REJEITADA");
     }

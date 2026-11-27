@@ -150,7 +150,7 @@ public class WhatsappWebhookService {
     Map<String, Object> button = asStringMap(message.get("button"));
     String payloadBtn = button == null ? null : (String) button.get("payload");
 
-    Optional<UsuarioTelefone> telefoneOpt = telefoneRepository.findByNumeroE164(from);
+    Optional<UsuarioTelefone> telefoneOpt = telefoneRepository.findComIdentidadeByNumeroE164(from);
     if (telefoneOpt.isEmpty()) {
       envioService.enviarInstrucaoCadastro(from, messageId);
       registrarMensagem(messageId, "NAO_CADASTRADO");
@@ -293,7 +293,7 @@ public class WhatsappWebhookService {
   }
 
   void processarConfirmacaoTexto(String messageId, String from, String texto) {
-    UsuarioTelefone telefone = telefoneRepository.findByNumeroE164(from).orElse(null);
+    UsuarioTelefone telefone = telefoneRepository.findComIdentidadeByNumeroE164(from).orElse(null);
     if (telefone == null) {
       registrarMensagem(messageId, "REJEITADA");
       return;
@@ -320,7 +320,7 @@ public class WhatsappWebhookService {
   }
 
   void confirmarLancamento(String messageId, String from, Long confirmacaoId) {
-    UsuarioTelefone telefone = telefoneRepository.findByNumeroE164(from).orElse(null);
+    UsuarioTelefone telefone = telefoneRepository.findComIdentidadeByNumeroE164(from).orElse(null);
     if (telefone == null) {
       registrarMensagem(messageId, "REJEITADA");
       return;
@@ -351,7 +351,7 @@ public class WhatsappWebhookService {
   }
 
   void cancelarLancamento(String messageId, String from, Long confirmacaoId) {
-    UsuarioTelefone telefone = telefoneRepository.findByNumeroE164(from).orElse(null);
+    UsuarioTelefone telefone = telefoneRepository.findComIdentidadeByNumeroE164(from).orElse(null);
     if (telefone == null) {
       registrarMensagem(messageId, "REJEITADA");
       return;

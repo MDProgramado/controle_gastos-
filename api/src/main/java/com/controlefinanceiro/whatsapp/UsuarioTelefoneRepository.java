@@ -1,6 +1,7 @@
 package com.controlefinanceiro.whatsapp;
 
 import java.util.Optional;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -14,6 +15,9 @@ import org.springframework.stereotype.Repository;
 public interface UsuarioTelefoneRepository extends JpaRepository<UsuarioTelefone, Long> {
 
   Optional<UsuarioTelefone> findByNumeroE164(String numeroE164);
+
+  @EntityGraph(attributePaths = {"usuario", "usuario.empresa", "empresa"})
+  Optional<UsuarioTelefone> findComIdentidadeByNumeroE164(String numeroE164);
 
   Optional<UsuarioTelefone> findFirstByUsuarioIdAndAtivoTrue(Long usuarioId);
 

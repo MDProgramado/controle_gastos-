@@ -62,7 +62,8 @@ class WhatsappProprioUsuarioTest {
     telefoneB = telefone(10L, usuarioB, empresa);
     pendencia = pendencia(42L, telefoneA);
 
-    when(telefoneRepository.findByNumeroE164(NUMERO)).thenReturn(Optional.of(telefoneB));
+    when(telefoneRepository.findComIdentidadeByNumeroE164(NUMERO))
+        .thenReturn(Optional.of(telefoneB));
     when(confirmacaoRepository.findById(42L)).thenReturn(Optional.of(pendencia));
     when(confirmacaoRepository.confirmar(anyLong(), anyLong(), any())).thenReturn(1);
     when(categoriaService.listar(1L))
