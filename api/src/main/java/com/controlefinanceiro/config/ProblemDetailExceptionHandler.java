@@ -270,6 +270,13 @@ public class ProblemDetailExceptionHandler {
     return ProblemDetail.forStatusAndDetail(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage());
   }
 
+  /** Rate limit do chat de IA por usuário → 429 amigável. */
+  @ExceptionHandler(com.controlefinanceiro.common.LimiteIaExcedidoException.class)
+  public ProblemDetail limiteIaExcedido(com.controlefinanceiro.common.LimiteIaExcedidoException ex) {
+    return ProblemDetail.forStatusAndDetail(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage());
+  }
+
+
   /** Número já vinculado a outra empresa → 409. */
   @ExceptionHandler(TelefoneJaVinculadoException.class)
   public ProblemDetail telefoneJaVinculado(TelefoneJaVinculadoException ex) {

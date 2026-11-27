@@ -24,9 +24,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class AiController {
 
   private final AiService aiService;
+  private final AiRateLimiter rateLimiter;
 
-  public AiController(AiService aiService) {
+  public AiController(AiService aiService, AiRateLimiter rateLimiter) {
     this.aiService = aiService;
+    this.rateLimiter = rateLimiter;
   }
 
   /**
@@ -38,13 +40,14 @@ public class AiController {
    */
   @PostMapping("/chat")
   public ResponseEntity<AiResponse> chat(@RequestBody AiRequest request) {
+    Long usuarioId = UsuarioContext.getUsuarioId();
+    rateLimiter.verificar(usuarioId);
     String empresaId = empresaId();
     String sessionId =
         request.sessionId() != null ? request.sessionId() : java.util.UUID.randomUUID().toString();
 
     AiResponse resposta =
-        aiService.processar(
-            sessionId, empresaId, UsuarioContext.getUsuarioId().toString(), request.mensagem());
+        aiService.processar(sessionId, empresaId, usuarioId.toString(), request.mensagem());
     return ResponseEntity.ok(resposta);
   }
 
