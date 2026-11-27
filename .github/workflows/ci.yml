@@ -23,7 +23,7 @@ jobs:
           java-version: "21"
           cache: maven
       - name: Unit tests (Docker-free)
-        run: ./mvnw -B -Dspotless.check.skip=true test
+        run: ./mvnw -B verify
       - name: Spotless
         run: ./mvnw -B spotless:check
 

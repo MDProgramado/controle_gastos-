@@ -17,8 +17,8 @@ import java.time.OffsetDateTime;
 /**
  * Entidade da tabela importacao_documento (fase 5).
  *
- * <p>R3: empresa via {@link Empresa}, nunca de body. O texto bruto do PDF nunca Ã© persistido
- * (LGPD) â€” ficam apenas hash, metadados e o resultado estruturado.
+ * <p>R3: empresa via {@link Empresa}, nunca de body. O texto bruto do PDF nunca é persistido (LGPD)
+ * â€” ficam apenas hash, metadados e o resultado estruturado.
  */
 @Entity
 @Table(name = "importacao_documento")
@@ -57,8 +57,8 @@ public class ImportacaoDocumento {
   private OffsetDateTime criadoEm;
 
   /**
-   * R3: timestamp preenchido pela aplicaÃ§Ã£o (o DEFAULT now() do banco nÃ£o Ã© visto pelo INSERT
-   * do Hibernate).
+   * R3: timestamp preenchido pela aplicação (o DEFAULT now() do banco não é visto pelo INSERT do
+   * Hibernate).
    */
   @PrePersist
   void aoPersistir() {

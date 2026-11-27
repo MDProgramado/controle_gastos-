@@ -136,7 +136,15 @@ public class ProblemDetailExceptionHandler {
     return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
   }
 
-  /** Validação do DTO (@Valid) → 400 listando os campos com problema. */
+  /** Tipo inv?lido em path/query param (ex.: /api/lancamentos/abc) ? 400. */
+  @ExceptionHandler(
+      org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class)
+  public ProblemDetail tipoArgumentoInvalido(
+      org.springframework.web.method.annotation.MethodArgumentTypeMismatchException ex) {
+    return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Par?metro inv?lido");
+  }
+
+  /** Valida??o do DTO (@Valid) ? 400 listando os campos com problema. */
   @ExceptionHandler(MethodArgumentNotValidException.class)
   public ProblemDetail argumentosInvalidos(MethodArgumentNotValidException ex) {
     String campos =
@@ -305,6 +313,9 @@ public class ProblemDetailExceptionHandler {
   /** Fallback final: 500 fixo, sem vazar detalhe interno. */
   @ExceptionHandler(Exception.class)
   public ProblemDetail erroInterno(Exception ex) {
+    if (ex instanceof org.springframework.web.ErrorResponse er) {
+      return er.getBody();
+    }
     LOG.error("Erro interno não tratado", ex);
     return ProblemDetail.forStatusAndDetail(
         HttpStatus.INTERNAL_SERVER_ERROR, "Erro interno. Tente novamente em instantes.");

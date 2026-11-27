@@ -34,7 +34,8 @@ public class AiService {
   private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(AiService.class);
   private static final int MAX_MENSAGENS_HISTORICO = 20;
   private static final int MAX_ITERACOES_FERRAMENTA = 2;
-  private static final long CHAT_DEADLINE_MS = 50_000L;
+  private static final long CHAT_DEADLINE_MS_DEFAULT = 50_000L;
+  private final long chatDeadlineMs;
   private static final ZoneId FUSO = ZoneId.of("America/Sao_Paulo");
   private static final BigDecimal ZERO = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_EVEN);
   private static final ObjectMapper MAPPER = new ObjectMapper();
@@ -59,12 +60,30 @@ public class AiService {
       AiMemoryStore memoryStore,
       AiKnowledgeStore knowledgeStore,
       AiContextoService contextoService,
-      FerramentaRegistry ferramentaRegistry) {
+      FerramentaRegistry ferramentaRegistry,
+      @org.springframework.beans.factory.annotation.Value("${ai.openrouter.chat-deadline-ms:50000}")
+          long chatDeadlineMs) {
     this.aiClient = aiClient;
     this.memoryStore = memoryStore;
     this.knowledgeStore = knowledgeStore;
     this.contextoService = contextoService;
     this.ferramentaRegistry = ferramentaRegistry;
+    this.chatDeadlineMs = chatDeadlineMs > 0 ? chatDeadlineMs : CHAT_DEADLINE_MS_DEFAULT;
+  }
+
+  public AiService(
+      AiClient aiClient,
+      AiMemoryStore memoryStore,
+      AiKnowledgeStore knowledgeStore,
+      AiContextoService contextoService,
+      FerramentaRegistry ferramentaRegistry) {
+    this(
+        aiClient,
+        memoryStore,
+        knowledgeStore,
+        contextoService,
+        ferramentaRegistry,
+        CHAT_DEADLINE_MS_DEFAULT);
   }
 
   /**
@@ -89,8 +108,7 @@ public class AiService {
     List<AiMessage> historico = memoryStore.obterHistorico(sessionId, empresaId, usuarioId);
     List<Map<String, Object>> mensagens =
         montarMensagens(historico, mensagem, empresaId, usuarioId, true);
-    long deadlineNanos =
-        System.nanoTime() + java.time.Duration.ofMillis(CHAT_DEADLINE_MS).toNanos();
+    long deadlineNanos = System.nanoTime() + java.time.Duration.ofMillis(chatDeadlineMs).toNanos();
 
     String respostaTexto;
     try {
@@ -393,13 +411,29 @@ public class AiService {
   private String normalizarTextoBruto(String texto) {
     if (texto == null || texto.isBlank()) return "";
     List<String> linhas = new ArrayList<>();
+    String blocoAtual = null;
     for (String linha : texto.split("\\R")) {
       String l = sanitizarLinhaProtocolo(linha);
       if (l.isEmpty()) continue;
-      if (l.startsWith("LANCAMENTO|")
-          || l.startsWith("CONSULTA|")
-          || l.startsWith("ESCLARECIMENTO|")) {
+      if (l.startsWith("LANCAMENTO|")) {
         linhas.add(l);
+        blocoAtual = "LANCAMENTO";
+        continue;
+      }
+      if (l.startsWith("CONSULTA|") || l.startsWith("ESCLARECIMENTO|")) {
+        linhas.add(l);
+        blocoAtual = l.startsWith("CONSULTA|") ? "CONSULTA" : "ESCLARECIMENTO";
+        continue;
+      }
+      if (l.startsWith("FERRAMENTA|")) {
+        blocoAtual = null;
+        continue;
+      }
+      if (("CONSULTA".equals(blocoAtual) || "ESCLARECIMENTO".equals(blocoAtual))
+          && !l.contains("|")) {
+        linhas.add(l);
+      } else {
+        blocoAtual = null;
       }
     }
     return String.join("\n", linhas);
@@ -541,7 +575,7 @@ public class AiService {
     String primeira = linhas[0];
     String continuacao = linhas.length > 1 ? linhas[1].trim() : "";
     String[] partes = primeira.split("\\|", -1);
-    String corpo = partes.length > 1 ? partes[1].trim() : "Nǜo entendi. Pode explicar melhor?";
+    String corpo = partes.length > 1 ? partes[1].trim() : "N?o entendi. Pode explicar melhor?";
     if (!continuacao.isBlank()) {
       corpo = (corpo + "\n" + continuacao).trim();
     }

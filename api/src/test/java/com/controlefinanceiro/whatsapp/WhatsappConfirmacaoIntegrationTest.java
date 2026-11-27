@@ -49,6 +49,7 @@ class WhatsappConfirmacaoIntegrationTest {
   @Autowired private WhatsappWebhookService webhookService;
 
   @MockBean private WhatsappEnvioService envioService;
+  @MockBean private com.controlefinanceiro.ai.AiService aiService;
 
   @org.springframework.boot.test.mock.mockito.SpyBean
   private com.controlefinanceiro.lancamento.LancamentoService lancamentoService;
@@ -194,14 +195,20 @@ class WhatsappConfirmacaoIntegrationTest {
             org.mockito.ArgumentMatchers.any(),
             org.mockito.ArgumentMatchers.any());
 
-    org.assertj.core.api.Assertions.assertThatThrownBy(
+    org.assertj.core.api.Assertions.assertThatCode(
             () ->
                 webhookService.processarConfirmacaoTexto(
                     "wamid-falha-1", NUMERO, "sim " + pendenciaId))
-        .isInstanceOf(RuntimeException.class);
+        .doesNotThrowAnyException();
 
     assertThat(status(pendenciaId)).isEqualTo("PENDENTE");
     assertThat(contarLancamentos(empresaId)).isZero();
+    assertThat(resultadoMensagem("wamid-falha-1")).isEqualTo("ERRO_CONFIRMAR");
+    verify(envioService)
+        .enviarTexto(
+            eq(NUMERO),
+            contains("Não foi possível processar sua confirmação"),
+            eq("wamid-falha-1"));
     verify(envioService, org.mockito.Mockito.never())
         .enviarTexto(
             org.mockito.ArgumentMatchers.any(),
@@ -341,6 +348,31 @@ class WhatsappConfirmacaoIntegrationTest {
   }
 
   @Test
+  void mensagemTextoDeNumeroVerificadoRegistraEEnviaResposta() throws Exception {
+    org.mockito.Mockito.when(
+            aiService.processar(
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.anyString()))
+        .thenReturn(
+            new com.controlefinanceiro.ai.AiResponse(
+                "consulta",
+                "Seu saldo atual é R$ 100,00",
+                java.util.List.of(),
+                null,
+                java.util.List.of(),
+                java.util.List.of()));
+
+    String messageId = "wamid-texto-comum-1";
+    webhookService.processarWebhook(payloadTexto(messageId, NUMERO, "qual meu saldo?"), "sig");
+
+    aguardarResultado(messageId, "CONSULTA");
+    verify(envioService, timeout(ESPERA_ASSINCRONA_MS))
+        .enviarTexto(eq(NUMERO), contains("Saldo"), eq(messageId));
+  }
+
+  @Test
   void confirmacaoComTelefoneVerificadoDeOutraEmpresaNaoGravaNaEmpresaDaPendencia()
       throws Exception {
     Long pendenciaId = criarPendencia();
@@ -457,5 +489,12 @@ class WhatsappConfirmacaoIntegrationTest {
   private String status(Long pendenciaId) {
     return jdbc.queryForObject(
         "SELECT status FROM whatsapp_confirmacao_pendente WHERE id = ?", String.class, pendenciaId);
+  }
+
+  private String resultadoMensagem(String messageId) {
+    return jdbc.queryForObject(
+        "SELECT resultado FROM whatsapp_mensagem_processada WHERE message_id = ?",
+        String.class,
+        messageId);
   }
 }

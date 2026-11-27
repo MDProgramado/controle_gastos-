@@ -19,8 +19,8 @@ import java.time.OffsetDateTime;
 /**
  * Entidade da tabela importacao_fatura (fase 5).
  *
- * <p>CabeÃ§alho extraÃ­do da fatura de cartÃ£o pelo staging. R3: empresa via {@link Empresa}, nunca
- * de body.
+ * <p>Cabeçalho extraído da fatura de cartão pelo staging. R3: empresa via {@link Empresa}, nunca de
+ * body.
  */
 @Entity
 @Table(name = "importacao_fatura")
@@ -57,8 +57,8 @@ public class ImportacaoFatura {
   private OffsetDateTime criadoEm;
 
   /**
-   * R3: timestamp preenchido pela aplicaÃ§Ã£o (o DEFAULT now() do banco nÃ£o Ã© visto pelo INSERT
-   * do Hibernate).
+   * R3: timestamp preenchido pela aplicação (o DEFAULT now() do banco não é visto pelo INSERT do
+   * Hibernate).
    */
   @PrePersist
   void aoPersistir() {
