@@ -195,14 +195,20 @@ class WhatsappConfirmacaoIntegrationTest {
             org.mockito.ArgumentMatchers.any(),
             org.mockito.ArgumentMatchers.any());
 
-    org.assertj.core.api.Assertions.assertThatThrownBy(
+    org.assertj.core.api.Assertions.assertThatCode(
             () ->
                 webhookService.processarConfirmacaoTexto(
                     "wamid-falha-1", NUMERO, "sim " + pendenciaId))
-        .isInstanceOf(RuntimeException.class);
+        .doesNotThrowAnyException();
 
     assertThat(status(pendenciaId)).isEqualTo("PENDENTE");
     assertThat(contarLancamentos(empresaId)).isZero();
+    assertThat(resultadoMensagem("wamid-falha-1")).isEqualTo("ERRO_CONFIRMAR");
+    verify(envioService)
+        .enviarTexto(
+            eq(NUMERO),
+            contains("Não foi possível processar sua confirmação"),
+            eq("wamid-falha-1"));
     verify(envioService, org.mockito.Mockito.never())
         .enviarTexto(
             org.mockito.ArgumentMatchers.any(),
@@ -341,7 +347,6 @@ class WhatsappConfirmacaoIntegrationTest {
     }
   }
 
-
   @Test
   void mensagemTextoDeNumeroVerificadoRegistraEEnviaResposta() throws Exception {
     org.mockito.Mockito.when(
@@ -364,7 +369,7 @@ class WhatsappConfirmacaoIntegrationTest {
 
     aguardarResultado(messageId, "CONSULTA");
     verify(envioService, timeout(ESPERA_ASSINCRONA_MS))
-        .enviarTexto(eq(NUMERO), contains("saldo"), eq(messageId));
+        .enviarTexto(eq(NUMERO), contains("Saldo"), eq(messageId));
   }
 
   @Test
@@ -484,5 +489,12 @@ class WhatsappConfirmacaoIntegrationTest {
   private String status(Long pendenciaId) {
     return jdbc.queryForObject(
         "SELECT status FROM whatsapp_confirmacao_pendente WHERE id = ?", String.class, pendenciaId);
+  }
+
+  private String resultadoMensagem(String messageId) {
+    return jdbc.queryForObject(
+        "SELECT resultado FROM whatsapp_mensagem_processada WHERE message_id = ?",
+        String.class,
+        messageId);
   }
 }
