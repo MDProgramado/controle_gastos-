@@ -232,6 +232,19 @@ class AiServiceTest {
   }
 
   @Test
+  @DisplayName("interpreta consulta em resposta multiline com markdown")
+  void interpretaConsultaMultilineComMarkdown() {
+    when(aiClient.completar(any()))
+        .thenReturn(
+            "Segue o resumo:\n```text\nCONSULTA|Você gastou R$ 342,50 em alimentação.\n```");
+    AiResponse resposta = aiService.processar("sessao-1", "empresa-1", "quanto gastei?");
+
+    assertThat(resposta.intent()).isEqualTo("consulta");
+    assertThat(resposta.resposta()).contains("R$ 342,50");
+    assertThat(resposta.proposta()).isNull();
+  }
+
+  @Test
   @DisplayName("parseValor aceita formatos BR e US")
   void parseValorAceitaFormatos() {
     when(aiClient.completar(any()))

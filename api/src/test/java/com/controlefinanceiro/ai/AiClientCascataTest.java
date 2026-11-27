@@ -140,6 +140,7 @@ class AiClientCascataTest {
     for (Map<String, Object> corpo : corposEnviados) {
       assertThat(corpo.get("temperature")).isEqualTo(0.0);
       assertThat(corpo.get("max_tokens")).isEqualTo(8000);
+      assertThat(corpo).doesNotContainKey("route");
     }
   }
 
