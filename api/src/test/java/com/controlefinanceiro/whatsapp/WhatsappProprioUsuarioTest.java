@@ -68,6 +68,9 @@ class WhatsappProprioUsuarioTest {
     when(categoriaService.listar(1L))
         .thenReturn(List.of(new CategoriaResponse(5L, "Alimentação", "SAIDA", true, true)));
 
+    WhatsappConfirmacaoService confirmacaoService =
+        new WhatsappConfirmacaoService(
+            confirmacaoRepository, telefoneRepository, lancamentoService, categoriaService);
     service =
         new WhatsappWebhookService(
             telefoneRepository,
@@ -77,7 +80,8 @@ class WhatsappProprioUsuarioTest {
             aiService,
             lancamentoService,
             categoriaService,
-            dashboardService);
+            dashboardService,
+            confirmacaoService);
   }
 
   @Test
@@ -167,3 +171,5 @@ class WhatsappProprioUsuarioTest {
     return pendencia;
   }
 }
+
+
