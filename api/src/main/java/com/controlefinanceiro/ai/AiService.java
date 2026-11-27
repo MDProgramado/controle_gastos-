@@ -575,7 +575,7 @@ public class AiService {
     String primeira = linhas[0];
     String continuacao = linhas.length > 1 ? linhas[1].trim() : "";
     String[] partes = primeira.split("\\|", -1);
-    String corpo = partes.length > 1 ? partes[1].trim() : "N?o entendi. Pode explicar melhor?";
+    String corpo = partes.length > 1 ? partes[1].trim() : "Não entendi. Pode explicar melhor?";
     if (!continuacao.isBlank()) {
       corpo = (corpo + "\n" + continuacao).trim();
     }

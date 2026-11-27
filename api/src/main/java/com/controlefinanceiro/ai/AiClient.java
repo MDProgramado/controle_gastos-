@@ -141,7 +141,7 @@ public class AiClient {
   public String completar(List<Map<String, Object>> mensagens, long deadlineNanos) {
     if (!configurado) {
       throw new IllegalStateException(
-          "ai.openrouter.api-key n?o configurada. Defina a env var OPENROUTER_API_KEY.");
+          "ai.openrouter.api-key não configurada. Defina a env var OPENROUTER_API_KEY.");
     }
 
     List<String> candidatos = listaCandidatosChat();
@@ -152,7 +152,7 @@ public class AiClient {
       long restante = restanteMsAte(deadlineNanos);
       if (restante < MARGEM_TENTATIVA_MS) {
         LOG.warn(
-            "Or?amento do chat esgotado antes do modelo {} (restante={}ms)", modeloAtual, restante);
+            "Orçamento do chat esgotado antes do modelo {} (restante={}ms)", modeloAtual, restante);
         break;
       }
 
@@ -164,7 +164,7 @@ public class AiClient {
       } catch (ServicoIaIndisponivelException e) {
         ultimaFalha = e;
         LOG.warn(
-            "Modelo {} falhou no chat (recuper?vel). Avan?ando. motivo={}",
+            "Modelo {} falhou no chat (recuperável). Avançando. motivo={}",
             modeloAtual,
             e.getMessage());
       } catch (RestClientResponseException e) {
@@ -172,19 +172,19 @@ public class AiClient {
         boolean recuperavel = recuperavel(status) || ehErroReasoning(status, e);
         ultimaFalha = indisponivel(e);
         LOG.warn(
-            "Modelo {} falhou no chat (HTTP {}, recuper?vel={}). {}",
+            "Modelo {} falhou no chat (HTTP {}, recuperável={}). {}",
             modeloAtual,
             status,
             recuperavel,
-            recuperavel ? "Avan?ando." : "Encerrando.");
+            recuperavel ? "Avançando." : "Encerrando.");
         if (!recuperavel) {
           throw ultimaFalha;
         }
       } catch (ResourceAccessException e) {
         ultimaFalha =
             new ServicoIaIndisponivelException(
-                "O servi?o de IA demorou para responder. Tente novamente em instantes.", e);
-        LOG.warn("Modelo {} falhou por timeout/conex?o no chat. Avan?ando.", modeloAtual, e);
+                "O serviço de IA demorou para responder. Tente novamente em instantes.", e);
+        LOG.warn("Modelo {} falhou por timeout/conexão no chat. Avançando.", modeloAtual, e);
       }
     }
 
@@ -192,7 +192,7 @@ public class AiClient {
       throw ultimaFalha;
     }
     throw new ServicoIaIndisponivelException(
-        "N?o foi poss?vel falar com o servi?o de IA agora. Tente novamente em instantes.");
+        "Não foi possível falar com o serviço de IA agora. Tente novamente em instantes.");
   }
 
   private List<String> listaCandidatosChat() {
