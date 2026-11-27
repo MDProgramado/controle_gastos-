@@ -19,8 +19,8 @@ import java.time.OffsetDateTime;
 /**
  * Entidade da tabela importacao_item (fase 5).
  *
- * <p>Item de staging extraÃ­do por IA, ainda nÃ£o gravado em lancamento/conta_a_pagar. R3: empresa
- * via {@link Empresa}, nunca de body. Valores monetÃ¡rios em {@link BigDecimal} com NUMERIC(14,2),
+ * <p>Item de staging extraído por IA, ainda não gravado em lancamento/conta_a_pagar. R3: empresa
+ * via {@link Empresa}, nunca de body. Valores monetários em {@link BigDecimal} com NUMERIC(14,2),
  * scale=2, nenhum double/float.
  */
 @Entity
@@ -85,7 +85,7 @@ public class ImportacaoItem {
   private OffsetDateTime criadoEm;
 
   /**
-   * R3: timestamp preenchido pela aplicaÃ§Ã£o (o DEFAULT now() do banco nÃ£o Ã© visto pelo INSERT
+   * R3: timestamp preenchido pela aplicação (o DEFAULT now() do banco não é visto pelo INSERT
    * do Hibernate).
    */
   @PrePersist

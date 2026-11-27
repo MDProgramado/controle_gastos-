@@ -223,7 +223,7 @@ export default async function Home({ searchParams }: PageProps) {
                 />
               </section>
 
-              {/* 3. ANÁLISE GRÁFICA EM PROPORÇÃO ÁUREA (61.8% Evolução | 38.2% Categorias) */}
+              {/* 3. AN?LISE GR?FICA EM PROPOR??O ?UREA (61.8% Evolu??o | 38.2% Categorias) */}
               <section
                 data-screen="free"
                 aria-labelledby="analise-h"
