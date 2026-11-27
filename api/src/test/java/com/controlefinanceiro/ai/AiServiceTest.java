@@ -258,6 +258,18 @@ class AiServiceTest {
   }
 
   @Test
+  @DisplayName("salva assistant com texto bruto normalizado de protocolo")
+  void salvaAssistantComTextoBrutoNormalizado() {
+    when(aiClient.completar(any()))
+        .thenReturn("  **LANCAMENTO|SAIDA|30,00|2026-11-10|5|Mercado|Padaria**  ");
+    aiService.processar("sessao-bruto", "empresa-1", "gastei 30 na padaria");
+    List<AiMessage> historico = aiService.obterHistorico("sessao-bruto", "empresa-1");
+    assertThat(historico).hasSize(2);
+    assertThat(historico.get(1).role()).isEqualTo("assistant");
+    assertThat(historico.get(1).content()).isEqualTo("LANCAMENTO|SAIDA|30,00|2026-11-10|5|Mercado|Padaria");
+  }
+
+  @Test
   @DisplayName("nao persiste mensagens quando IA falha")
   void naoPersisteMensagensQuandoIaFalha() {
     when(aiClient.completar(any())).thenThrow(new RuntimeException("falha IA"));

@@ -138,9 +138,15 @@ public class AiService {
       resposta = resposta.comCitacoes(citacoes);
     }
 
+    String brutoNormalizado = normalizarTextoBruto(respostaTexto);
     memoryStore.adicionarMensagem(sessionId, empresaId, usuarioId, new AiMessage("user", mensagem));
     memoryStore.adicionarMensagem(
-        sessionId, empresaId, usuarioId, new AiMessage("assistant", resposta.resposta()));
+        sessionId,
+        empresaId,
+        usuarioId,
+        new AiMessage(
+            "assistant",
+            brutoNormalizado.isBlank() ? resposta.resposta() : brutoNormalizado));
 
     return resposta;
   }
@@ -344,10 +350,27 @@ public class AiService {
     if (l.equals("```")) return "";
     l = l.replaceFirst("^(?i)(assistant|resposta|output)\\s*:\\s*", "");
     l = l.replaceFirst("^[-*]\\s+", "");
+    l = l.replace("**", "").replace("__", "").trim();
     if ((l.startsWith("`") && l.endsWith("`")) || (l.startsWith("\"") && l.endsWith("\""))) {
       l = l.substring(1, l.length() - 1).trim();
     }
+    l = l.replace("**", "").replace("__", "").trim();
     return l;
+  }
+
+  private String normalizarTextoBruto(String texto) {
+    if (texto == null || texto.isBlank()) return "";
+    List<String> linhas = new ArrayList<>();
+    for (String linha : texto.split("\\R")) {
+      String l = sanitizarLinhaProtocolo(linha);
+      if (l.isEmpty()) continue;
+      if (l.startsWith("LANCAMENTO|")
+          || l.startsWith("CONSULTA|")
+          || l.startsWith("ESCLARECIMENTO|")) {
+        linhas.add(l);
+      }
+    }
+    return String.join("\n", linhas);
   }
 
   /**
