@@ -136,15 +136,15 @@ public class ProblemDetailExceptionHandler {
     return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
   }
 
-  /** Tipo inv?lido em path/query param (ex.: /api/lancamentos/abc) ? 400. */
+  /** Tipo inválido em path/query param (ex.: /api/lancamentos/abc) → 400. */
   @ExceptionHandler(
       org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class)
   public ProblemDetail tipoArgumentoInvalido(
       org.springframework.web.method.annotation.MethodArgumentTypeMismatchException ex) {
-    return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Par?metro inv?lido");
+    return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Parâmetro inválido");
   }
 
-  /** Valida??o do DTO (@Valid) ? 400 listando os campos com problema. */
+  /** Validação do DTO (@Valid) → 400 listando os campos com problema. */
   @ExceptionHandler(MethodArgumentNotValidException.class)
   public ProblemDetail argumentosInvalidos(MethodArgumentNotValidException ex) {
     String campos =

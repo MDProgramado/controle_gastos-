@@ -53,6 +53,14 @@ Testes Docker-backed (Testcontainers, Postgres 16): `.\mvnw.cmd test "-Dsurefire
 
 CI: `.github/workflows/ci.yml` (Java 21 + Node 22) roda os gates acima em PR/push para `main`, sem segredos de deploy. Build da API no Render (`api/Dockerfile`) executa `mvn clean verify` (unitários + spotless) antes de empacotar.
 
+## Encoding (obrigatório)
+
+Todo arquivo de texto é **UTF-8 sem BOM, com LF** (`.editorconfig` + `.gitattributes`). O Windows PowerShell 5.1 lê e grava em cp1252 por padrão e já destruiu acentos deste repositório mais de uma vez ("n?o", "Par?metro").
+
+- **Proibido** criar ou alterar arquivos com `Set-Content`, `Add-Content`, `Out-File`, `>`/`>>` ou `Get-Content ... | ...` no PowerShell. Use somente a ferramenta de edição/escrita do agente.
+- Nunca "conserte" mojibake com substituição em massa; restaure o texto a partir do `git log -p` / `git show <commit>:<arquivo>`.
+- `api/src/test/java/com/controlefinanceiro/EncodingTest.java` (roda no `mvnw verify` e no CI) falha com BOM, UTF-8 inválido, mojibake (`Ã£`, `�`) ou acento trocado por `?`.
+
 ## Regras de Fluxo e Skills do Projeto
 
 Sempre siga esta ordem ao desenvolver novas funcionalidades (dentro dos comandos `/gsd-quick`, `/gsd-debug` ou `/gsd-execute-phase`):
