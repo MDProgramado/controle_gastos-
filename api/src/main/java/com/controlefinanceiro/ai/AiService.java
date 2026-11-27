@@ -229,8 +229,13 @@ public class AiService {
 
       Ferramentas determinísticas (uma linha, quando precisar de cálculo exato):
         FERRAMENTA|nome|{"chave":"valor"}
-      Nomes: listar_categorias, consultar_historico_e_comparativo, diagnosticar_orcamento_50_30_20,
-      detectar_ralos_e_recorrencias, simular_quitacao_ou_juros, consultar_base_conhecimento.
+      Use EXATAMENTE estes nomes e argumentos JSON:
+      - listar_categorias: {}
+      - consultar_historico_e_comparativo: {"mes":"YYYY-MM","meses":6}
+      - diagnosticar_orcamento_50_30_20: {"mes":"YYYY-MM"}
+      - detectar_ralos_e_recorrencias: {"mes":"YYYY-MM"}
+      - simular_quitacao_ou_juros: {"valor":1000.00,"taxaMensal":0.02,"parcelas":12}
+      - consultar_base_conhecimento: {"query":"termo de busca"}
       Após resultado, responda em CONSULTA|... citando fonte quando houver:
         [título — órgão, vigência, dispositivo (source_id)]
 
