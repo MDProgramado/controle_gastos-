@@ -1,5 +1,5 @@
-export const API_TIMEOUT_MS = 5000;
-export const AI_TIMEOUT_MS = 60000;
+﻿export const API_TIMEOUT_MS = 5000;
+export const AI_TIMEOUT_MS = 55000;
 export const IMPORTACAO_TIMEOUT_MS = 120000;
 
 const CAMINHOS_PERMITIDOS = [

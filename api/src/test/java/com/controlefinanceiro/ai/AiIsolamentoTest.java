@@ -2,6 +2,7 @@ package com.controlefinanceiro.ai;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -33,7 +34,7 @@ class AiIsolamentoTest {
     when(contextoService.montarContexto(any())).thenReturn("");
     aiService =
         new AiService(aiClient, new AiMemoryStore(), new AiKnowledgeStore(), contextoService);
-    when(aiClient.completar(any())).thenReturn("CONSULTA|Resposta");
+    when(aiClient.completar(any(), anyLong())).thenReturn("CONSULTA|Resposta");
   }
 
   @AfterEach

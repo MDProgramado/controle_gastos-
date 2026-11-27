@@ -2,6 +2,7 @@ package com.controlefinanceiro.ai;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -53,7 +54,7 @@ class AiServiceFerramentaTest {
   @Test
   @DisplayName("chamada de ferramenta executa no registry e faz segunda chamada ao modelo")
   void chamadaDeFerramentaFazSegundaChamada() {
-    when(aiClient.completar(any()))
+    when(aiClient.completar(any(), anyLong()))
         .thenReturn(
             "FERRAMENTA|consultar_base_conhecimento|{\"query\":\"teto de juros|cartão\",\"topK\":3}",
             "CONSULTA|O teto é de 100%.");
@@ -71,7 +72,7 @@ class AiServiceFerramentaTest {
 
     AiResponse resposta = aiService.processar("sessao-tool", "1", "qual o teto de juros?");
 
-    verify(aiClient, times(2)).completar(any());
+    verify(aiClient, times(2)).completar(any(), anyLong());
     assertThat(resposta.intent()).isEqualTo("consulta");
     assertThat(resposta.resposta()).contains("100%");
     assertThat(resposta.citacoes()).hasSize(1);
@@ -83,7 +84,7 @@ class AiServiceFerramentaTest {
 
     @SuppressWarnings("unchecked")
     ArgumentCaptor<List<Map<String, Object>>> mensagensCaptor = ArgumentCaptor.forClass(List.class);
-    verify(aiClient, times(2)).completar(mensagensCaptor.capture());
+    verify(aiClient, times(2)).completar(mensagensCaptor.capture(), anyLong());
     String ultima =
         (String)
             mensagensCaptor.getValue().get(mensagensCaptor.getValue().size() - 1).get("content");
@@ -94,7 +95,7 @@ class AiServiceFerramentaTest {
   @Test
   @DisplayName("loop de ferramenta excedido retorna esclarecimento amigavel sem erro cru")
   void loopFerramentaExcedidoRetornaEsclarecimento() {
-    when(aiClient.completar(any()))
+    when(aiClient.completar(any(), anyLong()))
         .thenReturn(
             "FERRAMENTA|consultar_base_conhecimento|{\"query\":\"a\"}",
             "FERRAMENTA|consultar_base_conhecimento|{\"query\":\"b\"}",
@@ -109,3 +110,6 @@ class AiServiceFerramentaTest {
     assertThat(resposta.opcoes()).contains("Falar com atendente");
   }
 }
+
+
+

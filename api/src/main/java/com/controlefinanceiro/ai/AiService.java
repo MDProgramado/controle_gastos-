@@ -33,6 +33,7 @@ public class AiService {
 
   private static final int MAX_MENSAGENS_HISTORICO = 20;
   private static final int MAX_ITERACOES_FERRAMENTA = 2;
+  private static final long CHAT_DEADLINE_MS = 50_000L;
   private static final ZoneId FUSO = ZoneId.of("America/Sao_Paulo");
   private static final BigDecimal ZERO = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_EVEN);
   private static final ObjectMapper MAPPER = new ObjectMapper();
@@ -87,10 +88,11 @@ public class AiService {
     List<AiMessage> historico = memoryStore.obterHistorico(sessionId, empresaId, usuarioId);
     List<Map<String, Object>> mensagens =
         montarMensagens(historico, mensagem, empresaId, usuarioId, true);
+    long deadlineNanos = System.nanoTime() + java.time.Duration.ofMillis(CHAT_DEADLINE_MS).toNanos();
 
     String respostaTexto;
     try {
-      respostaTexto = aiClient.completar(mensagens);
+      respostaTexto = aiClient.completar(mensagens, deadlineNanos);
     } catch (RuntimeException e) {
       return respostaIndisponivel(e);
     }
@@ -115,7 +117,7 @@ public class AiService {
       }
       mensagens = comResultadoDaFerramenta(mensagens, respostaTexto, resultado);
       try {
-        respostaTexto = aiClient.completar(mensagens);
+        respostaTexto = aiClient.completar(mensagens, deadlineNanos);
       } catch (RuntimeException e) {
         return respostaIndisponivel(e);
       }

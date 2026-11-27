@@ -2,6 +2,7 @@ package com.controlefinanceiro.ai;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -53,7 +54,7 @@ class AiServiceTest {
   @Test
   @DisplayName("mensagem com gastei retorna lancamento com proposta")
   void mensagemComGasteiRetornaLancamentoComProposta() {
-    when(aiClient.completar(any())).thenReturn("LANCAMENTO|SAIDA|45.00|2026-11-10||Almoço");
+    when(aiClient.completar(any(), anyLong())).thenReturn("LANCAMENTO|SAIDA|45.00|2026-11-10||Almoço");
 
     AiResponse resposta = aiService.processar("sessao-1", "empresa-1", "gastei 45 no almoço");
 
@@ -68,7 +69,7 @@ class AiServiceTest {
   @Test
   @DisplayName("CONSULTA multiline captura continuacao e sanitiza markdown")
   void consultaMultilineCapturaContinuacaoESanitizaMarkdown() {
-    when(aiClient.completar(any()))
+    when(aiClient.completar(any(), anyLong()))
         .thenReturn("**CONSULTA|** Seu saldo é **R$ 1.000,00**\nDetalhe: entrada de R$ 1.500,00\nSaída de R$ 500,00");
     AiResponse resposta = aiService.processar("s-consulta", "empresa-1", "como está meu saldo?");
     assertThat(resposta.intent()).isEqualTo("consulta");
@@ -81,7 +82,7 @@ class AiServiceTest {
   @Test
   @DisplayName("ESCLARECIMENTO multiline captura continuacao ate proximo protocolo")
   void esclarecimentoMultilineCapturaContinuacao() {
-    when(aiClient.completar(any()))
+    when(aiClient.completar(any(), anyLong()))
         .thenReturn("ESCLARECIMENTO|Qual categoria você quer?\nPode ser **Mercado** ou Lazer\nMercado|Lazer");
     AiResponse resposta = aiService.processar("s-esc", "empresa-1", "gastei 10");
     assertThat(resposta.intent()).isEqualTo("esclarecimento");
@@ -93,7 +94,7 @@ class AiServiceTest {
   @Test
   @DisplayName("mensagem com varios itens retorna multiplas propostas")
   void mensagemComVariosItensRetornaMultiplasPropostas() {
-    when(aiClient.completar(any()))
+    when(aiClient.completar(any(), anyLong()))
         .thenReturn(
             """
             LANCAMENTO|ENTRADA|2400.00|2026-11-12||Salário|Salário do mês
@@ -124,7 +125,7 @@ class AiServiceTest {
   @Test
   @DisplayName("propostas duplicadas do modelo sao descartadas")
   void propostasDuplicadasDoModeloSaoDescartadas() {
-    when(aiClient.completar(any()))
+    when(aiClient.completar(any(), anyLong()))
         .thenReturn(
             """
             LANCAMENTO|SAIDA|45.00|2026-11-12||Alimentação|Almoço
@@ -142,7 +143,7 @@ class AiServiceTest {
   @DisplayName("dados reais da empresa vao no prompt enviado a IA")
   void dadosReaisDaEmpresaVaoNoPromptEnviadoIa() {
     when(contextoService.montarContexto(1L, 7L)).thenReturn("Totais por mês: novembro de 2026");
-    when(aiClient.completar(any())).thenReturn("CONSULTA|R$ 1.234,56");
+    when(aiClient.completar(any(), anyLong())).thenReturn("CONSULTA|R$ 1.234,56");
 
     aiService.processar("sessao-1", "1", "quanto gastei?");
 
@@ -159,7 +160,7 @@ class AiServiceTest {
   @Test
   @DisplayName("mensagem com quanto retorna consulta com dados")
   void mensagemComQuantoRetornaConsultaComDados() {
-    when(aiClient.completar(any())).thenReturn("CONSULTA|Gastou R$ 342,50 com alimentação");
+    when(aiClient.completar(any(), anyLong())).thenReturn("CONSULTA|Gastou R$ 342,50 com alimentação");
 
     AiResponse resposta =
         aiService.processar("sessao-1", "empresa-1", "quanto gastei com alimentação");
@@ -173,7 +174,7 @@ class AiServiceTest {
   @Test
   @DisplayName("mensagem sem intencao retorna esclarecimento com opcoes")
   void mensagemSemIntencaoRetornaEsclarecimentoComOpcoes() {
-    when(aiClient.completar(any()))
+    when(aiClient.completar(any(), anyLong()))
         .thenReturn("ESCLARECIMENTO|Não entendi. Tente: X?|Opção 1|Opção 2");
 
     AiResponse resposta = aiService.processar("sessao-1", "empresa-1", "qualquer coisa");
@@ -186,7 +187,7 @@ class AiServiceTest {
   @Test
   @DisplayName("categoriaId nulo quando IA nao tem certeza")
   void categoriaIdNuloQuandoIaNaoTemCerteza() {
-    when(aiClient.completar(any())).thenReturn("LANCAMENTO|ENTRADA|100.00|2026-11-10||Salário");
+    when(aiClient.completar(any(), anyLong())).thenReturn("LANCAMENTO|ENTRADA|100.00|2026-11-10||Salário");
 
     AiResponse resposta = aiService.processar("sessao-1", "empresa-1", "recebi 100 de salário");
 
@@ -197,7 +198,7 @@ class AiServiceTest {
   @Test
   @DisplayName("historico e persistido na sessao para retroalimentacao")
   void historicoEPersistidoNaSessaoParaRetroalimentacao() {
-    when(aiClient.completar(any())).thenReturn("CONSULTA|Resposta do assistente");
+    when(aiClient.completar(any(), anyLong())).thenReturn("CONSULTA|Resposta do assistente");
 
     AiResponse primeira = aiService.processar("sessao-1", "empresa-1", "mensagem um");
     AiResponse segunda = aiService.processar("sessao-1", "empresa-1", "mensagem dois");
@@ -236,7 +237,7 @@ class AiServiceTest {
   @Test
   @DisplayName("limpar sessao remove o historico")
   void limparSessaoRemoveHistorico() {
-    when(aiClient.completar(any())).thenReturn("CONSULTA|Resposta");
+    when(aiClient.completar(any(), anyLong())).thenReturn("CONSULTA|Resposta");
 
     aiService.processar("sessao-1", "empresa-1", "mensagem um");
     assertThat(aiService.obterHistorico("sessao-1", "empresa-1")).hasSize(2);
@@ -248,7 +249,7 @@ class AiServiceTest {
   @Test
   @DisplayName("interpreta lancamento em resposta multiline com markdown")
   void interpretaLancamentoMultilineComMarkdown() {
-    when(aiClient.completar(any()))
+    when(aiClient.completar(any(), anyLong()))
         .thenReturn(
             "Claro!\n```text\nLANCAMENTO|SAIDA|45,90|2026-11-12||Alimentação|Almoço\n```\n");
     AiResponse resposta = aiService.processar("sessao-1", "empresa-1", "gastei 45,90 almoço");
@@ -259,7 +260,7 @@ class AiServiceTest {
   @Test
   @DisplayName("interpreta consulta em resposta multiline com markdown")
   void interpretaConsultaMultilineComMarkdown() {
-    when(aiClient.completar(any()))
+    when(aiClient.completar(any(), anyLong()))
         .thenReturn(
             "Segue o resumo:\n```text\nCONSULTA|Você gastou R$ 342,50 em alimentação.\n```");
     AiResponse resposta = aiService.processar("sessao-1", "empresa-1", "quanto gastei?");
@@ -272,11 +273,11 @@ class AiServiceTest {
   @Test
   @DisplayName("parseValor aceita formatos BR e US")
   void parseValorAceitaFormatos() {
-    when(aiClient.completar(any()))
+    when(aiClient.completar(any(), anyLong()))
         .thenReturn("LANCAMENTO|SAIDA|1.234,56|2026-11-12||Mercado|Compra");
     AiResponse br = aiService.processar("s1", "empresa-1", "gastei 1.234,56");
     assertThat(br.proposta().valor()).isEqualByComparingTo("1234.56");
-    when(aiClient.completar(any()))
+    when(aiClient.completar(any(), anyLong()))
         .thenReturn("LANCAMENTO|SAIDA|1,234.56|2026-11-12||Mercado|Compra");
     AiResponse us = aiService.processar("s2", "empresa-1", "gastei 1,234.56");
     assertThat(us.proposta().valor()).isEqualByComparingTo("1234.56");
@@ -285,7 +286,7 @@ class AiServiceTest {
   @Test
   @DisplayName("salva assistant com texto bruto normalizado de protocolo")
   void salvaAssistantComTextoBrutoNormalizado() {
-    when(aiClient.completar(any()))
+    when(aiClient.completar(any(), anyLong()))
         .thenReturn("  **LANCAMENTO|SAIDA|30,00|2026-11-10|5|Mercado|Padaria**  ");
     aiService.processar("sessao-bruto", "empresa-1", "gastei 30 na padaria");
     List<AiMessage> historico = aiService.obterHistorico("sessao-bruto", "empresa-1");
@@ -297,7 +298,7 @@ class AiServiceTest {
   @Test
   @DisplayName("nao persiste mensagens quando IA falha")
   void naoPersisteMensagensQuandoIaFalha() {
-    when(aiClient.completar(any())).thenThrow(new RuntimeException("falha IA"));
+    when(aiClient.completar(any(), anyLong())).thenThrow(new RuntimeException("falha IA"));
     AiResponse resposta = aiService.processar("sessao-falha", "empresa-1", "oi");
     assertThat(resposta.intent()).isEqualTo("esclarecimento");
     assertThat(aiService.obterHistorico("sessao-falha", "empresa-1")).isEmpty();
