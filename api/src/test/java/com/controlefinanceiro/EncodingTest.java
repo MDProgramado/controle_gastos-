@@ -42,11 +42,24 @@ class EncodingTest {
   @Test
   void fontesEstaoEmUtf8SemCorrupcao() throws IOException {
     List<Path> raizes = new ArrayList<>(List.of(Path.of("src/main"), Path.of("src/test")));
-    for (String dir : List.of("app", "lib", "components", "e2e")) {
+    for (String dir : List.of("app", "lib", "components", "contexts", "e2e")) {
       raizes.add(Path.of("../web", dir));
     }
 
     List<String> problemas = new ArrayList<>();
+    // Arquivos da raiz do web (proxy.ts, next.config.ts...), sem descer em node_modules/.next.
+    Path raizWeb = Path.of("../web");
+    if (Files.isDirectory(raizWeb)) {
+      try (Stream<Path> arquivos = Files.list(raizWeb)) {
+        for (Path arquivo :
+            arquivos
+                .filter(Files::isRegularFile)
+                .filter(p -> p.toString().endsWith(".ts") || p.toString().endsWith(".mjs"))
+                .toList()) {
+          verificar(arquivo, problemas);
+        }
+      }
+    }
     for (Path raiz : raizes) {
       if (!Files.isDirectory(raiz)) {
         continue;
