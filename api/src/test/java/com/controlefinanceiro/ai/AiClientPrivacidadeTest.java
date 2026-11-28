@@ -151,6 +151,25 @@ class AiClientPrivacidadeTest {
     assertThat(r.chamadas()).isEqualTo(2);
   }
 
+  @Test
+  @DisplayName("2.6: temperatura do chat é 0.2 por padrão e configurável")
+  void temperaturaDoChat() {
+    List<Map<String, Object>> corpos = new ArrayList<>();
+    AiClient client =
+        new AiClient(
+            MODELOS,
+            List.of(),
+            restClient(
+                corpos, sucesso(resposta("ok", "modelo/a")), sucesso(resposta("ok", "modelo/a"))));
+
+    client.completar(MENSAGENS);
+    client.configurarTemperaturaChat(0.5);
+    client.completar(MENSAGENS);
+
+    assertThat(corpos.get(0)).containsEntry("temperature", 0.2);
+    assertThat(corpos.get(1)).containsEntry("temperature", 0.5);
+  }
+
   static RestClient restClient(List<Map<String, Object>> corpos, ResponseCreator... respostas) {
     RestClient.Builder builder = RestClient.builder().baseUrl(BASE_URL);
     MockRestServiceServer servidor = MockRestServiceServer.bindTo(builder).build();

@@ -58,6 +58,13 @@ public class AiClient {
   private boolean zdr = true;
 
   /**
+   * Temperatura do chat. Uma única chamada faz extração de lançamentos (pede ~0.1) e consulta/
+   * educação (~0.4); 0.2 é o meio-termo padrão. A extração de PDF tem configuração própria.
+   */
+  @Value("${ai.openrouter.temperatura-chat:0.2}")
+  private double temperaturaChat = 0.2;
+
+  /**
    * Opções para {@link #completarComCascata(List, OpcoesCompletar)}.
    *
    * @param modelos lista de modelos em ordem de prioridade (gratuitos no caminho da extração)
@@ -141,6 +148,11 @@ public class AiClient {
     this.zdr = zdr;
   }
 
+  /** Ajuste da temperatura do chat (testes de unidade). */
+  void configurarTemperaturaChat(double temperatura) {
+    this.temperaturaChat = temperatura;
+  }
+
   /** Objeto {@code provider} da OpenRouter com a política de dados configurada. */
   Map<String, Object> politicaProvedor() {
     return Map.of("data_collection", dataCollection, "zdr", zdr);
@@ -180,7 +192,7 @@ public class AiClient {
 
       try {
         Map<String, Object> corpo =
-            montarCorpo(mensagens, List.of(modeloAtual), 0.4, maxTokensChat);
+            montarCorpo(mensagens, List.of(modeloAtual), temperaturaChat, maxTokensChat);
         String json = chamar(corpo);
         return extrairConteudo(json, "chat", modeloAtual);
       } catch (ServicoIaIndisponivelException e) {

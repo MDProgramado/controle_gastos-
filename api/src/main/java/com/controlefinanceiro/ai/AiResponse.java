@@ -36,6 +36,11 @@ public record AiResponse(
     return new AiResponse(intent, resposta, dados, proposta, propostas, opcoes, novasCitacoes);
   }
 
+  /** Cópia com outro texto de resposta (o contrato JSON não muda). */
+  public AiResponse comResposta(String novaResposta) {
+    return new AiResponse(intent, novaResposta, dados, proposta, propostas, opcoes, citacoes);
+  }
+
   public record AiCitacao(
       String sourceId, String titulo, String organizacao, String vigencia, String dispositivo) {}
 

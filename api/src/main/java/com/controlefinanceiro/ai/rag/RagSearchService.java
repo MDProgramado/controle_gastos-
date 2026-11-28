@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -15,10 +17,20 @@ public class RagSearchService {
 
   private final EmbeddingClient embeddingClient;
   private final RagChunkRepository repository;
+  private final double similaridadeMinima;
 
-  public RagSearchService(EmbeddingClient embeddingClient, RagChunkRepository repository) {
+  @Autowired
+  public RagSearchService(
+      EmbeddingClient embeddingClient,
+      RagChunkRepository repository,
+      @Value("${ai.rag.similaridade-minima:0.60}") double similaridadeMinima) {
     this.embeddingClient = embeddingClient;
     this.repository = repository;
+    this.similaridadeMinima = similaridadeMinima;
+  }
+
+  public RagSearchService(EmbeddingClient embeddingClient, RagChunkRepository repository) {
+    this(embeddingClient, repository, 0.60);
   }
 
   public List<RagTrecho> buscar(String consulta, int topK) {
@@ -31,8 +43,12 @@ public class RagSearchService {
     try {
       List<float[]> vetores = embeddingClient.embedir(List.of(consulta));
       if (vetores != null && !vetores.isEmpty() && vetores.get(0) != null) {
-        for (RagTrecho trecho : repository.buscarPorVetor(vetores.get(0), limite)) {
-          encontrados.putIfAbsent(trecho.chunkId(), trecho);
+        for (RagChunkRepository.TrechoPontuado p :
+            repository.buscarPorVetor(vetores.get(0), limite, similaridadeMinima)) {
+          // Filtro também em memória (defesa em profundidade, caso o SQL mude).
+          if (p.similaridade() >= similaridadeMinima) {
+            encontrados.putIfAbsent(p.trecho().chunkId(), p.trecho());
+          }
         }
       }
     } catch (RuntimeException e) {

@@ -127,4 +127,21 @@ class FerramentasFinanceirasTest {
     assertThat(resultado.citacoes().get(0).sourceId()).isEqualTo("02-bcb-res4549");
     assertThat(resultado.conteudo()).contains("art. 2-C");
   }
+
+  @Test
+  @DisplayName("base de conhecimento sem trechos relevantes devolve aviso e nenhuma citação")
+  void baseSemTrechosDevolveAviso() throws Exception {
+    org.mockito.Mockito.when(
+            ragSearchService.buscar(
+                org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyInt()))
+        .thenReturn(java.util.List.of());
+
+    ResultadoFerramenta resultado =
+        ferramentas.consultarBaseConhecimento(
+            MAPPER.readTree("{\"query\":\"receita de bolo\"}"), contexto);
+
+    assertThat(resultado.conteudo())
+        .isEqualTo("{\"trechos\":[],\"aviso\":\"nenhuma fonte relevante encontrada\"}");
+    assertThat(resultado.citacoes()).isEmpty();
+  }
 }

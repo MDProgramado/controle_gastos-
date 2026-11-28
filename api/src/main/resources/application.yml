@@ -68,6 +68,9 @@ ai:
     read-timeout-ms: ${OPENROUTER_READ_TIMEOUT_MS:25000}
     chat-deadline-ms: ${AI_OPENROUTER_CHAT_DEADLINE_MS:50000}
     max-tokens-chat: ${AI_OPENROUTER_MAX_TOKENS_CHAT:2000}
+    # Temperatura do chat: baixa porque a mesma chamada extrai lançamentos (ideal ~0.1) e
+    # responde consultas/educação (~0.4).
+    temperatura-chat: ${AI_OPENROUTER_TEMPERATURA_CHAT:0.2}
     # MODELOS PAGOS por padrão: os modelos ":free" são servidos por provedores que podem
     # registrar e treinar com os prompts e não garantem a política de dados abaixo. Como o chat
     # e a extração recebem dados financeiros reais de clientes (LGPD), o padrão é sempre pago.
@@ -99,6 +102,8 @@ ai:
   rag:
     corpus-path: ${AI_RAG_CORPUS_PATH:rag/corpus_financeiro_RAG_chunks.jsonl}
     embedding-batch-size: ${AI_RAG_EMBEDDING_BATCH_SIZE:64}
+    # Similaridade de cosseno mínima (1 - distância) para um trecho entrar no contexto.
+    similaridade-minima: ${AI_RAG_SIMILARIDADE_MINIMA:0.60}
 
 # WhatsApp (Meta Cloud API). Segredos somente via env var; ausência de token/secret
 # desliga o envio e faz o webhook responder 503 (nunca aceita requisição sem validação).
