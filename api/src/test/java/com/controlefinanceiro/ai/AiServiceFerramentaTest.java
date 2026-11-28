@@ -32,7 +32,7 @@ class AiServiceFerramentaTest {
 
   @BeforeEach
   void setup() {
-    aiClient = mock(AiClient.class);
+    aiClient = TestesIa.mockAiClient();
     registry = mock(FerramentaRegistry.class);
     AiMemoryStore memoryStore = new AiMemoryStore();
     AiKnowledgeStore knowledgeStore = new AiKnowledgeStore();
@@ -88,7 +88,8 @@ class AiServiceFerramentaTest {
     String ultima =
         (String)
             mensagensCaptor.getValue().get(mensagensCaptor.getValue().size() - 1).get("content");
-    assertThat(ultima).contains("RESULTADO_DA_FERRAMENTA");
+    assertThat(ultima).startsWith("<resultado_ferramenta>").endsWith("</resultado_ferramenta>");
+    assertThat(ultima).doesNotContain("RESULTADO_DA_FERRAMENTA");
     assertThat(ultima).contains("art. 2-C");
   }
 

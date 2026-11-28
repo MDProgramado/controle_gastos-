@@ -3,7 +3,6 @@ package com.controlefinanceiro.common;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -177,25 +176,18 @@ class IsolamentoUsuarioServicosTest {
   @DisplayName("contexto da IA usa empresa_id e usuario_id em todas as consultas")
   void contextoIaUsaEmpresaEUsuario() {
     DashboardRepository dashboard = mock(DashboardRepository.class);
-    LancamentoRepository lancamentos = mock(LancamentoRepository.class);
     when(dashboard.totalEntradas(eq(EMPRESA), eq(USUARIO), any(), any()))
         .thenReturn(BigDecimal.ZERO);
     when(dashboard.totalSaidas(eq(EMPRESA), eq(USUARIO), any(), any())).thenReturn(BigDecimal.ZERO);
     when(dashboard.breakdownSaida(eq(EMPRESA), eq(USUARIO), any(), any())).thenReturn(List.of());
     when(dashboard.breakdownEntrada(eq(EMPRESA), eq(USUARIO), any(), any())).thenReturn(List.of());
-    when(lancamentos.findByEmpresaIdAndUsuarioIdAndFiltros(
-            eq(EMPRESA), eq(USUARIO), isNull(), isNull(), isNull(), isNull(), any()))
-        .thenReturn(new PageImpl<>(List.of()));
 
-    new AiContextoService(dashboard, lancamentos).montarContexto(EMPRESA);
+    new AiContextoService(dashboard).montarContexto(EMPRESA);
 
-    verify(dashboard, times(3)).totalEntradas(eq(EMPRESA), eq(USUARIO), any(), any());
-    verify(dashboard, times(3)).totalSaidas(eq(EMPRESA), eq(USUARIO), any(), any());
+    verify(dashboard, times(2)).totalEntradas(eq(EMPRESA), eq(USUARIO), any(), any());
+    verify(dashboard, times(2)).totalSaidas(eq(EMPRESA), eq(USUARIO), any(), any());
     verify(dashboard).breakdownSaida(eq(EMPRESA), eq(USUARIO), any(), any());
     verify(dashboard).breakdownEntrada(eq(EMPRESA), eq(USUARIO), any(), any());
-    verify(lancamentos)
-        .findByEmpresaIdAndUsuarioIdAndFiltros(
-            EMPRESA, USUARIO, null, null, null, null, PageRequest.of(0, 12));
   }
 
   @Test

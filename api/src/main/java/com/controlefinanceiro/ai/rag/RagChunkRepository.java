@@ -71,10 +71,30 @@ public class RagChunkRepository {
     jdbc.batchUpdate(UPSERT, lote);
   }
 
-  public List<RagTrecho> buscarPorVetor(float[] embedding, int limite) {
+  /** Trecho com a similaridade de cosseno ({@code 1 - distância}) em relação à consulta. */
+  public record TrechoPontuado(RagTrecho trecho, double similaridade) {}
+
+  /**
+   * Busca vetorial com limiar: só devolve trechos com similaridade {@code >= similaridadeMinima}
+   * (sem limiar o {@code ORDER BY ... LIMIT} sempre devolveria algo, mesmo irrelevante).
+   */
+  public List<TrechoPontuado> buscarPorVetor(
+      float[] embedding, int limite, double similaridadeMinima) {
     String sql =
-        "SELECT " + COLUNAS + " FROM rag_chunk ORDER BY embedding <=> CAST(? AS vector) LIMIT ?";
-    return jdbc.query(sql, this::mapear, paraLiteralVetor(embedding), limite);
+        "SELECT "
+            + COLUNAS
+            + ", 1 - (embedding <=> CAST(? AS vector)) AS similaridade FROM rag_chunk"
+            + " WHERE 1 - (embedding <=> CAST(? AS vector)) >= ?"
+            + " ORDER BY embedding <=> CAST(? AS vector) LIMIT ?";
+    String vetor = paraLiteralVetor(embedding);
+    return jdbc.query(
+        sql,
+        (rs, linha) -> new TrechoPontuado(mapear(rs, linha), rs.getDouble(7)),
+        vetor,
+        vetor,
+        similaridadeMinima,
+        vetor,
+        limite);
   }
 
   public List<RagTrecho> buscarPorTexto(String consulta, int limite) {

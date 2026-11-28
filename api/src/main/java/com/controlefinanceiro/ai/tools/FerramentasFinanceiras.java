@@ -287,6 +287,12 @@ public class FerramentasFinanceiras {
     String consulta = args != null && args.hasNonNull("query") ? args.path("query").asText() : "";
     int topK = Math.max(1, Math.min(intDe(args, "topK", 5), 10));
     List<RagTrecho> trechos = ragSearchService.buscar(consulta, topK);
+    if (trechos == null || trechos.isEmpty()) {
+      ObjectNode vazio = MAPPER.createObjectNode();
+      vazio.set("trechos", MAPPER.createArrayNode());
+      vazio.put("aviso", "nenhuma fonte relevante encontrada");
+      return new ResultadoFerramenta(vazio.toString(), List.of());
+    }
 
     ArrayNode array = MAPPER.createArrayNode();
     List<AiResponse.AiCitacao> citacoes = new ArrayList<>();

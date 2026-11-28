@@ -10,3 +10,4 @@
 *.woff2 binary
 *.ttf binary
 *.eot binary
+api/src/main/resources/db/migration/*.sql -text

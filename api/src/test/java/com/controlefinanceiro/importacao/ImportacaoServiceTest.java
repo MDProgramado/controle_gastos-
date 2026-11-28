@@ -178,7 +178,7 @@ class ImportacaoServiceTest {
     assertThat(resultado.documentos()).hasSize(1);
     assertThat(resultado.documentos().get(0).status()).isEqualTo("ERRO");
     assertThat(resultado.documentos().get(0).mensagem()).contains("não é um PDF");
-    verify(iaExtracaoService, never()).extrair(anyString(), anyList(), anyString());
+    verify(iaExtracaoService, never()).extrair(anyString(), anyList(), anyString(), any());
   }
 
   @Test
@@ -213,7 +213,7 @@ class ImportacaoServiceTest {
   @DisplayName("PDF válido: status ANALISADO, staging gravado, categoria mapeada")
   void pdfValidoEhAnalisado() throws IOException {
     when(pdfTextoExtractor.extrair(any())).thenReturn("fatura cartão vencimento 2026-12-10");
-    when(iaExtracaoService.extrair(anyString(), anyList(), anyString()))
+    when(iaExtracaoService.extrair(anyString(), anyList(), anyString(), any()))
         .thenReturn(
             new IaExtracaoService.ResultadoExtracao(
                 List.of(
@@ -264,7 +264,7 @@ class ImportacaoServiceTest {
   @DisplayName("staging não grava lancamento nem conta_a_pagar (D-02: confirmação é 05-05)")
   void analisarNaoGravaDefinitivo() throws IOException {
     when(pdfTextoExtractor.extrair(any())).thenReturn("extrato pix transferência");
-    when(iaExtracaoService.extrair(anyString(), anyList(), anyString()))
+    when(iaExtracaoService.extrair(anyString(), anyList(), anyString(), any()))
         .thenReturn(
             new IaExtracaoService.ResultadoExtracao(
                 List.of(), null, "m1", false, List.of(), String.valueOf(EMPRESA_ID)));
@@ -282,7 +282,7 @@ class ImportacaoServiceTest {
     when(mapeadorCategoria.mapear(any(), any(), anyList()))
         .thenReturn(new MapeadorCategoria.ResultadoMapeamento(9L, "Outros", true));
     when(pdfTextoExtractor.extrair(any())).thenReturn("fatura cartão");
-    when(iaExtracaoService.extrair(anyString(), anyList(), anyString()))
+    when(iaExtracaoService.extrair(anyString(), anyList(), anyString(), any()))
         .thenReturn(
             new IaExtracaoService.ResultadoExtracao(
                 List.of(
@@ -323,7 +323,7 @@ class ImportacaoServiceTest {
 
     assertThat(resultado.documentos()).hasSize(1);
     assertThat(resultado.documentos().get(0).status()).isEqualTo("DUPLICADO");
-    verify(iaExtracaoService, never()).extrair(anyString(), anyList(), anyString());
+    verify(iaExtracaoService, never()).extrair(anyString(), anyList(), anyString(), any());
     verify(itemRepository, never()).save(any());
   }
 
@@ -341,7 +341,7 @@ class ImportacaoServiceTest {
     assertThat(resultado.documentos().get(0).status()).isEqualTo("SEM_TEXTO");
     assertThat(resultado.documentos().get(0).mensagem()).contains("digitalizado");
     verify(documentoRepository).save(any(ImportacaoDocumento.class));
-    verify(iaExtracaoService, never()).extrair(anyString(), anyList(), anyString());
+    verify(iaExtracaoService, never()).extrair(anyString(), anyList(), anyString(), any());
   }
 
   /* ============================ IA indisponível ============================ */
@@ -350,7 +350,7 @@ class ImportacaoServiceTest {
   @DisplayName("IA fora em todos os arquivos → 503 (nenhum documento analisado)")
   void iaForaEmTodosLanca503() throws IOException {
     when(pdfTextoExtractor.extrair(any())).thenReturn("fatura cartão");
-    when(iaExtracaoService.extrair(anyString(), anyList(), anyString()))
+    when(iaExtracaoService.extrair(anyString(), anyList(), anyString(), any()))
         .thenThrow(new ServicoIaIndisponivelException("IA fora"));
 
     assertThatThrownBy(
@@ -363,7 +363,7 @@ class ImportacaoServiceTest {
   @DisplayName("IA fora em um arquivo, outro analisado → lote responde com ERRO no arquivo")
   void iaForaEmUmArquivoNaoDerrubaLote() throws IOException {
     when(pdfTextoExtractor.extrair(any())).thenReturn("extrato pix");
-    when(iaExtracaoService.extrair(anyString(), anyList(), anyString()))
+    when(iaExtracaoService.extrair(anyString(), anyList(), anyString(), any()))
         .thenReturn(
             new IaExtracaoService.ResultadoExtracao(
                 List.of(), null, "m1", false, List.of(), String.valueOf(EMPRESA_ID)))

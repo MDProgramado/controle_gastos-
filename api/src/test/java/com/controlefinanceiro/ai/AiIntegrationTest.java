@@ -52,6 +52,8 @@ class AiIntegrationTest {
 
   @BeforeEach
   void login() throws Exception {
+    // O AiService usa completarComUso; os stubs abaixo são de completar (só texto).
+    when(aiClient.completarComUso(any(), anyLong())).thenAnswer(TestesIa.delegarParaCompletar());
     tokenAdmin = login("admin@controle.com", SENHA_FIXTURE);
   }
 

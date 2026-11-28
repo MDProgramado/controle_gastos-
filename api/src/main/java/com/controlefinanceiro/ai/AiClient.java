@@ -3,7 +3,12 @@ package com.controlefinanceiro.ai;
 import com.controlefinanceiro.common.ServicoIaIndisponivelException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tags;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import java.math.BigDecimal;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
@@ -47,6 +52,38 @@ public class AiClient {
   private final boolean configurado;
 
   /**
+   * Política de dados enviada em toda requisição (objeto {@code provider} da OpenRouter): {@code
+   * data_collection=deny} exclui provedores que guardam/treinam com os prompts e {@code zdr=true}
+   * restringe a endpoints Zero Data Retention. Dados financeiros reais de clientes (LGPD).
+   */
+  @Value("${ai.openrouter.data-collection:deny}")
+  private String dataCollection = "deny";
+
+  @Value("${ai.openrouter.zdr:true}")
+  private boolean zdr = true;
+
+  /**
+   * Temperatura do chat. Uma única chamada faz extração de lançamentos (pede ~0.1) e consulta/
+   * educação (~0.4); 0.2 é o meio-termo padrão. A extração de PDF tem configuração própria.
+   */
+  @Value("${ai.openrouter.temperatura-chat:0.2}")
+  private double temperaturaChat = 0.2;
+
+  /**
+   * Métricas ia.* (Micrometer). Tags só de baixa cardinalidade: modelo, operação, tipo, resultado —
+   * NUNCA empresaId/usuarioId (o custo por cliente vai para a tabela ai_uso_diario).
+   */
+  private MeterRegistry meterRegistry = new SimpleMeterRegistry();
+
+  @Autowired(required = false)
+  public void setMeterRegistry(MeterRegistry meterRegistry) {
+    this.meterRegistry = meterRegistry;
+  }
+
+  /** Resposta do chat: conteúdo + uso (tokens/custo) de cada chamada feita, inclusive falhas. */
+  public record RespostaChat(String conteudo, List<UsoIa> usos) {}
+
+  /**
    * Opções para {@link #completarComCascata(List, OpcoesCompletar)}.
    *
    * @param modelos lista de modelos em ordem de prioridade (gratuitos no caminho da extração)
@@ -68,12 +105,17 @@ public class AiClient {
    * Resultado de {@link #completarComCascata}: conteúdo, modelo que respondeu e se houve fallback.
    */
   public record RespostaCompletar(
-      String conteudo, String modeloUsado, boolean degradado, int chamadas) {}
+      String conteudo, String modeloUsado, boolean degradado, int chamadas, List<UsoIa> usos) {
+
+    public RespostaCompletar(String conteudo, String modeloUsado, boolean degradado, int chamadas) {
+      this(conteudo, modeloUsado, degradado, chamadas, List.of());
+    }
+  }
 
   @Autowired
   public AiClient(
       @Value("${ai.openrouter.api-key:}") String apiKey,
-      @Value("${ai.openrouter.modelo:google/gemma-4-31b-it:free}") String modelo,
+      @Value("${ai.openrouter.modelo:google/gemma-4-31b-it}") String modelo,
       @Value("${ai.openrouter.modelos:}") String modelosConfig,
       @Value("${ai.openrouter.modelos-reserva:}") String modelosReservaConfig,
       @Value("${ai.openrouter.connect-timeout-ms:3000}") int connectTimeoutMs,
@@ -115,13 +157,29 @@ public class AiClient {
       RestClient restClient,
       int maxTokensChat,
       long chatDeadlineMs) {
-    this.modelo = modelos.isEmpty() ? "google/gemma-4-31b-it:free" : modelos.get(0);
+    this.modelo = modelos.isEmpty() ? "google/gemma-4-31b-it" : modelos.get(0);
     this.modelos = modelos;
     this.modelosReserva = modelosReserva;
     this.restClient = restClient;
     this.maxTokensChat = maxTokensChat;
     this.chatDeadlineMs = chatDeadlineMs;
     this.configurado = true;
+  }
+
+  /** Ajuste da política de dados (testes de unidade). */
+  void configurarPoliticaDados(String dataCollection, boolean zdr) {
+    this.dataCollection = dataCollection;
+    this.zdr = zdr;
+  }
+
+  /** Ajuste da temperatura do chat (testes de unidade). */
+  void configurarTemperaturaChat(double temperatura) {
+    this.temperaturaChat = temperatura;
+  }
+
+  /** Objeto {@code provider} da OpenRouter com a política de dados configurada. */
+  Map<String, Object> politicaProvedor() {
+    return Map.of("data_collection", dataCollection, "zdr", zdr);
   }
 
   /**
@@ -139,6 +197,11 @@ public class AiClient {
    * que retries/fallbacks consumam o mesmo orçamento.
    */
   public String completar(List<Map<String, Object>> mensagens, long deadlineNanos) {
+    return completarComUso(mensagens, deadlineNanos).conteudo();
+  }
+
+  /** Igual a {@link #completar(List, long)}, devolvendo também o uso de cada chamada. */
+  public RespostaChat completarComUso(List<Map<String, Object>> mensagens, long deadlineNanos) {
     if (!configurado) {
       throw new IllegalStateException(
           "ai.openrouter.api-key não configurada. Defina a env var OPENROUTER_API_KEY.");
@@ -146,6 +209,7 @@ public class AiClient {
 
     List<String> candidatos = listaCandidatosChat();
     ServicoIaIndisponivelException ultimaFalha = null;
+    List<UsoIa> usos = new ArrayList<>();
 
     for (int i = 0; i < candidatos.size(); i++) {
       String modeloAtual = candidatos.get(i);
@@ -156,12 +220,19 @@ public class AiClient {
         break;
       }
 
+      long inicio = System.nanoTime();
+      String json = null;
       try {
         Map<String, Object> corpo =
-            montarCorpo(mensagens, List.of(modeloAtual), 0.4, maxTokensChat);
-        String json = chamar(corpo);
-        return extrairConteudo(json, "chat", modeloAtual);
+            montarCorpo(mensagens, List.of(modeloAtual), temperaturaChat, maxTokensChat);
+        json = chamar(corpo);
+        String conteudo = extrairConteudo(json, "chat", modeloAtual);
+        UsoIa uso = extrairUso(json, OP_CHAT, modeloAtual);
+        usos.add(uso);
+        registrarMetricas(uso, i > 0 ? "fallback" : "ok", inicio);
+        return new RespostaChat(conteudo, List.copyOf(usos));
       } catch (ServicoIaIndisponivelException e) {
+        registrarFalha(usos, json, OP_CHAT, modeloAtual, "erro", inicio);
         ultimaFalha = e;
         LOG.warn(
             "Modelo {} falhou no chat (recuperável). Avançando. motivo={}",
@@ -169,7 +240,15 @@ public class AiClient {
             e.getMessage());
       } catch (RestClientResponseException e) {
         int status = e.getStatusCode().value();
-        boolean recuperavel = recuperavel(status) || ehErroReasoning(status, e);
+        boolean semProvedor = semProvedorCompativel(status, e);
+        if (semProvedor) {
+          LOG.warn(
+              "Nenhum provedor com a política de dados exigida para o modelo {} (HTTP {}). Avançando.",
+              modeloAtual,
+              status);
+        }
+        boolean recuperavel = semProvedor || recuperavel(status) || ehErroReasoning(status, e);
+        registrarFalha(usos, null, OP_CHAT, modeloAtual, "erro", inicio);
         ultimaFalha = indisponivel(e);
         LOG.warn(
             "Modelo {} falhou no chat (HTTP {}, recuperável={}). {}",
@@ -181,10 +260,14 @@ public class AiClient {
           throw ultimaFalha;
         }
       } catch (ResourceAccessException e) {
+        registrarFalha(usos, null, OP_CHAT, modeloAtual, "timeout", inicio);
         ultimaFalha =
             new ServicoIaIndisponivelException(
                 "O serviço de IA demorou para responder. Tente novamente em instantes.", e);
-        LOG.warn("Modelo {} falhou por timeout/conexão no chat. Avançando.", modeloAtual, e);
+        LOG.warn(
+            "Modelo {} falhou por timeout/conexão no chat. Avançando. erro={}",
+            modeloAtual,
+            e.getClass().getSimpleName());
       }
     }
 
@@ -223,6 +306,22 @@ public class AiClient {
     }
   }
 
+  /**
+   * Com {@code data_collection=deny}/{@code zdr=true} a OpenRouter pode não ter provedor compatível
+   * para o modelo (HTTP 404 ou 400 citando provedor/endpoint/política). Trocar de modelo resolve.
+   */
+  private boolean semProvedorCompativel(int status, RestClientResponseException e) {
+    if (status != 404 && status != 400) return false;
+    try {
+      String body = e.getResponseBodyAsString();
+      if (body == null) return false;
+      String b = body.toLowerCase(java.util.Locale.ROOT);
+      return b.contains("provider") || b.contains("endpoints found") || b.contains("data policy");
+    } catch (RuntimeException ex) {
+      return false;
+    }
+  }
+
   private boolean recuperavel(int status) {
     return status == 402 || status == 429 || status >= 500;
   }
@@ -249,7 +348,8 @@ public class AiClient {
 
     List<String> principal =
         (opcoes.modelos() == null || opcoes.modelos().isEmpty()) ? modelos : opcoes.modelos();
-    RespostaCompletar resposta = tentarEmLista(mensagens, opcoes, principal, false);
+    List<UsoIa> usos = new ArrayList<>();
+    RespostaCompletar resposta = tentarEmLista(mensagens, opcoes, principal, false, usos);
     if (resposta != null) {
       return resposta;
     }
@@ -259,7 +359,7 @@ public class AiClient {
     if (!modelosReserva.isEmpty() && !modelosReserva.equals(principal)) {
       LOG.warn(
           "Cascata de modelos gratuitos falhou. Indo para o último recurso: {}", modelosReserva);
-      resposta = tentarEmLista(mensagens, opcoes, modelosReserva, true);
+      resposta = tentarEmLista(mensagens, opcoes, modelosReserva, true, usos);
       if (resposta != null) {
         return resposta;
       }
@@ -277,7 +377,8 @@ public class AiClient {
       List<Map<String, Object>> mensagens,
       OpcoesCompletar opcoes,
       List<String> lista,
-      boolean etapaReserva) {
+      boolean etapaReserva,
+      List<UsoIa> usos) {
     int chamadas = 0;
     for (int i = 0; i < lista.size(); i++) {
       String modeloAtual = lista.get(i);
@@ -285,15 +386,20 @@ public class AiClient {
 
       for (int tentativa = 1; tentativa <= opcoes.tentativasPorModelo(); tentativa++) {
         chamadas++;
+        long inicio = System.nanoTime();
+        String json = null;
         try {
-          String json =
+          json =
               chamar(
                   montarCorpo(
                       mensagens, List.of(modeloAtual), opcoes.temperatura(), opcoes.maxTokens()));
           String conteudo = extrairConteudo(json, etapaReserva ? "reserva" : "cascata");
           String modeloUsado = extrairModeloUsado(json);
 
+          UsoIa uso = extrairUso(json, OP_EXTRACAO, modeloAtual);
+          usos.add(uso);
           if (opcoes.conteudoValido() != null && !opcoes.conteudoValido().test(conteudo)) {
+            registrarMetricas(uso, "erro", inicio);
             LOG.warn(
                 "Modelo {} devolveu conteúdo fora do esperado (tentativa {}). Avançando de modelo.",
                 modeloAtual,
@@ -302,10 +408,21 @@ public class AiClient {
             break;
           }
 
+          registrarMetricas(uso, degradado ? "fallback" : "ok", inicio);
           LOG.info("Resposta da IA servida pelo modelo {} (chamada {})", modeloUsado, chamadas);
-          return new RespostaCompletar(conteudo, modeloUsado, degradado, chamadas);
+          return new RespostaCompletar(
+              conteudo, modeloUsado, degradado, chamadas, List.copyOf(usos));
         } catch (RestClientResponseException e) {
+          registrarFalha(usos, null, OP_EXTRACAO, modeloAtual, "erro", inicio);
           int status = e.getStatusCode().value();
+          if (semProvedorCompativel(status, e)) {
+            LOG.warn(
+                "Nenhum provedor com a política de dados exigida para o modelo {} (HTTP {})."
+                    + " Avançando de modelo.",
+                modeloAtual,
+                status);
+            break;
+          }
           boolean recuperavel = status == 402 || status == 429 || status >= 500;
           if (recuperavel && tentativa < opcoes.tentativasPorModelo()) {
             dormir(pausaComRetryAfter(e, opcoes.esperaInicialMs(), tentativa));
@@ -314,13 +431,18 @@ public class AiClient {
           LOG.warn("Modelo {} falhou (HTTP {}). Avançando de modelo.", modeloAtual, status);
           break;
         } catch (ResourceAccessException e) {
+          registrarFalha(usos, null, OP_EXTRACAO, modeloAtual, "timeout", inicio);
           if (tentativa < opcoes.tentativasPorModelo()) {
             dormir(opcoes.esperaInicialMs() * (long) Math.pow(2, tentativa - 1));
             continue;
           }
-          LOG.warn("Modelo {} falhou por timeout/conexão. Avançando de modelo.", modeloAtual, e);
+          LOG.warn(
+              "Modelo {} falhou por timeout/conexão. Avançando de modelo. erro={}",
+              modeloAtual,
+              e.getClass().getSimpleName());
           break;
         } catch (ServicoIaIndisponivelException e) {
+          registrarFalha(usos, json, OP_EXTRACAO, modeloAtual, "erro", inicio);
           LOG.warn(
               "Modelo {} devolveu resposta inválida ({}). Avançando de modelo.",
               modeloAtual,
@@ -415,6 +537,7 @@ public class AiClient {
     corpo.put("temperature", temperatura != null ? temperatura : 0.4);
     corpo.put("max_tokens", maxTokens != null ? maxTokens : 800);
     corpo.put("reasoning", Map.of("effort", "low", "exclude", true));
+    corpo.put("provider", politicaProvedor());
     return corpo;
   }
 
@@ -475,6 +598,64 @@ public class AiClient {
       throw new ServicoIaIndisponivelException("O serviço de IA devolveu uma resposta vazia.");
     }
     return texto;
+  }
+
+  static final String OP_CHAT = "chat";
+  static final String OP_EXTRACAO = "extracao";
+
+  /**
+   * Lê o objeto {@code usage} da OpenRouter ({@code prompt_tokens}, {@code completion_tokens} e
+   * {@code cost}, quando vier). Ausente/ilegível: uso com zero tokens e custo zero.
+   */
+  static UsoIa extrairUso(String json, String operacao, String modelo) {
+    try {
+      JsonNode usage = MAPPER.readTree(json).path("usage");
+      JsonNode custo = usage.path("cost");
+      BigDecimal custoUsd =
+          custo.isNumber() || custo.isTextual() ? new BigDecimal(custo.asText()) : BigDecimal.ZERO;
+      return new UsoIa(
+          operacao,
+          modelo,
+          usage.path("prompt_tokens").asLong(0),
+          usage.path("completion_tokens").asLong(0),
+          custoUsd,
+          1);
+    } catch (Exception e) {
+      return UsoIa.falha(operacao, modelo);
+    }
+  }
+
+  private void registrarFalha(
+      List<UsoIa> usos,
+      String json,
+      String operacao,
+      String modelo,
+      String resultado,
+      long inicioNanos) {
+    UsoIa uso = json == null ? UsoIa.falha(operacao, modelo) : extrairUso(json, operacao, modelo);
+    usos.add(uso);
+    registrarMetricas(uso, resultado, inicioNanos);
+  }
+
+  /** Registra ia.tokens, ia.custo.usd, ia.chamadas e ia.latencia (sem tags de tenant). */
+  private void registrarMetricas(UsoIa uso, String resultado, long inicioNanos) {
+    registrarMetricas(
+        meterRegistry, uso, resultado, Duration.ofNanos(System.nanoTime() - inicioNanos));
+  }
+
+  /** Compartilhado com o cliente de embeddings. */
+  public static void registrarMetricas(
+      MeterRegistry registry, UsoIa uso, String resultado, Duration latencia) {
+    try {
+      Tags base = Tags.of("modelo", uso.modelo(), "operacao", uso.operacao());
+      registry.counter("ia.tokens", base.and("tipo", "entrada")).increment(uso.tokensEntrada());
+      registry.counter("ia.tokens", base.and("tipo", "saida")).increment(uso.tokensSaida());
+      registry.counter("ia.custo.usd", base).increment(uso.custoUsd().doubleValue());
+      registry.counter("ia.chamadas", base.and("resultado", resultado)).increment();
+      registry.timer("ia.latencia", base).record(latencia);
+    } catch (RuntimeException e) {
+      LOG.debug("Falha ao registrar métricas da IA: {}", e.getClass().getSimpleName());
+    }
   }
 
   /** Extrai o campo {@code model} da resposta da OpenRouter (modelo que de fato respondeu). */

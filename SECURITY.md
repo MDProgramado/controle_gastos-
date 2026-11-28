@@ -281,6 +281,26 @@ Current code avoids obvious body logging in several places (`WhatsappEnvioServic
 | Missing CSRF tokens on API | rejected | API is stateless Bearer/JWT resource server (`SecurityConfig` disables CSRF by design); browser uses BFF with httpOnly sameSite=lax cookie and server-side Bearer forwarding. CSRF still needs review if cookie-authenticated endpoints are added. |
 | Password hashing absent | rejected | BCrypt cost 12 is configured in `SecurityConfig` and seed migration; passwords validated with `PasswordEncoder.matches`. |
 
+## Dados enviados à IA
+
+**Quais dados são enviados** (OpenRouter, chat, extração de PDF e embeddings):
+- Contexto fixo de cada mensagem do chat: totais de entradas, saídas e saldo do mês atual e do anterior, e o resumo por categoria do mês atual (nome da categoria + total). Não inclui descrição de lançamento.
+- A mensagem digitada pelo usuário e o histórico da sessão (até 20 mensagens).
+- Sob demanda, quando o modelo chama uma ferramenta: agregados por mês e categoria; `detectar_ralos_e_recorrencias` devolve também a descrição de gastos recorrentes.
+- O conhecimento cadastrado pelo admin da empresa e trechos da base pública de educação financeira (RAG).
+- Na importação de PDF: o texto extraído do extrato/fatura, já sanitizado.
+- **Nunca** são montados no prompt: nome, e-mail, telefone ou CPF do usuário, nem `empresa_id`/`usuario_id` (o tenant vem do JWT e fica só no backend).
+
+**Política** (por requisição, configurável em `ai.openrouter.data-collection` / `ai.openrouter.zdr`):
+- Toda requisição à OpenRouter envia `"provider": {"data_collection": "deny", "zdr": true}`: só provedores que não coletam nem treinam com os dados, e só endpoints Zero Data Retention (sem retenção).
+- Os padrões de modelo são pagos; modelos `:free` só via env var, apenas em desenvolvimento e nunca com dados reais.
+- Se nenhum provedor atende à política para um modelo, a cascata avança para o próximo e registra WARN.
+- Logs não registram conteúdo de mensagens nem respostas da IA, só modelo, finish_reason, tokens, latência e resultado.
+
+**Observabilidade e custo:** métricas `ia.tokens`, `ia.custo.usd`, `ia.chamadas` e `ia.latencia` (tags: modelo, operação, tipo e resultado; nunca empresa ou usuário) em `/actuator/prometheus`, que exige ADMIN ou o header `X-Metrics-Token` = `METRICS_TOKEN`. `/actuator/health` é público e não mostra detalhes; os demais endpoints do actuator são negados. O custo por cliente fica em `ai_uso_diario` (`GET /api/admin/ia/uso`, ADMIN, escopo do JWT).
+
+**Como desligar a IA por empresa:** **pendente.** Não existe hoje um flag por empresa. A IA só pode ser desligada globalmente, removendo `OPENROUTER_API_KEY`. Falta um campo em `empresa` com checagem em `AiController`, `WhatsappWebhookService` e `ImportacaoService`.
+
 ## Sensitive Data & Encryption Statement
 
 **Source-evidence only:** Sensitive data has partial protection in code, but end-to-end encryption/protection cannot be fully confirmed from source.

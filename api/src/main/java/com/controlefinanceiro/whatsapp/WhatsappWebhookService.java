@@ -202,7 +202,10 @@ public class WhatsappWebhookService {
         default -> registrarMensagem(messageId, "REJEITADA");
       }
     } catch (RuntimeException e) {
-      LOG.error("Erro ao processar mensagem WhatsApp com IA: messageId={}", messageId, e);
+      LOG.error(
+          "Erro ao processar mensagem WhatsApp com IA: messageId={} erro={}",
+          messageId,
+          e.getClass().getSimpleName());
       envioService.enviarTexto(
           telefone.getNumeroE164(),
           "Não consegui processar sua mensagem agora. Tente novamente em instantes.",

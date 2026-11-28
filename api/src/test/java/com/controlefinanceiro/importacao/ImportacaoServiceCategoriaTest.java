@@ -90,7 +90,7 @@ class ImportacaoServiceCategoriaTest {
 
     try {
       when(extrator.extrair(any())).thenReturn("extrato pix mercado");
-      when(ia.extrair(anyString(), anyList(), anyString()))
+      when(ia.extrair(anyString(), anyList(), anyString(), any()))
           .thenReturn(
               new IaExtracaoService.ResultadoExtracao(
                   List.of(item("Mercado"), item("Restaurante"), item("Padaria"), item("Farmácia")),
