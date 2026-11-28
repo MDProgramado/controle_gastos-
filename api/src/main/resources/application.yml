@@ -68,21 +68,29 @@ ai:
     read-timeout-ms: ${OPENROUTER_READ_TIMEOUT_MS:25000}
     chat-deadline-ms: ${AI_OPENROUTER_CHAT_DEADLINE_MS:50000}
     max-tokens-chat: ${AI_OPENROUTER_MAX_TOKENS_CHAT:2000}
-    modelo: ${AI_OPENROUTER_MODELO:google/gemma-4-31b-it:free}
+    # MODELOS PAGOS por padrão: os modelos ":free" são servidos por provedores que podem
+    # registrar e treinar com os prompts e não garantem a política de dados abaixo. Como o chat
+    # e a extração recebem dados financeiros reais de clientes (LGPD), o padrão é sempre pago.
+    # Modelos ":free" só via env var — somente para desenvolvimento, nunca com dados reais de
+    # clientes.
+    modelo: ${AI_OPENROUTER_MODELO:google/gemma-4-31b-it}
     embedding-model: ${AI_OPENROUTER_EMBEDDING_MODEL:openai/text-embedding-3-small}
+    # Política de dados enviada em TODA requisição (chat, extração, embeddings) no objeto
+    # "provider" da OpenRouter: data_collection=deny (sem provedores que coletam/treinam) e
+    # zdr=true (somente endpoints Zero Data Retention).
+    data-collection: ${AI_OPENROUTER_DATA_COLLECTION:deny}
+    zdr: ${AI_OPENROUTER_ZDR:true}
     # Cascata de modelos do chat (separados por vírgula). O cliente tenta em ordem,
-    # respeitando o orçamento total de tempo do chat.
-    modelos: ${AI_OPENROUTER_MODELOS:google/gemma-4-31b-it:free,google/gemma-4-26b-a4b-it:free}
-    # Último recurso: entra em campo só quando a cascata inteira falha. Necessário porque o
-    # limite de modelos :free é por conta e por dia (50 req/dia): quando estoura, TODOS os
-    # modelos gratuitos caem juntos e nenhuma cascata de gratuitos resolve.
-    # Para desativar (somente modelos gratuitos), defina AI_OPENROUTER_MODELOS_RESERVA=none
-    # (o valor "none" desliga a lista — em Windows uma env var vazia é removida pelo sistema).
-    modelos-reserva: ${AI_OPENROUTER_MODELOS_RESERVA:google/gemma-4-31b-it}
+    # respeitando o orçamento total de tempo do chat. Primário fixo; secundário configurável.
+    modelos: ${AI_OPENROUTER_MODELOS:google/gemma-4-31b-it,${AI_OPENROUTER_MODELO_SECUNDARIO:google/gemma-4-26b-a4b-it}}
+    # Último recurso: entra em campo só quando a cascata inteira falha. Com a cascata já paga,
+    # fica desligado por padrão ("none" desliga a lista — em Windows uma env var vazia é
+    # removida pelo sistema).
+    modelos-reserva: ${AI_OPENROUTER_MODELOS_RESERVA:none}
 
-    # Cascata específica da extração de PDFs (fase 5). Mesmo ordem da cascata do chat,
-    # configurável à parte. TODOS gratuitos — nunca mistura modelo pago.
-    modelos-extracao: ${AI_OPENROUTER_MODELOS_EXTRACAO:google/gemma-4-31b-it:free,google/gemma-4-26b-a4b-it:free,openrouter/free}
+    # Cascata específica da extração de PDFs (fase 5). Mesma política: somente modelos pagos
+    # por padrão (o PDF traz extrato bancário real do cliente).
+    modelos-extracao: ${AI_OPENROUTER_MODELOS_EXTRACAO:google/gemma-4-31b-it,${AI_OPENROUTER_MODELO_SECUNDARIO:google/gemma-4-26b-a4b-it}}
     temperature-extracao: ${AI_OPENROUTER_TEMPERATURA_EXTRACAO:0.0}
     max-tokens-extracao: ${AI_OPENROUTER_MAX_TOKENS_EXTRACAO:8000}
     tentativas-extracao: ${AI_OPENROUTER_TENTATIVAS_EXTRACAO:3}

@@ -53,7 +53,7 @@ public class IaExtracaoService {
   public IaExtracaoService(
       AiClient aiClient,
       @Value("${ai.openrouter.modelos-extracao:}") String modelosConfig,
-      @Value("${ai.openrouter.modelo:google/gemma-4-31b-it:free}") String modeloPadrao,
+      @Value("${ai.openrouter.modelo:google/gemma-4-31b-it}") String modeloPadrao,
       @Value("${ai.openrouter.temperature-extracao:0.0}") Double temperatura,
       @Value("${ai.openrouter.max-tokens-extracao:8000}") Integer maxTokens,
       @Value("${ai.openrouter.tentativas-extracao:3}") int tentativas,

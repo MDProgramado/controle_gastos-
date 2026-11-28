@@ -47,6 +47,17 @@ public class AiClient {
   private final boolean configurado;
 
   /**
+   * Política de dados enviada em toda requisição (objeto {@code provider} da OpenRouter): {@code
+   * data_collection=deny} exclui provedores que guardam/treinam com os prompts e {@code zdr=true}
+   * restringe a endpoints Zero Data Retention. Dados financeiros reais de clientes (LGPD).
+   */
+  @Value("${ai.openrouter.data-collection:deny}")
+  private String dataCollection = "deny";
+
+  @Value("${ai.openrouter.zdr:true}")
+  private boolean zdr = true;
+
+  /**
    * Opções para {@link #completarComCascata(List, OpcoesCompletar)}.
    *
    * @param modelos lista de modelos em ordem de prioridade (gratuitos no caminho da extração)
@@ -73,7 +84,7 @@ public class AiClient {
   @Autowired
   public AiClient(
       @Value("${ai.openrouter.api-key:}") String apiKey,
-      @Value("${ai.openrouter.modelo:google/gemma-4-31b-it:free}") String modelo,
+      @Value("${ai.openrouter.modelo:google/gemma-4-31b-it}") String modelo,
       @Value("${ai.openrouter.modelos:}") String modelosConfig,
       @Value("${ai.openrouter.modelos-reserva:}") String modelosReservaConfig,
       @Value("${ai.openrouter.connect-timeout-ms:3000}") int connectTimeoutMs,
@@ -115,13 +126,24 @@ public class AiClient {
       RestClient restClient,
       int maxTokensChat,
       long chatDeadlineMs) {
-    this.modelo = modelos.isEmpty() ? "google/gemma-4-31b-it:free" : modelos.get(0);
+    this.modelo = modelos.isEmpty() ? "google/gemma-4-31b-it" : modelos.get(0);
     this.modelos = modelos;
     this.modelosReserva = modelosReserva;
     this.restClient = restClient;
     this.maxTokensChat = maxTokensChat;
     this.chatDeadlineMs = chatDeadlineMs;
     this.configurado = true;
+  }
+
+  /** Ajuste da política de dados (testes de unidade). */
+  void configurarPoliticaDados(String dataCollection, boolean zdr) {
+    this.dataCollection = dataCollection;
+    this.zdr = zdr;
+  }
+
+  /** Objeto {@code provider} da OpenRouter com a política de dados configurada. */
+  Map<String, Object> politicaProvedor() {
+    return Map.of("data_collection", dataCollection, "zdr", zdr);
   }
 
   /**
@@ -169,7 +191,14 @@ public class AiClient {
             e.getMessage());
       } catch (RestClientResponseException e) {
         int status = e.getStatusCode().value();
-        boolean recuperavel = recuperavel(status) || ehErroReasoning(status, e);
+        boolean semProvedor = semProvedorCompativel(status, e);
+        if (semProvedor) {
+          LOG.warn(
+              "Nenhum provedor com a política de dados exigida para o modelo {} (HTTP {}). Avançando.",
+              modeloAtual,
+              status);
+        }
+        boolean recuperavel = semProvedor || recuperavel(status) || ehErroReasoning(status, e);
         ultimaFalha = indisponivel(e);
         LOG.warn(
             "Modelo {} falhou no chat (HTTP {}, recuperável={}). {}",
@@ -218,6 +247,22 @@ public class AiClient {
     try {
       String body = e.getResponseBodyAsString();
       return body != null && body.toLowerCase(java.util.Locale.ROOT).contains("reasoning");
+    } catch (RuntimeException ex) {
+      return false;
+    }
+  }
+
+  /**
+   * Com {@code data_collection=deny}/{@code zdr=true} a OpenRouter pode não ter provedor compatível
+   * para o modelo (HTTP 404 ou 400 citando provedor/endpoint/política). Trocar de modelo resolve.
+   */
+  private boolean semProvedorCompativel(int status, RestClientResponseException e) {
+    if (status != 404 && status != 400) return false;
+    try {
+      String body = e.getResponseBodyAsString();
+      if (body == null) return false;
+      String b = body.toLowerCase(java.util.Locale.ROOT);
+      return b.contains("provider") || b.contains("endpoints found") || b.contains("data policy");
     } catch (RuntimeException ex) {
       return false;
     }
@@ -306,6 +351,14 @@ public class AiClient {
           return new RespostaCompletar(conteudo, modeloUsado, degradado, chamadas);
         } catch (RestClientResponseException e) {
           int status = e.getStatusCode().value();
+          if (semProvedorCompativel(status, e)) {
+            LOG.warn(
+                "Nenhum provedor com a política de dados exigida para o modelo {} (HTTP {})."
+                    + " Avançando de modelo.",
+                modeloAtual,
+                status);
+            break;
+          }
           boolean recuperavel = status == 402 || status == 429 || status >= 500;
           if (recuperavel && tentativa < opcoes.tentativasPorModelo()) {
             dormir(pausaComRetryAfter(e, opcoes.esperaInicialMs(), tentativa));
@@ -415,6 +468,7 @@ public class AiClient {
     corpo.put("temperature", temperatura != null ? temperatura : 0.4);
     corpo.put("max_tokens", maxTokens != null ? maxTokens : 800);
     corpo.put("reasoning", Map.of("effort", "low", "exclude", true));
+    corpo.put("provider", politicaProvedor());
     return corpo;
   }
 

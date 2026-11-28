@@ -3,8 +3,6 @@ package com.controlefinanceiro.ai;
 import com.controlefinanceiro.common.UsuarioContext;
 import com.controlefinanceiro.dashboard.DashboardRepository;
 import com.controlefinanceiro.dashboard.dto.CategoryExpense;
-import com.controlefinanceiro.lancamento.Lancamento;
-import com.controlefinanceiro.lancamento.LancamentoRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -12,7 +10,6 @@ import java.time.ZoneId;
 import java.time.format.TextStyle;
 import java.util.List;
 import java.util.Locale;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,21 +22,24 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>Todos os valores vêm do banco com SUM/SQL e são formatados em pt-BR. Todo cálculo monetário
  * usa {@link BigDecimal} com scale=2 e {@link RoundingMode#HALF_EVEN} (R1). O tenant vem
  * exclusivamente do JWT (R3).
+ *
+ * <p>Minimização de dados (LGPD): o contexto fixo traz só totais do mês atual e do anterior e o
+ * resumo por categoria do mês atual. Nenhuma descrição de lançamento (texto livre do usuário) e
+ * nenhum dado pessoal (nome, e-mail, telefone, CPF) entra aqui; detalhes são obtidos sob demanda
+ * pela ferramenta {@code consultar_historico_e_comparativo}.
  */
 @Service
 public class AiContextoService {
 
   private static final ZoneId FUSO = ZoneId.of("America/Sao_Paulo");
-  private static final int MESES_NO_HISTORICO = 3;
-  private static final int MAX_LANCAMENTOS = 12;
+
+  /** Mês atual + mês anterior. */
+  private static final int MESES_NO_HISTORICO = 2;
 
   private final DashboardRepository dashboardRepository;
-  private final LancamentoRepository lancamentoRepository;
 
-  public AiContextoService(
-      DashboardRepository dashboardRepository, LancamentoRepository lancamentoRepository) {
+  public AiContextoService(DashboardRepository dashboardRepository) {
     this.dashboardRepository = dashboardRepository;
-    this.lancamentoRepository = lancamentoRepository;
   }
 
   /**
@@ -108,30 +108,6 @@ public class AiContextoService {
             .append(" em ")
             .append(c.nome())
             .append("\n");
-      }
-    }
-
-    List<Lancamento> recentes =
-        lancamentoRepository
-            .findByEmpresaIdAndUsuarioIdAndFiltros(
-                empresaId, usuarioId, null, null, null, null, PageRequest.of(0, MAX_LANCAMENTOS))
-            .getContent();
-
-    if (!recentes.isEmpty()) {
-      sb.append("\nÚltimos ").append(recentes.size()).append(" lançamentos:\n");
-      for (Lancamento l : recentes) {
-        sb.append("- ")
-            .append(l.getData())
-            .append(" ")
-            .append(l.getTipo())
-            .append(" ")
-            .append(formatarMoeda(l.getValor()))
-            .append(" - ")
-            .append(l.getCategoria() != null ? l.getCategoria().getNome() : "sem categoria");
-        if (l.getDescricao() != null && !l.getDescricao().isBlank()) {
-          sb.append(" (").append(l.getDescricao()).append(")");
-        }
-        sb.append("\n");
       }
     }
 

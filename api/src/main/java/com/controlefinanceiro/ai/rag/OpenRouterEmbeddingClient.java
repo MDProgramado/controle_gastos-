@@ -22,14 +22,20 @@ public class OpenRouterEmbeddingClient implements EmbeddingClient {
   private final RestClient restClient;
   private final String modelo;
   private final boolean configurado;
+  private final String dataCollection;
+  private final boolean zdr;
 
   @Autowired
   public OpenRouterEmbeddingClient(
       @Value("${ai.openrouter.api-key:}") String apiKey,
       @Value("${ai.openrouter.embedding-model:openai/text-embedding-3-small}") String modelo,
       @Value("${ai.openrouter.connect-timeout-ms:3000}") int connectTimeoutMs,
-      @Value("${ai.openrouter.read-timeout-ms:30000}") int readTimeoutMs) {
+      @Value("${ai.openrouter.read-timeout-ms:30000}") int readTimeoutMs,
+      @Value("${ai.openrouter.data-collection:deny}") String dataCollection,
+      @Value("${ai.openrouter.zdr:true}") boolean zdr) {
     this.modelo = modelo;
+    this.dataCollection = dataCollection;
+    this.zdr = zdr;
     this.configurado = apiKey != null && !apiKey.isBlank();
     SimpleClientHttpRequestFactory fabrica = new SimpleClientHttpRequestFactory();
     fabrica.setConnectTimeout(Duration.ofMillis(connectTimeoutMs));
@@ -47,6 +53,16 @@ public class OpenRouterEmbeddingClient implements EmbeddingClient {
             : null;
   }
 
+  /** Construtor para testes de unidade: RestClient mockado (sem rede). */
+  OpenRouterEmbeddingClient(
+      String modelo, RestClient restClient, String dataCollection, boolean zdr) {
+    this.modelo = modelo;
+    this.restClient = restClient;
+    this.configurado = true;
+    this.dataCollection = dataCollection;
+    this.zdr = zdr;
+  }
+
   @Override
   public List<float[]> embedir(List<String> textos) {
     if (!configurado) {
@@ -59,6 +75,8 @@ public class OpenRouterEmbeddingClient implements EmbeddingClient {
     Map<String, Object> corpo = new LinkedHashMap<>();
     corpo.put("model", modelo);
     corpo.put("input", textos);
+    // Mesma política de dados do chat: sem coleta/treino e somente Zero Data Retention.
+    corpo.put("provider", Map.of("data_collection", dataCollection, "zdr", zdr));
     String json =
         restClient
             .post()
