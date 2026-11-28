@@ -32,7 +32,7 @@ class AiServiceFerramentaTest {
 
   @BeforeEach
   void setup() {
-    aiClient = mock(AiClient.class);
+    aiClient = TestesIa.mockAiClient();
     registry = mock(FerramentaRegistry.class);
     AiMemoryStore memoryStore = new AiMemoryStore();
     AiKnowledgeStore knowledgeStore = new AiKnowledgeStore();

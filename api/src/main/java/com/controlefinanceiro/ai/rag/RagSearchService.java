@@ -52,7 +52,9 @@ public class RagSearchService {
         }
       }
     } catch (RuntimeException e) {
-      LOG.warn("Busca vetorial indisponível; usando apenas busca lexical: {}", e.getMessage());
+      LOG.warn(
+          "Busca vetorial indisponível; usando apenas busca lexical: {}",
+          com.controlefinanceiro.common.LogRedacao.mensagem(e));
     }
 
     for (RagTrecho trecho : repository.buscarPorTexto(consulta, limite)) {

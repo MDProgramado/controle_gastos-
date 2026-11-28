@@ -227,4 +227,21 @@ class IaExtracaoServiceTest {
     assertThat(resultado.degradado()).isTrue();
     assertThat(resultado.modeloUsado()).isEqualTo("m2");
   }
+
+  @Test
+  @DisplayName("3.3: extração registra o uso de tokens/custo da empresa e do usuário")
+  void extracaoRegistraUso() {
+    com.controlefinanceiro.ai.UsoIa uso =
+        new com.controlefinanceiro.ai.UsoIa(
+            "extracao", "m1", 900, 100, new java.math.BigDecimal("0.002"), 1);
+    when(aiClient.completarComCascata(anyList(), any(AiClient.OpcoesCompletar.class)))
+        .thenReturn(new AiClient.RespostaCompletar("{\"itens\":[]}", "m1", false, 1, List.of(uso)));
+    com.controlefinanceiro.ai.AiUsoService usoService =
+        mock(com.controlefinanceiro.ai.AiUsoService.class);
+    service.setUsoService(usoService);
+
+    service.extrair("texto do extrato", List.of("Alimentação"), "3", 9L);
+
+    verify(usoService).registrar(3L, 9L, List.of(uso));
+  }
 }

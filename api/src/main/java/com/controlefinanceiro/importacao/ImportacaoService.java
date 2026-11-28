@@ -709,7 +709,8 @@ public class ImportacaoService {
     String tipoDocumento = ClassificadorDocumento.classificar(nome, texto);
 
     IaExtracaoService.ResultadoExtracao extracao =
-        iaExtracaoService.extrair(sanitizado, nomesDasCategorias, String.valueOf(empresaId));
+        iaExtracaoService.extrair(
+            sanitizado, nomesDasCategorias, String.valueOf(empresaId), usuarioId);
 
     List<ImportacaoItem> itens = construirItens(usuario, extracao, tipoDocumento, categorias);
     ImportacaoFatura fatura = construirFatura(empresaId, usuario, extracao, tipoDocumento);

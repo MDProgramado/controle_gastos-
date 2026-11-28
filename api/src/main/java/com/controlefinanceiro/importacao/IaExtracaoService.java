@@ -83,6 +83,45 @@ public class IaExtracaoService {
    */
   public ResultadoExtracao extrair(
       String textoSanitizado, List<String> categoriasTenant, String empresaId) {
+    return extrair(textoSanitizado, categoriasTenant, empresaId, null);
+  }
+
+  /**
+   * Igual a {@link #extrair(String, List, String)}, registrando o uso (tokens/custo) da extração
+   * para a empresa e o usuário (tabela ai_uso_diario).
+   */
+  public ResultadoExtracao extrair(
+      String textoSanitizado, List<String> categoriasTenant, String empresaId, Long usuarioId) {
+    List<com.controlefinanceiro.ai.UsoIa> usos = new ArrayList<>();
+    try {
+      return extrairComUso(textoSanitizado, categoriasTenant, empresaId, usos);
+    } finally {
+      if (usoService != null && usuarioId != null && !usos.isEmpty()) {
+        usoService.registrar(paraLong(empresaId), usuarioId, usos);
+      }
+    }
+  }
+
+  private com.controlefinanceiro.ai.AiUsoService usoService;
+
+  @org.springframework.beans.factory.annotation.Autowired(required = false)
+  public void setUsoService(com.controlefinanceiro.ai.AiUsoService usoService) {
+    this.usoService = usoService;
+  }
+
+  private static Long paraLong(String valor) {
+    try {
+      return Long.valueOf(valor);
+    } catch (RuntimeException e) {
+      return null;
+    }
+  }
+
+  private ResultadoExtracao extrairComUso(
+      String textoSanitizado,
+      List<String> categoriasTenant,
+      String empresaId,
+      List<com.controlefinanceiro.ai.UsoIa> usos) {
     if (textoSanitizado == null || textoSanitizado.isBlank()) {
       return ResultadoExtracao.vazio("TEXTO_VAZIO", empresaId);
     }
@@ -95,7 +134,7 @@ public class IaExtracaoService {
     List<ItemRejeitado> todosRejeitados = new ArrayList<>();
 
     for (String chunk : chunks) {
-      ResultadoParcial parcial = extrairUmChunk(chunk, categoriasTenant);
+      ResultadoParcial parcial = extrairUmChunk(chunk, categoriasTenant, usos);
       todosItens.addAll(parcial.itens());
       if (parcial.fatura() != null) {
         fatura = parcial.fatura(); // fatura do último chunk que a trouxe
@@ -112,7 +151,8 @@ public class IaExtracaoService {
   }
 
   /** Uma chamada de IA por chunk (1 documento típico = 1 chamada; D-19). */
-  private ResultadoParcial extrairUmChunk(String texto, List<String> categoriasTenant) {
+  private ResultadoParcial extrairUmChunk(
+      String texto, List<String> categoriasTenant, List<com.controlefinanceiro.ai.UsoIa> usos) {
     List<Map<String, Object>> mensagens = new ArrayList<>();
     mensagens.add(
         Map.of(
@@ -134,6 +174,9 @@ public class IaExtracaoService {
             conteudo -> ehJsonValido(conteudo));
 
     AiClient.RespostaCompletar resposta = aiClient.completarComCascata(mensagens, opcoes);
+    if (resposta.usos() != null) {
+      usos.addAll(resposta.usos());
+    }
     return parseResposta(resposta.conteudo(), resposta.modeloUsado(), resposta.degradado());
   }
 
@@ -154,8 +197,13 @@ public class IaExtracaoService {
       raiz = MAPPER.readTree(limpo);
     } catch (Exception e) {
       // JSON inválido: nada de confiável nesta resposta; registra como rejeitado
+      // Trecho redigido vai só para o item rejeitado (exibido ao próprio usuário), nunca para log.
       String seguro = LogRedacao.paraLog(limpo);
-      LOG.warn("Resposta da IA não é JSON válido: {}", seguro);
+      // Nunca loga o conteúdo da resposta (pode conter dados do extrato): só modelo e tamanho.
+      LOG.warn(
+          "Resposta da IA não é JSON válido (modelo={}, tamanho={})",
+          modeloUsado,
+          limpo == null ? 0 : limpo.length());
       return new ResultadoParcial(
           List.of(),
           null,

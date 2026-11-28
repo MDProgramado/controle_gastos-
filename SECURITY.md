@@ -297,6 +297,8 @@ Current code avoids obvious body logging in several places (`WhatsappEnvioServic
 - Se nenhum provedor atende à política para um modelo, a cascata avança para o próximo e registra WARN.
 - Logs não registram conteúdo de mensagens nem respostas da IA, só modelo, finish_reason, tokens, latência e resultado.
 
+**Observabilidade e custo:** métricas `ia.tokens`, `ia.custo.usd`, `ia.chamadas` e `ia.latencia` (tags: modelo, operação, tipo e resultado; nunca empresa ou usuário) em `/actuator/prometheus`, que exige ADMIN ou o header `X-Metrics-Token` = `METRICS_TOKEN`. `/actuator/health` é público e não mostra detalhes; os demais endpoints do actuator são negados. O custo por cliente fica em `ai_uso_diario` (`GET /api/admin/ia/uso`, ADMIN, escopo do JWT).
+
 **Como desligar a IA por empresa:** **pendente.** Não existe hoje um flag por empresa. A IA só pode ser desligada globalmente, removendo `OPENROUTER_API_KEY`. Falta um campo em `empresa` com checagem em `AiController`, `WhatsappWebhookService` e `ImportacaoService`.
 
 ## Sensitive Data & Encryption Statement

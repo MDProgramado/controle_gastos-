@@ -70,7 +70,7 @@ class AiContextoServiceTest {
             new UsuarioAuthAuthenticationToken(
                 new UsuarioAuth(EMAIL, 1L, 7L, 0, "USER"),
                 List.of(new SimpleGrantedAuthority("ROLE_USER"))));
-    AiClient aiClient = mock(AiClient.class);
+    AiClient aiClient = TestesIa.mockAiClient();
     when(aiClient.completar(any(), anyLong())).thenReturn("CONSULTA|ok");
     AiMemoryStore memoria = new AiMemoryStore();
     AiService service =

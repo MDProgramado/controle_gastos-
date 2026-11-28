@@ -83,7 +83,7 @@ class GuardrailSaidaTest {
   @Test
   @DisplayName("AiService devolve resposta genérica quando o modelo vaza o system prompt")
   void aiServiceDescartaVazamento() {
-    AiClient aiClient = mock(AiClient.class);
+    AiClient aiClient = TestesIa.mockAiClient();
     AiContextoService contexto = mock(AiContextoService.class);
     when(contexto.montarContexto(any(), any())).thenReturn("");
     when(aiClient.completar(any(), anyLong()))
@@ -100,7 +100,7 @@ class GuardrailSaidaTest {
   @Test
   @DisplayName("AiService adiciona aviso em proposta com valor alto")
   void aiServiceAvisoValorAlto() {
-    AiClient aiClient = mock(AiClient.class);
+    AiClient aiClient = TestesIa.mockAiClient();
     AiContextoService contexto = mock(AiContextoService.class);
     when(contexto.montarContexto(any(), any())).thenReturn("");
     when(aiClient.completar(any(), anyLong()))

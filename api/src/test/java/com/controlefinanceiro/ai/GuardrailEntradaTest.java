@@ -77,7 +77,7 @@ class GuardrailEntradaTest {
   @Test
   @DisplayName("AiService não chama o LLM quando o guardrail bloqueia")
   void aiServiceNaoChamaLlm() {
-    AiClient aiClient = mock(AiClient.class);
+    AiClient aiClient = TestesIa.mockAiClient();
     AiContextoService contexto = mock(AiContextoService.class);
     when(contexto.montarContexto(any(), any())).thenReturn("");
     AiService service =

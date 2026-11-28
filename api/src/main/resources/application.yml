@@ -41,6 +41,21 @@ spring:
       max-file-size: 8MB
       max-request-size: 40MB
 
+# Observabilidade (actuator + Prometheus). Só health, info e prometheus são expostos; o acesso é
+# controlado no SecurityConfig: health público (sem detalhes), prometheus exige ADMIN ou o header
+# X-Metrics-Token = METRICS_TOKEN. O healthCheck da Render continua em /api/health.
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: never
+
+metrics:
+  token: ${METRICS_TOKEN:}
+
 # Configuração da importação de PDFs (fase 5 — custo zero, sem OCR).
 importacao:
   max-paginas: ${IMPORTACAO_MAX_PAGINAS:200}

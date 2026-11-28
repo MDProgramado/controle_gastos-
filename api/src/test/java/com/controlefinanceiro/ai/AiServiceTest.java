@@ -33,7 +33,7 @@ class AiServiceTest {
 
   @BeforeEach
   void setup() {
-    aiClient = mock(AiClient.class);
+    aiClient = TestesIa.mockAiClient();
     memoryStore = new AiMemoryStore();
     knowledgeStore = new AiKnowledgeStore();
     contextoService = mock(AiContextoService.class);

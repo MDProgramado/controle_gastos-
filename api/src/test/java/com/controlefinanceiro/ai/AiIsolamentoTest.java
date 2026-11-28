@@ -29,7 +29,7 @@ class AiIsolamentoTest {
 
   @BeforeEach
   void setup() {
-    aiClient = mock(AiClient.class);
+    aiClient = TestesIa.mockAiClient();
     AiContextoService contextoService = mock(AiContextoService.class);
     when(contextoService.montarContexto(any())).thenReturn("");
     aiService =

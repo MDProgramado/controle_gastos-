@@ -1,7 +1,12 @@
 package com.controlefinanceiro.ai.rag;
 
+import com.controlefinanceiro.ai.AiClient;
+import com.controlefinanceiro.ai.UsoIa;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -24,6 +29,12 @@ public class OpenRouterEmbeddingClient implements EmbeddingClient {
   private final boolean configurado;
   private final String dataCollection;
   private final boolean zdr;
+  private MeterRegistry meterRegistry = new SimpleMeterRegistry();
+
+  @Autowired(required = false)
+  public void setMeterRegistry(MeterRegistry meterRegistry) {
+    this.meterRegistry = meterRegistry;
+  }
 
   @Autowired
   public OpenRouterEmbeddingClient(
@@ -77,15 +88,55 @@ public class OpenRouterEmbeddingClient implements EmbeddingClient {
     corpo.put("input", textos);
     // Mesma política de dados do chat: sem coleta/treino e somente Zero Data Retention.
     corpo.put("provider", Map.of("data_collection", dataCollection, "zdr", zdr));
-    String json =
-        restClient
-            .post()
-            .uri("/embeddings")
-            .contentType(MediaType.APPLICATION_JSON)
-            .body(corpo)
-            .retrieve()
-            .body(String.class);
-    return extrairVetores(json, textos.size());
+    long inicio = System.nanoTime();
+    String json;
+    try {
+      json =
+          restClient
+              .post()
+              .uri("/embeddings")
+              .contentType(MediaType.APPLICATION_JSON)
+              .body(corpo)
+              .retrieve()
+              .body(String.class);
+    } catch (org.springframework.web.client.ResourceAccessException e) {
+      metricas(UsoIa.falha(OP_EMBEDDING, modelo), "timeout", inicio);
+      throw e;
+    } catch (RuntimeException e) {
+      metricas(UsoIa.falha(OP_EMBEDDING, modelo), "erro", inicio);
+      throw e;
+    }
+    try {
+      List<float[]> vetores = extrairVetores(json, textos.size());
+      metricas(uso(json), "ok", inicio);
+      return vetores;
+    } catch (RuntimeException e) {
+      metricas(uso(json), "erro", inicio);
+      throw e;
+    }
+  }
+
+  static final String OP_EMBEDDING = "embedding";
+
+  private UsoIa uso(String json) {
+    try {
+      JsonNode usage = MAPPER.readTree(json).path("usage");
+      JsonNode custo = usage.path("cost");
+      return new UsoIa(
+          OP_EMBEDDING,
+          modelo,
+          usage.path("prompt_tokens").asLong(0),
+          0,
+          custo.isNumber() || custo.isTextual() ? new BigDecimal(custo.asText()) : BigDecimal.ZERO,
+          1);
+    } catch (Exception e) {
+      return UsoIa.falha(OP_EMBEDDING, modelo);
+    }
+  }
+
+  private void metricas(UsoIa uso, String resultado, long inicio) {
+    AiClient.registrarMetricas(
+        meterRegistry, uso, resultado, Duration.ofNanos(System.nanoTime() - inicio));
   }
 
   private List<float[]> extrairVetores(String json, int esperado) {

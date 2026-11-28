@@ -47,6 +47,13 @@ public class AiService {
   private final FerramentaRegistry ferramentaRegistry;
   private final GuardrailEntrada guardrailEntrada = new GuardrailEntrada();
   private final GuardrailSaida guardrailSaida = new GuardrailSaida();
+  private AiUsoService usoService;
+
+  /** Registro de uso/custo por empresa (opcional: testes de unidade não precisam). */
+  @Autowired(required = false)
+  public void setUsoService(AiUsoService usoService) {
+    this.usoService = usoService;
+  }
 
   public AiService(
       AiClient aiClient,
@@ -112,6 +119,20 @@ public class AiService {
       return bloqueio.get();
     }
 
+    // Uso (tokens/custo) de todas as chamadas desta mensagem, registrado ao final em qualquer
+    // saída.
+    List<UsoIa> usos = new ArrayList<>();
+    try {
+      return processarComLlm(sessionId, empresaId, usuarioId, mensagem, usos);
+    } finally {
+      if (usoService != null && !usos.isEmpty()) {
+        usoService.registrar(parseLong(empresaId), parseLong(usuarioId), usos);
+      }
+    }
+  }
+
+  private AiResponse processarComLlm(
+      String sessionId, String empresaId, String usuarioId, String mensagem, List<UsoIa> usos) {
     List<AiMessage> historico = memoryStore.obterHistorico(sessionId, empresaId, usuarioId);
     List<Map<String, Object>> mensagens =
         montarMensagens(historico, mensagem, empresaId, usuarioId, true);
@@ -119,7 +140,7 @@ public class AiService {
 
     String respostaTexto;
     try {
-      respostaTexto = aiClient.completar(mensagens, deadlineNanos);
+      respostaTexto = chamarModelo(mensagens, deadlineNanos, usos);
     } catch (RuntimeException e) {
       return respostaIndisponivel(e);
     }
@@ -144,7 +165,7 @@ public class AiService {
       }
       mensagens = comResultadoDaFerramenta(mensagens, respostaTexto, resultado);
       try {
-        respostaTexto = aiClient.completar(mensagens, deadlineNanos);
+        respostaTexto = chamarModelo(mensagens, deadlineNanos, usos);
       } catch (RuntimeException e) {
         return respostaIndisponivel(e);
       }
@@ -192,6 +213,15 @@ public class AiService {
             "assistant", brutoNormalizado.isBlank() ? resposta.resposta() : brutoNormalizado));
 
     return resposta;
+  }
+
+  private String chamarModelo(
+      List<Map<String, Object>> mensagens, long deadlineNanos, List<UsoIa> usos) {
+    AiClient.RespostaChat resposta = aiClient.completarComUso(mensagens, deadlineNanos);
+    if (resposta.usos() != null) {
+      usos.addAll(resposta.usos());
+    }
+    return resposta.conteudo();
   }
 
   private List<Map<String, Object>> comResultadoDaFerramenta(
@@ -634,7 +664,8 @@ public class AiService {
 
   private AiResponse respostaIndisponivel(RuntimeException e) {
     if (e instanceof com.controlefinanceiro.common.ServicoIaIndisponivelException) {
-      LOG.warn("IA indisponível para o chat: {}", e.getMessage());
+      LOG.warn(
+          "IA indisponível para o chat: {}", com.controlefinanceiro.common.LogRedacao.mensagem(e));
       return new AiResponse(
           "esclarecimento",
           "Não foi possível falar com o serviço de IA agora. Tente novamente em instantes.",
@@ -643,7 +674,8 @@ public class AiService {
           List.of(),
           List.of("Tentar novamente", "Falar com atendente"));
     }
-    LOG.error("Erro inesperado no chat de IA", e);
+    // Sem stack trace: a mensagem da exceção pode ecoar o prompt ou a resposta da IA.
+    LOG.error("Erro inesperado no chat de IA: {}", e.getClass().getSimpleName());
     return new AiResponse(
         "esclarecimento",
         "Ocorreu um erro interno. Tente novamente em instantes.",

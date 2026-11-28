@@ -37,12 +37,34 @@ class OpenRouterEmbeddingClientPrivacidadeTest {
                         new TypeReference<Map<String, Object>>() {})))
         .andRespond(
             withSuccess(
-                "{\"data\":[{\"embedding\":[0.1,0.2]}],\"model\":\"m\"}",
+                "{\"data\":[{\"embedding\":[0.1,0.2]}],\"model\":\"m\","
+                    + "\"usage\":{\"prompt_tokens\":8,\"cost\":0.0000016}}",
                 MediaType.APPLICATION_JSON));
 
     OpenRouterEmbeddingClient client =
         new OpenRouterEmbeddingClient("m", builder.build(), "deny", true);
+    io.micrometer.core.instrument.MeterRegistry registry =
+        new io.micrometer.core.instrument.simple.SimpleMeterRegistry();
+    client.setMeterRegistry(registry);
     List<float[]> vetores = client.embedir(List.of("texto"));
+
+    // 3.2: métricas com operacao=embedding, sem tags de tenant.
+    assertThat(
+            registry
+                .get("ia.tokens")
+                .tag("operacao", "embedding")
+                .tag("tipo", "entrada")
+                .counter()
+                .count())
+        .isEqualTo(8);
+    assertThat(
+            registry
+                .get("ia.chamadas")
+                .tag("operacao", "embedding")
+                .tag("resultado", "ok")
+                .counter()
+                .count())
+        .isEqualTo(1);
 
     assertThat(vetores).hasSize(1);
     assertThat(corpos.get(0))

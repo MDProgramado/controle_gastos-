@@ -36,7 +36,10 @@ import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWrite
 public class SecurityConfig {
 
   @Bean
-  SecurityFilterChain securityFilterChain(HttpSecurity http, UsuarioRepository usuarioRepository)
+  SecurityFilterChain securityFilterChain(
+      HttpSecurity http,
+      UsuarioRepository usuarioRepository,
+      @org.springframework.beans.factory.annotation.Value("${metrics.token:}") String metricsToken)
       throws Exception {
     http
         // API stateless com Bearer — CSRF não se aplica (o cookie httpOnly fica no BFF do web)
@@ -62,6 +65,19 @@ public class SecurityConfig {
                         "/api/auth/google",
                         "/api/health")
                     .permitAll()
+                    // Actuator: health público (sem detalhes); prometheus só ADMIN ou o token do
+                    // scraper (METRICS_TOKEN); qualquer outro endpoint do actuator é negado.
+                    .requestMatchers("/actuator/health", "/actuator/health/**")
+                    .permitAll()
+                    .requestMatchers("/actuator/prometheus")
+                    .hasAnyRole("ADMIN", "METRICS")
+                    .requestMatchers("/actuator/info")
+                    .hasRole("ADMIN")
+                    .requestMatchers("/actuator/**")
+                    .denyAll()
+                    // Uso/custo da IA da empresa: somente ADMIN (escopo pelo JWT)
+                    .requestMatchers("/api/admin/ia/**")
+                    .hasRole("ADMIN")
                     // Webhook público da Meta (validação via X-Hub-Signature-256, não JWT)
                     .requestMatchers(HttpMethod.GET, "/webhooks/whatsapp")
                     .permitAll()
@@ -89,6 +105,8 @@ public class SecurityConfig {
         .oauth2ResourceServer(
             oauth2 ->
                 oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())))
+        .addFilterBefore(
+            new MetricsTokenFilter(metricsToken), BearerTokenAuthenticationFilter.class)
         .addFilterAfter(
             new UsuarioSessaoFilter(usuarioRepository), BearerTokenAuthenticationFilter.class);
     return http.build();
